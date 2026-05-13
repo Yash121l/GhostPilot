@@ -38,14 +38,16 @@ export class LinkedInConnector implements SocialConnector {
 
   getAuthURL(state: string, _codeVerifier: string, redirectUri: string): string {
     // LinkedIn uses standard OAuth 2.0 (PKCE not supported as of 2024)
+    // Build params manually — URLSearchParams encodes spaces as + but LinkedIn
+    // requires %20-encoded spaces in the scope parameter.
     const params = new URLSearchParams({
       response_type: 'code',
       client_id: clientId(),
       redirect_uri: redirectUri,
       state,
-      scope: SCOPES.join(' '),
     })
-    return `https://www.linkedin.com/oauth/v2/authorization?${params}`
+    // Append scope separately so spaces are encoded as %20, not +
+    return `https://www.linkedin.com/oauth/v2/authorization?${params}&scope=${SCOPES.map(encodeURIComponent).join('%20')}`
   }
 
   async handleCallback(code: string, _codeVerifier: string, redirectUri: string): Promise<ConnectionResult> {
