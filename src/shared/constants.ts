@@ -14,6 +14,13 @@ export const OAUTH_CALLBACK_PATH = '/oauth/callback'
  */
 export const OAUTH_REDIRECT_URI = 'https://ghostpilot.yashlunawat.com/oauth/callback'
 
+/**
+ * Fixed localhost port for the OAuth fallback server.
+ * Used in dev mode when the ghostpilot:// URL scheme isn't registered with macOS.
+ * The website callback page POSTs {code, state} here if the deep link doesn't fire.
+ */
+export const OAUTH_FALLBACK_PORT = 49152
+
 // ─── Limits ───────────────────────────────────────────────────────────────────
 
 export const MAX_POST_ATTEMPTS = 3

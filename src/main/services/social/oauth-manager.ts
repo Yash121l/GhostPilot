@@ -1,3 +1,4 @@
+import { createServer, type Server } from 'http'
 import { randomBytes } from 'crypto'
 import { shell } from 'electron'
 import { nanoid } from 'nanoid'
@@ -11,22 +12,78 @@ import type { SocialConnector, OAuthTokens } from './interface'
 import type { Platform } from '../../../shared/types/platform'
 import { AppError, ErrorCode } from '../../../shared/types/error'
 import { createLogger } from '../../infrastructure/logger/logger'
-import { OAUTH_STATE_TTL_MS, OAUTH_REDIRECT_URI } from '../../../shared/constants'
+import { OAUTH_STATE_TTL_MS, OAUTH_REDIRECT_URI, OAUTH_FALLBACK_PORT } from '../../../shared/constants'
 import type { AuthStatusOutput } from '../../../shared/ipc-types'
 
 const logger = createLogger('OAuthManager')
+
+/** How long to wait for the user to complete the OAuth flow (ms). */
+const OAUTH_BROWSER_TIMEOUT_MS = 10 * 60 * 1000 // 10 minutes
 
 interface OAuthState {
   state: string
   codeVerifier: string
   platform: Platform
   createdAt: number
+  /** Resolve function for the pending initiateConnect() promise */
+  resolve?: (params: { code: string; state: string }) => void
+  /** Reject function for the pending initiateConnect() promise */
+  reject?: (err: Error) => void
+}
+
+/**
+ * Spin up a temporary localhost HTTP server on a fixed port.
+ * The website callback page POSTs {code, state} here as a fallback
+ * when the ghostpilot:// deep link doesn't open the app (e.g. in dev mode).
+ */
+function createCallbackServer(
+  port: number,
+  onCallback: (code: string, state: string) => void,
+): Server {
+  const server = createServer((req, res) => {
+    // Allow CORS from the website
+    res.setHeader('Access-Control-Allow-Origin', 'https://ghostpilot.yashlunawat.com')
+    res.setHeader('Access-Control-Allow-Methods', 'POST, OPTIONS')
+    res.setHeader('Access-Control-Allow-Headers', 'Content-Type')
+
+    if (req.method === 'OPTIONS') {
+      res.writeHead(204)
+      res.end()
+      return
+    }
+
+    if (req.method === 'POST' && req.url === '/oauth/callback') {
+      let body = ''
+      req.on('data', (chunk) => { body += chunk })
+      req.on('end', () => {
+        try {
+          const { code, state } = JSON.parse(body) as { code: string; state: string }
+          res.writeHead(200, { 'Content-Type': 'application/json' })
+          res.end(JSON.stringify({ ok: true }))
+          onCallback(code, state)
+        } catch {
+          res.writeHead(400)
+          res.end()
+        }
+      })
+      return
+    }
+
+    res.writeHead(404)
+    res.end()
+  })
+
+  server.listen(port, '127.0.0.1')
+  return server
 }
 
 export class OAuthManager {
   private pendingStates = new Map<string, OAuthState>()
   private connectors = new Map<string, SocialConnector>()
   private keychain = new KeychainService()
+  /** Localhost fallback server — one at a time */
+  private callbackServer: Server | null = null
+  private callbackPort = OAUTH_FALLBACK_PORT
 
   constructor(private readonly audit: AuditService) {}
 
@@ -38,10 +95,6 @@ export class OAuthManager {
     return this.connectors.get(platform)
   }
 
-  /**
-   * Build the OAuth URL for a platform without opening the browser.
-   * Used by the CONNECTIONS_GET_AUTH_URL IPC handler.
-   */
   async getAuthURL(platform: Platform): Promise<string> {
     const connector = this.connectors.get(platform)
     if (!connector) {
@@ -58,8 +111,8 @@ export class OAuthManager {
 
   /**
    * Open the browser for OAuth.
-   * The platform redirects to ghostpilot.yashlunawat.com/oauth/callback,
-   * which deep-links back via ghostpilot://oauth/callback — caught by handleCallback().
+   * Starts a localhost fallback server so the website callback page can POST
+   * the code back even if the ghostpilot:// deep link doesn't fire (dev mode).
    */
   async initiateConnect(platform: Platform): Promise<void> {
     const connector = this.connectors.get(platform)
@@ -73,10 +126,30 @@ export class OAuthManager {
     const state = nanoid(32)
     const codeVerifier = randomBytes(32).toString('base64url')
 
-    this.pendingStates.set(state, { state, codeVerifier, platform, createdAt: Date.now() })
+    // Start localhost fallback server before opening the browser
+    this.callbackServer?.close()
+    this.callbackServer = createCallbackServer(
+      this.callbackPort,
+      (code, receivedState) => {
+        const pending = this.pendingStates.get(receivedState)
+        if (pending?.resolve) {
+          pending.resolve({ code, state: receivedState })
+        }
+      },
+    )
+
+    const pending: OAuthState = { state, codeVerifier, platform, createdAt: Date.now() }
+
+    // Wrap in a promise so initiateConnect() waits for the callback
+    const callbackPromise = new Promise<{ code: string; state: string }>((resolve, reject) => {
+      pending.resolve = resolve
+      pending.reject = reject
+    })
+
+    this.pendingStates.set(state, pending)
 
     const authURL = connector.getAuthURL(state, codeVerifier, OAUTH_REDIRECT_URI)
-    logger.info({ msg: 'Opening OAuth URL', platform })
+    logger.info({ msg: 'Opening OAuth URL', platform, fallbackPort: this.callbackPort })
 
     this.audit.write({
       actor: 'user',
@@ -87,6 +160,20 @@ export class OAuthManager {
     })
 
     await shell.openExternal(authURL)
+
+    // Wait for callback (via deep link OR localhost fallback)
+    const timeout = new Promise<never>((_, reject) =>
+      setTimeout(() => reject(new AppError({
+        code: ErrorCode.OAUTH_FAILED,
+        message: 'OAuth timed out — complete the flow in the browser within 10 minutes',
+      })), OAUTH_BROWSER_TIMEOUT_MS),
+    )
+
+    const { code } = await Promise.race([callbackPromise, timeout])
+    this.callbackServer?.close()
+    this.callbackServer = null
+
+    await this._processCallback(code, state, codeVerifier, platform)
   }
 
   /**
@@ -114,29 +201,45 @@ export class OAuthManager {
     if (!pending) {
       throw new AppError({ code: ErrorCode.OAUTH_STATE_MISMATCH, message: 'Unknown or expired OAuth state' })
     }
-    if (Date.now() - pending.createdAt > OAUTH_STATE_TTL_MS) {
+
+    // If initiateConnect() is waiting via the promise, resolve it
+    if (pending.resolve) {
+      pending.resolve({ code, state })
+      return
+    }
+
+    // Otherwise process directly (e.g. called from open-url before initiateConnect resolves)
+    await this._processCallback(code, state, pending.codeVerifier, pending.platform)
+  }
+
+  private async _processCallback(
+    code: string,
+    state: string,
+    codeVerifier: string,
+    platform: Platform,
+  ): Promise<void> {
+    if (Date.now() - (this.pendingStates.get(state)?.createdAt ?? 0) > OAUTH_STATE_TTL_MS) {
       this.pendingStates.delete(state)
       throw new AppError({ code: ErrorCode.OAUTH_STATE_MISMATCH, message: 'OAuth state expired' })
     }
 
     this.pendingStates.delete(state)
 
-    const connector = this.connectors.get(pending.platform)!
-    // Pass the same redirect URI used when building the auth URL
-    const result = await connector.handleCallback(code, pending.codeVerifier, OAUTH_REDIRECT_URI)
+    const connector = this.connectors.get(platform)!
+    const result = await connector.handleCallback(code, codeVerifier, OAUTH_REDIRECT_URI)
 
     const connectionId = nanoid()
-    const keychainKey = `ghostpilot:social:${pending.platform}:${connectionId}`
+    const keychainKey = `ghostpilot:social:${platform}:${connectionId}`
     await this.keychain.set(keychainKey, JSON.stringify(result.tokens))
 
     const db = getDb()
     const now = new Date()
 
-    await db.delete(socialConnections).where(eq(socialConnections.platform, pending.platform))
+    await db.delete(socialConnections).where(eq(socialConnections.platform, platform))
 
     await db.insert(socialConnections).values({
       id: connectionId,
-      platform: pending.platform,
+      platform,
       platformUserId: result.platformUserId,
       displayName: result.displayName,
       keychainKey,
@@ -152,10 +255,10 @@ export class OAuthManager {
       entityType: 'social_connections',
       entityId: connectionId,
       outcome: 'success',
-      details: { platform: pending.platform, displayName: result.displayName },
+      details: { platform, displayName: result.displayName },
     })
 
-    logger.info({ msg: 'OAuth complete', platform: pending.platform, displayName: result.displayName })
+    logger.info({ msg: 'OAuth complete', platform, displayName: result.displayName })
   }
 
   async disconnect(platform: Platform): Promise<void> {

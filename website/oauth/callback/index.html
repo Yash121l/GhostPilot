@@ -96,11 +96,22 @@ p { font-size: 14px; color: #888; line-height: 1.6; margin-bottom: 0; }
   var deepLink = 'ghostpilot://oauth/callback?code=' +
     encodeURIComponent(code) + '&state=' + encodeURIComponent(state);
 
-  // Attempt to open the app
+  // Attempt to open the app via deep link
   window.location.href = deepLink;
 
-  // After a short delay, check if the page is still visible.
-  // If the app opened, the tab will have blurred. If not, show a manual button.
+  // After a short delay, also POST to the localhost fallback server
+  // (handles dev mode where the ghostpilot:// scheme isn't registered with macOS)
+  setTimeout(function () {
+    fetch('http://127.0.0.1:49152/oauth/callback', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ code: code, state: state }),
+    }).catch(function () {
+      // Fallback server not running — deep link is the only path
+    });
+  }, 500);
+
+  // After 1.5s check if the page blurred (app opened via deep link)
   var opened = false;
   window.addEventListener('blur', function () { opened = true; });
 
@@ -108,7 +119,7 @@ p { font-size: 14px; color: #888; line-height: 1.6; margin-bottom: 0; }
     if (opened) {
       showSuccess();
     } else {
-      // App didn't open — show a manual button
+      // Show manual button as last resort
       spinner.style.display = 'none';
       title.textContent = 'Open GhostPilot';
       msg.textContent = 'Click below to finish connecting. Make sure GhostPilot is running.';
