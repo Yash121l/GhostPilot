@@ -1,22 +1,58 @@
 name: Release
 
+# Triggered by pushing a version tag: git tag v1.2.3 && git push --tags
 on:
   push:
     tags:
-      - 'v*'
+      - 'v[0-9]+.[0-9]+.[0-9]+'
+      - 'v[0-9]+.[0-9]+.[0-9]+-*'   # pre-releases: v1.0.0-beta.1
+
+permissions:
+  contents: write   # needed to create GitHub Releases and upload assets
 
 jobs:
+  # ── 1. Run tests before releasing ──────────────────────────────────────────
+  test:
+    name: Pre-release tests
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: 'npm'
+      - run: npm ci
+      - run: npm rebuild better-sqlite3
+      - run: npm run typecheck
+      - run: npm test
+
+  # ── 2. Build & publish per platform ────────────────────────────────────────
   release:
-    name: Release (${{ matrix.os }})
+    name: Release (${{ matrix.name }})
+    needs: test
     strategy:
+      fail-fast: false
       matrix:
         include:
-          - os: macos-latest
-            build_cmd: build:mac
-          - os: windows-latest
-            build_cmd: build:win
-          - os: ubuntu-latest
-            build_cmd: build:linux
+          # macOS Apple Silicon — .dmg (arm64)
+          - name: macOS arm64
+            os: macos-latest
+            args: --mac --arm64
+
+          # macOS Intel — .dmg (x64)
+          - name: macOS x64
+            os: macos-13
+            args: --mac --x64
+
+          # Windows — NSIS installer + portable .exe
+          - name: Windows x64
+            os: windows-latest
+            args: --win --x64
+
+          # Linux — AppImage + .deb
+          - name: Linux x64
+            os: ubuntu-latest
+            args: --linux --x64
 
     runs-on: ${{ matrix.os }}
 
@@ -32,9 +68,120 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
-      - name: Build & publish to GitHub Releases
-        run: npm run ${{ matrix.build_cmd }}
+      # Rebuild native modules (better-sqlite3, keytar) for the Electron ABI
+      - name: Rebuild native modules for Electron
+        run: npx electron-builder install-app-deps
+
+      # ── macOS code signing & notarization ──────────────────────────────────
+      # Set up secrets in repo Settings → Secrets:
+      #   APPLE_CERTIFICATE        Base64-encoded .p12 Developer ID certificate
+      #   APPLE_CERTIFICATE_PASSWORD  Password for the .p12
+      #   APPLE_ID                 Your Apple ID email
+      #   APPLE_APP_SPECIFIC_PASSWORD  App-specific password from appleid.apple.com
+      #   APPLE_TEAM_ID            Your 10-char Apple Team ID
+      - name: Import macOS signing certificate
+        if: runner.os == 'macOS' && env.APPLE_CERTIFICATE != ''
+        env:
+          APPLE_CERTIFICATE: ${{ secrets.APPLE_CERTIFICATE }}
+          APPLE_CERTIFICATE_PASSWORD: ${{ secrets.APPLE_CERTIFICATE_PASSWORD }}
+        run: |
+          KEYCHAIN_PATH=$RUNNER_TEMP/app-signing.keychain-db
+          KEYCHAIN_PASSWORD=$(openssl rand -base64 32)
+          security create-keychain -p "$KEYCHAIN_PASSWORD" "$KEYCHAIN_PATH"
+          security set-keychain-settings -lut 21600 "$KEYCHAIN_PATH"
+          security unlock-keychain -p "$KEYCHAIN_PASSWORD" "$KEYCHAIN_PATH"
+          echo "$APPLE_CERTIFICATE" | base64 --decode > /tmp/certificate.p12
+          security import /tmp/certificate.p12 -P "$APPLE_CERTIFICATE_PASSWORD" \
+            -A -t cert -f pkcs12 -k "$KEYCHAIN_PATH"
+          security list-keychain -d user -s "$KEYCHAIN_PATH"
+          rm /tmp/certificate.p12
+
+      # ── Build & upload to GitHub Releases ──────────────────────────────────
+      - name: Build & publish
+        run: npx electron-vite build && npx electron-builder ${{ matrix.args }} --publish always
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          # TODO(phase-8): CSC_LINK, CSC_KEY_PASSWORD for macOS code signing
-          # TODO(phase-8): WIN_CSC_LINK, WIN_CSC_KEY_PASSWORD for Windows
+          # macOS signing (only active when secrets are set)
+          CSC_LINK: ${{ secrets.APPLE_CERTIFICATE }}
+          CSC_KEY_PASSWORD: ${{ secrets.APPLE_CERTIFICATE_PASSWORD }}
+          # macOS notarization (only active when secrets are set)
+          APPLE_ID: ${{ secrets.APPLE_ID }}
+          APPLE_APP_SPECIFIC_PASSWORD: ${{ secrets.APPLE_APP_SPECIFIC_PASSWORD }}
+          APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
+          # Windows signing (optional — set WIN_CSC_LINK + WIN_CSC_KEY_PASSWORD)
+          WIN_CSC_LINK: ${{ secrets.WIN_CSC_LINK }}
+          WIN_CSC_KEY_PASSWORD: ${{ secrets.WIN_CSC_KEY_PASSWORD }}
+          # Skip signing gracefully if certs not configured
+          CSC_IDENTITY_AUTO_DISCOVERY: ${{ secrets.APPLE_CERTIFICATE != '' }}
+
+  # ── 3. Create the GitHub Release with release notes ────────────────────────
+  create-release:
+    name: Create GitHub Release
+    needs: release
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0   # full history for changelog generation
+
+      - name: Extract version from tag
+        id: version
+        run: echo "version=${GITHUB_REF_NAME#v}" >> $GITHUB_OUTPUT
+
+      - name: Generate release notes from commits
+        id: notes
+        run: |
+          # Get commits since last tag
+          PREV_TAG=$(git tag --sort=-version:refname | grep -E '^v[0-9]' | sed -n '2p')
+          if [ -z "$PREV_TAG" ]; then
+            COMMITS=$(git log --pretty=format:"- %s (%h)" HEAD)
+          else
+            COMMITS=$(git log --pretty=format:"- %s (%h)" ${PREV_TAG}..HEAD)
+          fi
+
+          cat > /tmp/release-notes.md << 'NOTES'
+          ## What's new
+
+          NOTES
+          echo "$COMMITS" >> /tmp/release-notes.md
+          cat >> /tmp/release-notes.md << 'FOOTER'
+
+          ---
+
+          ## Downloads
+
+          | Platform | File | Notes |
+          |----------|------|-------|
+          | macOS (Apple Silicon) | `GhostPilot-*-arm64.dmg` | M1/M2/M3/M4 Macs |
+          | macOS (Intel) | `GhostPilot-*-x64.dmg` | Intel Macs |
+          | Windows | `GhostPilot-*-setup.exe` | Windows 10/11 x64 |
+          | Linux | `GhostPilot-*.AppImage` | Universal Linux |
+          | Linux | `GhostPilot-*.deb` | Debian/Ubuntu |
+
+          > **macOS:** If you see "unidentified developer", right-click → Open.  
+          > **Linux AppImage:** `chmod +x GhostPilot-*.AppImage && ./GhostPilot-*.AppImage`
+
+          ## Requirements
+
+          - macOS 13 Ventura or later
+          - Windows 10 (build 19041) or later
+          - Linux: glibc 2.28+
+
+          ## Setup
+
+          See [SETUP.md](https://github.com/Yash121l/GhostPilot/blob/main/SETUP.md) for LinkedIn, X, and Instagram connection instructions.
+          FOOTER
+
+          echo "notes_file=/tmp/release-notes.md" >> $GITHUB_OUTPUT
+
+      - name: Update GitHub Release with notes
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ github.ref_name }}
+          name: GhostPilot ${{ github.ref_name }}
+          body_path: /tmp/release-notes.md
+          draft: false
+          prerelease: ${{ contains(github.ref_name, '-') }}
+          make_latest: ${{ !contains(github.ref_name, '-') }}
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

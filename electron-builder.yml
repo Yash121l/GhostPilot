@@ -1,44 +1,133 @@
 appId: com.ghostpilot.app
 productName: GhostPilot
+copyright: Copyright © 2026 Yash Lunawat
+
 directories:
   buildResources: build
+  output: dist
+
+# Files to include in the app bundle
 files:
+  - out/**/*
+  - resources/**/*
   - '!**/.vscode/*'
   - '!src/*'
+  - '!tests/*'
+  - '!design/*'
+  - '!coverage/*'
   - '!electron.vite.config.{js,ts,mjs,cjs}'
-  - '!{.eslintcache,eslint.config.mjs,.prettierignore,.prettierrc.yaml,dev-app-update.yml,CHANGELOG.md,README.md}'
+  - '!{.eslintcache,eslint.config.mjs,.prettierignore,.prettierrc.yaml}'
   - '!{.env,.env.*,.npmrc,pnpm-lock.yaml}'
   - '!{tsconfig.json,tsconfig.node.json,tsconfig.web.json}'
+  - '!{vitest.config.ts,playwright.config.ts}'
+  - '!{SETUP.md,README.md,CLAUDE.md}'
+
+# Unpack native modules from asar so they can be loaded at runtime
 asarUnpack:
   - resources/**
+  - node_modules/better-sqlite3/**
+  - node_modules/keytar/**
+
+# ── macOS ─────────────────────────────────────────────────────────────────────
+mac:
+  target:
+    - target: dmg
+      arch:
+        - arm64    # Apple Silicon (M1/M2/M3/M4)
+        - x64      # Intel
+  category: public.app-category.productivity
+  icon: resources/icon.png
+  # Entitlements for macOS sandbox / hardened runtime
+  entitlementsInherit: build/entitlements.mac.plist
+  hardenedRuntime: true
+  gatekeeperAssess: false
+  extendInfo:
+    NSCameraUsageDescription: GhostPilot does not use the camera.
+    NSMicrophoneUsageDescription: GhostPilot does not use the microphone.
+    NSDocumentsFolderUsageDescription: GhostPilot may access Documents for context ingestion.
+    NSDownloadsFolderUsageDescription: GhostPilot may save exports to Downloads.
+  # Notarization — set APPLE_ID, APPLE_APP_SPECIFIC_PASSWORD, APPLE_TEAM_ID in CI secrets
+  notarize:
+    teamId: $(APPLE_TEAM_ID)
+
+dmg:
+  artifactName: ${productName}-${version}-${arch}.${ext}
+  title: ${productName} ${version}
+  background: build/dmg-background.png
+  icon: resources/icon.png
+  iconSize: 80
+  contents:
+    - x: 130
+      y: 220
+    - x: 410
+      y: 220
+      type: link
+      path: /Applications
+
+# ── Windows ───────────────────────────────────────────────────────────────────
 win:
-  executableName: ghostpilot
+  target:
+    - target: nsis
+      arch:
+        - x64
+    - target: portable
+      arch:
+        - x64
+  icon: resources/icon.png
+  executableName: GhostPilot
+
 nsis:
-  artifactName: ${name}-${version}-setup.${ext}
+  artifactName: ${productName}-${version}-setup.${ext}
   shortcutName: ${productName}
   uninstallDisplayName: ${productName}
   createDesktopShortcut: always
-mac:
-  entitlementsInherit: build/entitlements.mac.plist
-  extendInfo:
-    - NSCameraUsageDescription: Application requests access to the device's camera.
-    - NSMicrophoneUsageDescription: Application requests access to the device's microphone.
-    - NSDocumentsFolderUsageDescription: Application requests access to the user's Documents folder.
-    - NSDownloadsFolderUsageDescription: Application requests access to the user's Downloads folder.
-  notarize: false
-dmg:
-  artifactName: ${name}-${version}.${ext}
+  createStartMenuShortcut: true
+  oneClick: false
+  allowToChangeInstallationDirectory: true
+  installerIcon: resources/icon.png
+  uninstallerIcon: resources/icon.png
+
+portable:
+  artifactName: ${productName}-${version}-portable.${ext}
+
+# ── Linux ─────────────────────────────────────────────────────────────────────
 linux:
   target:
-    - AppImage
-    - snap
-    - deb
-  maintainer: electronjs.org
+    - target: AppImage
+      arch:
+        - x64
+    - target: deb
+      arch:
+        - x64
+  icon: resources/icon.png
   category: Utility
+  maintainer: Yash Lunawat <yash@yashlunawat.com>
+  description: Local-first AI-powered social publishing desktop app
+
 appImage:
-  artifactName: ${name}-${version}.${ext}
-npmRebuild: false
+  artifactName: ${productName}-${version}.${ext}
+
+deb:
+  artifactName: ${productName}-${version}-amd64.${ext}
+  depends:
+    - libgtk-3-0
+    - libnotify4
+    - libnss3
+    - libxss1
+    - libxtst6
+    - xdg-utils
+    - libatspi2.0-0
+    - libdrm2
+    - libgbm1
+    - libxcb-dri3-0
+    - libsecret-1-0   # for keytar
+
+# ── Auto-updater ──────────────────────────────────────────────────────────────
 publish:
   provider: github
   owner: Yash121l
   repo: GhostPilot
+  releaseType: release
+
+# Don't rebuild native modules during build — CI does it explicitly
+npmRebuild: false
