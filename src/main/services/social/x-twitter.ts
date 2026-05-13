@@ -14,11 +14,11 @@ import { createLogger } from '../../infrastructure/logger/logger'
 
 const logger = createLogger('XTwitterConnector')
 
-const CLIENT_ID = process.env['TWITTER_CLIENT_ID'] ?? ''
-const CLIENT_SECRET = process.env['TWITTER_CLIENT_SECRET'] ?? ''
-// OAuth 1.0a credentials for media uploads (v1.1 API still required for media)
-const CONSUMER_KEY = process.env['TWITTER_CONSUMER_KEY'] ?? ''
-const CONSUMER_SECRET = process.env['TWITTER_CONSUMER_SECRET'] ?? ''
+// Read at call time so .env loaded in main/index.ts is always picked up
+const clientId = (): string => process.env['TWITTER_CLIENT_ID'] ?? ''
+const clientSecret = (): string => process.env['TWITTER_CLIENT_SECRET'] ?? ''
+const consumerKey = (): string => process.env['TWITTER_CONSUMER_KEY'] ?? ''
+const consumerSecret = (): string => process.env['TWITTER_CONSUMER_SECRET'] ?? ''
 
 const API_V2 = 'https://api.twitter.com/2'
 const _API_V1 = 'https://api.twitter.com/1.1'
@@ -43,7 +43,7 @@ export class XTwitterConnector implements SocialConnector {
     const codeChallenge = createHash('sha256').update(codeVerifier).digest('base64url')
     const params = new URLSearchParams({
       response_type: 'code',
-      client_id: CLIENT_ID,
+      client_id: clientId(),
       redirect_uri: redirectUri,
       state,
       code_challenge: codeChallenge,
@@ -54,7 +54,7 @@ export class XTwitterConnector implements SocialConnector {
   }
 
   async handleCallback(code: string, codeVerifier: string, redirectUri: string): Promise<ConnectionResult> {
-    const credentials = Buffer.from(`${CLIENT_ID}:${CLIENT_SECRET}`).toString('base64')
+    const credentials = Buffer.from(`${clientId()}:${clientSecret()}`).toString('base64')
     const res = await this.fetch(`${API_V2}/oauth2/token`, {
       method: 'POST',
       headers: {
@@ -98,7 +98,7 @@ export class XTwitterConnector implements SocialConnector {
   }
 
   async refreshTokens(refreshToken: string): Promise<OAuthTokens> {
-    const credentials = Buffer.from(`${CLIENT_ID}:${CLIENT_SECRET}`).toString('base64')
+    const credentials = Buffer.from(`${clientId()}:${clientSecret()}`).toString('base64')
     const res = await this.fetch(`${API_V2}/oauth2/token`, {
       method: 'POST',
       headers: {
@@ -126,7 +126,7 @@ export class XTwitterConnector implements SocialConnector {
   }
 
   async revokeConnection(tokens: OAuthTokens): Promise<void> {
-    const credentials = Buffer.from(`${CLIENT_ID}:${CLIENT_SECRET}`).toString('base64')
+    const credentials = Buffer.from(`${clientId()}:${clientSecret()}`).toString('base64')
     await this.fetch(`${API_V2}/oauth2/revoke`, {
       method: 'POST',
       headers: {
@@ -308,7 +308,7 @@ export class XTwitterConnector implements SocialConnector {
         const buf = Buffer.from(await imgRes.arrayBuffer())
         const b64 = buf.toString('base64')
 
-        const authHeader = CONSUMER_KEY
+        const authHeader = consumerKey()
           ? this.oauth1Header('POST', `${UPLOAD_API}/media/upload.json`, tokens)
           : `Bearer ${tokens.accessToken}`
 
@@ -339,7 +339,7 @@ export class XTwitterConnector implements SocialConnector {
   /** Generate an OAuth 1.0a Authorization header for the given request. */
   private oauth1Header(method: string, url: string, tokens: OAuthTokens): string {
     const oauthParams: Record<string, string> = {
-      oauth_consumer_key: CONSUMER_KEY,
+      oauth_consumer_key: consumerKey(),
       oauth_nonce: Math.random().toString(36).slice(2),
       oauth_signature_method: 'HMAC-SHA1',
       oauth_timestamp: Math.floor(Date.now() / 1000).toString(),
@@ -353,7 +353,7 @@ export class XTwitterConnector implements SocialConnector {
       .join('&')
 
     const sigBase = [method.toUpperCase(), encodeURIComponent(url), encodeURIComponent(paramStr)].join('&')
-    const sigKey = `${encodeURIComponent(CONSUMER_SECRET)}&${encodeURIComponent(tokens.refreshToken ?? '')}`
+    const sigKey = `${encodeURIComponent(consumerSecret())}&${encodeURIComponent(tokens.refreshToken ?? '')}`
     const signature = createHmac('sha1', sigKey).update(sigBase).digest('base64')
 
     oauthParams['oauth_signature'] = signature

@@ -13,9 +13,9 @@ import { createLogger } from '../../infrastructure/logger/logger'
 
 const logger = createLogger('LinkedInConnector')
 
-const CLIENT_ID = process.env['LINKEDIN_CLIENT_ID'] ?? ''
-const CLIENT_SECRET = process.env['LINKEDIN_CLIENT_SECRET'] ?? ''
-const REDIRECT_URI = 'ghostpilot://oauth/callback'
+// Read at call time so .env loaded in main/index.ts is always picked up
+const clientId = (): string => process.env['LINKEDIN_CLIENT_ID'] ?? ''
+const clientSecret = (): string => process.env['LINKEDIN_CLIENT_SECRET'] ?? ''
 
 // LinkedIn REST API v202404+
 const API_BASE = 'https://api.linkedin.com'
@@ -36,28 +36,28 @@ export class LinkedInConnector implements SocialConnector {
 
   // ─── OAuth ──────────────────────────────────────────────────────────────────
 
-  getAuthURL(state: string, _codeVerifier: string): string {
+  getAuthURL(state: string, _codeVerifier: string, redirectUri: string): string {
     // LinkedIn uses standard OAuth 2.0 (PKCE not supported as of 2024)
     const params = new URLSearchParams({
       response_type: 'code',
-      client_id: CLIENT_ID,
-      redirect_uri: REDIRECT_URI,
+      client_id: clientId(),
+      redirect_uri: redirectUri,
       state,
       scope: SCOPES.join(' '),
     })
     return `https://www.linkedin.com/oauth/v2/authorization?${params}`
   }
 
-  async handleCallback(code: string, _codeVerifier: string): Promise<ConnectionResult> {
+  async handleCallback(code: string, _codeVerifier: string, redirectUri: string): Promise<ConnectionResult> {
     const res = await this.fetch('https://www.linkedin.com/oauth/v2/accessToken', {
       method: 'POST',
       headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
       body: new URLSearchParams({
         grant_type: 'authorization_code',
         code,
-        redirect_uri: REDIRECT_URI,
-        client_id: CLIENT_ID,
-        client_secret: CLIENT_SECRET,
+        redirect_uri: redirectUri,
+        client_id: clientId(),
+        client_secret: clientSecret(),
       }).toString(),
     })
 
@@ -90,8 +90,8 @@ export class LinkedInConnector implements SocialConnector {
       body: new URLSearchParams({
         grant_type: 'refresh_token',
         refresh_token: refreshToken,
-        client_id: CLIENT_ID,
-        client_secret: CLIENT_SECRET,
+        client_id: clientId(),
+        client_secret: clientSecret(),
       }).toString(),
     })
 

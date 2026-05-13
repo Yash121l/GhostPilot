@@ -13,8 +13,9 @@ import { createLogger } from '../../infrastructure/logger/logger'
 
 const logger = createLogger('InstagramConnector')
 
-const APP_ID = process.env['META_APP_ID'] ?? ''
-const APP_SECRET = process.env['META_APP_SECRET'] ?? ''
+// Read at call time so .env loaded in main/index.ts is always picked up
+const appId = (): string => process.env['META_APP_ID'] ?? ''
+const appSecret = (): string => process.env['META_APP_SECRET'] ?? ''
 const GRAPH = 'https://graph.facebook.com/v20.0'
 
 // Instagram limits: 50 API-triggered posts per 24h window; 160 DMs per hour
@@ -43,7 +44,7 @@ export class InstagramConnector implements SocialConnector {
 
   getAuthURL(state: string, _codeVerifier: string, redirectUri: string): string {
     const params = new URLSearchParams({
-      client_id: APP_ID,
+      client_id: appId(),
       redirect_uri: redirectUri,
       scope: [
         'instagram_basic',
@@ -62,14 +63,14 @@ export class InstagramConnector implements SocialConnector {
   async handleCallback(code: string, _codeVerifier: string, redirectUri: string): Promise<ConnectionResult> {
     const shortRes = await this.gfetch('/oauth/access_token', {
       method: 'POST',
-      body: new URLSearchParams({ client_id: APP_ID, client_secret: APP_SECRET, redirect_uri: redirectUri, code }),
+      body: new URLSearchParams({ client_id: appId(), client_secret: appSecret(), redirect_uri: redirectUri, code }),
     })
     if (!shortRes.ok) throw new Error(`Instagram token exchange failed: ${await shortRes.text()}`)
     const shortData = (await shortRes.json()) as { access_token: string }
 
     // Exchange for long-lived (60-day) token
     const longRes = await this.gfetch(
-      `/oauth/access_token?grant_type=fb_exchange_token&client_id=${APP_ID}&client_secret=${APP_SECRET}&fb_exchange_token=${shortData.access_token}`,
+      `/oauth/access_token?grant_type=fb_exchange_token&client_id=${appId()}&client_secret=${appSecret()}&fb_exchange_token=${shortData.access_token}`,
     )
     if (!longRes.ok) throw new Error(`Instagram long-lived token exchange failed: ${await longRes.text()}`)
     const longData = (await longRes.json()) as { access_token: string; expires_in?: number }

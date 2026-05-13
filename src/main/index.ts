@@ -1,5 +1,7 @@
 import { app, BrowserWindow, Tray, nativeImage, dialog, shell, protocol, Notification } from 'electron'
 import { join } from 'path'
+import { readFileSync, existsSync } from 'fs'
+import { resolve } from 'path'
 import { Worker } from 'worker_threads'
 import { electronApp, optimizer } from '@electron-toolkit/utils'
 import { initDb, closeDb, getDbPath } from './infrastructure/db/connection'
@@ -9,6 +11,24 @@ import { registerAllHandlers } from './ipc'
 import { initServices, getServices } from './services/index'
 import type { Platform } from '../shared/types/platform'
 import { APP_NAME, APP_URL_SCHEME } from '../shared/constants'
+
+// ─── Load .env into process.env at runtime ────────────────────────────────────
+// electron-vite's `define` only substitutes at build time. In dev mode the
+// main process runs from source, so we must load .env ourselves.
+;(function loadEnv() {
+  const envPath = resolve(process.cwd(), '.env')
+  if (!existsSync(envPath)) return
+  const lines = readFileSync(envPath, 'utf-8').split('\n')
+  for (const line of lines) {
+    const trimmed = line.trim()
+    if (!trimmed || trimmed.startsWith('#')) continue
+    const eq = trimmed.indexOf('=')
+    if (eq === -1) continue
+    const key = trimmed.slice(0, eq).trim()
+    const val = trimmed.slice(eq + 1).trim().replace(/^["']|["']$/g, '')
+    if (key && !(key in process.env)) process.env[key] = val
+  }
+})()
 
 const logger = createLogger('Main')
 
