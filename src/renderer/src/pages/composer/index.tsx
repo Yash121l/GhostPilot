@@ -90,10 +90,23 @@ export default function ComposerPage(): ReactElement {
     if (!selectedPlatforms.length) { setCreateError('Select at least one platform.'); return }
     setCreateError(null)
 
-    // Don't create a DB record yet — just generate variants in memory.
-    // The post is only saved when the user explicitly publishes or schedules.
-    // If we already have a saved post (from a previous generate), reuse it.
+    // Always create one post per composer session.
+    // If we already have a savedPost, try to update its body.
+    // If the post no longer exists in DB (e.g. was cleared), create a new one.
     let post = savedPost
+
+    if (post) {
+      const updateRes = await ipc.invoke(IPC_CHANNELS.POST_UPDATE_BODY, { id: post.id, body })
+      if (updateRes.ok) {
+        post = updateRes.value
+        setSavedPost(post)
+      } else {
+        // Post was deleted — create fresh
+        post = null
+        setSavedPost(null)
+      }
+    }
+
     if (!post) {
       const createRes = await ipc.invoke(IPC_CHANNELS.POST_CREATE, {
         personaId: personaId || 'default',
@@ -103,35 +116,21 @@ export default function ComposerPage(): ReactElement {
       if (!createRes.ok) { setCreateError(createRes.error.message); return }
       post = createRes.value
       setSavedPost(post)
-    } else {
-      // Update the body if it changed since last generate
-      const updateRes = await ipc.invoke(IPC_CHANNELS.POST_UPDATE_BODY, {
-        id: post.id,
-        body,
-      })
-      if (updateRes.ok) {
-        post = updateRes.value
-        setSavedPost(post)
-      }
     }
 
     await generate(post.id, selectedPlatforms)
   }, [bodyText, personaId, selectedPlatforms, savedPost, generate])
 
   const handleClear = useCallback((): void => {
-    // Delete the draft post from DB if it was never published/scheduled
-    if (savedPost) {
-      ipc.invoke(IPC_CHANNELS.POST_DELETE, { id: savedPost.id }).catch(() => {/* non-fatal */})
-    }
     editorRef.current?.commands.clearContent()
     setBodyText('')
-    setSavedPost(null)
+    setSavedPost(null)  // forget the post ID — next Generate creates a fresh one
     setCreateError(null)
     setSuccessMsg(null)
     setScheduleStep('idle')
     setScheduleAt('')
     resetGen()
-  }, [savedPost, resetGen])
+  }, [resetGen])
 
   const handleCopy = async (): Promise<void> => {
     const variant = genState.variantMap[activePlatform]
