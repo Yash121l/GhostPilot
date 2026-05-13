@@ -1,8 +1,6 @@
 /**
  * @module ipc-types
  * Single source of truth for ALL IPC channel names and their typed payloads.
- * Imported by preload (contextBridge) and renderer (window.api calls).
- * main/ipc handlers must satisfy these contracts.
  */
 
 import type { Result, AppError } from './types/error'
@@ -11,9 +9,13 @@ import type { Platform } from './types/platform'
 import type { Persona } from './types/persona'
 import type { Intent } from './types/intent'
 import type { TrendCluster } from './types/trend'
-import type { AIGatewayRequest, AIGatewayResponse, LLMUsage } from './types/ai'
-
-// ─── Channel Names ────────────────────────────────────────────────────────────
+import type {
+  AIGatewayRequest,
+  AIGatewayResponse,
+  LLMUsage,
+  ProviderKeyConfig,
+  OllamaStatus,
+} from './types/ai'
 
 export const IPC_CHANNELS = {
   // Posts
@@ -28,15 +30,25 @@ export const IPC_CHANNELS = {
   // AI
   AI_COMPLETE: 'ai:complete',
   AI_STREAM_START: 'ai:stream:start',
-  AI_STREAM_CHUNK: 'ai:stream:chunk', // main → renderer event
+  AI_STREAM_CHUNK: 'ai:stream:chunk',
   AI_STREAM_END: 'ai:stream:end',
   AI_USAGE_LIST: 'ai:usage:list',
+  AI_USAGE_DAILY: 'ai:usage:daily',
+
+  // AI Provider Keys
+  AI_KEYS_LIST: 'ai:keys:list',
+  AI_KEYS_ADD: 'ai:keys:add',
+  AI_KEYS_DELETE: 'ai:keys:delete',
+  AI_KEYS_SET_DEFAULT: 'ai:keys:set-default',
+  AI_KEYS_TEST: 'ai:keys:test',
+  AI_OLLAMA_STATUS: 'ai:ollama:status',
 
   // Persona
   PERSONA_GET: 'persona:get',
   PERSONA_LIST: 'persona:list',
   PERSONA_CREATE: 'persona:create',
   PERSONA_UPDATE: 'persona:update',
+  PERSONA_DELETE: 'persona:delete',
 
   // Intent
   INTENT_LIST: 'intent:list',
@@ -46,6 +58,8 @@ export const IPC_CHANNELS = {
 
   // Trends
   TREND_LIST: 'trend:list',
+  TREND_REFRESH: 'trend:refresh',
+  TREND_DISMISS: 'trend:dismiss',
 
   // Auth
   AUTH_CONNECT: 'auth:connect',
@@ -62,7 +76,7 @@ export const IPC_CHANNELS = {
 
 export type IPCChannel = (typeof IPC_CHANNELS)[keyof typeof IPC_CHANNELS]
 
-// ─── Payload types per channel ────────────────────────────────────────────────
+// ─── Shared payload types ─────────────────────────────────────────────────────
 
 export interface CreatePostInput {
   personaId: string
@@ -85,7 +99,7 @@ export interface SchedulePostInput {
   postId: string
   variantId: string
   platform: Platform
-  scheduledAt: string // ISO string — renderer cannot send Date objects over IPC
+  scheduledAt: string
 }
 
 export interface AuditQueryInput {
@@ -125,10 +139,24 @@ export interface AuthConnectInput {
 export interface AuthStatusOutput {
   platform: Platform
   connected: boolean
+  displayName?: string
   expiresAt?: number
 }
 
-// ─── Typed IPC Map (request → response) ──────────────────────────────────────
+export interface AddProviderKeyInput {
+  provider: string
+  label: string
+  secret: string
+}
+
+export interface DailyUsage {
+  date: string
+  totalCostUsd: number
+  totalTokens: number
+  byProvider: Record<string, number>
+}
+
+// ─── Typed IPC Map ────────────────────────────────────────────────────────────
 
 export interface IPCMap {
   [IPC_CHANNELS.POST_CREATE]: { req: CreatePostInput; res: Result<Post, AppError> }
@@ -142,10 +170,7 @@ export interface IPCMap {
     res: Result<Post, AppError>
   }
   [IPC_CHANNELS.POST_APPROVE]: { req: ApprovePostInput; res: Result<Post, AppError> }
-  [IPC_CHANNELS.POST_SCHEDULE]: {
-    req: SchedulePostInput
-    res: Result<Job, AppError>
-  }
+  [IPC_CHANNELS.POST_SCHEDULE]: { req: SchedulePostInput; res: Result<Job, AppError> }
   [IPC_CHANNELS.POST_DELETE]: { req: { id: string }; res: Result<void, AppError> }
 
   [IPC_CHANNELS.AI_COMPLETE]: {
@@ -155,6 +180,34 @@ export interface IPCMap {
   [IPC_CHANNELS.AI_USAGE_LIST]: {
     req: { limit?: number }
     res: Result<LLMUsage[], AppError>
+  }
+  [IPC_CHANNELS.AI_USAGE_DAILY]: {
+    req: { days?: number }
+    res: Result<DailyUsage[], AppError>
+  }
+  [IPC_CHANNELS.AI_KEYS_LIST]: {
+    req: Record<string, never>
+    res: Result<ProviderKeyConfig[], AppError>
+  }
+  [IPC_CHANNELS.AI_KEYS_ADD]: {
+    req: AddProviderKeyInput
+    res: Result<ProviderKeyConfig, AppError>
+  }
+  [IPC_CHANNELS.AI_KEYS_DELETE]: {
+    req: { id: string }
+    res: Result<void, AppError>
+  }
+  [IPC_CHANNELS.AI_KEYS_SET_DEFAULT]: {
+    req: { id: string }
+    res: Result<void, AppError>
+  }
+  [IPC_CHANNELS.AI_KEYS_TEST]: {
+    req: { id: string }
+    res: Result<{ latencyMs: number; model: string }, AppError>
+  }
+  [IPC_CHANNELS.AI_OLLAMA_STATUS]: {
+    req: Record<string, never>
+    res: Result<OllamaStatus, AppError>
   }
 
   [IPC_CHANNELS.PERSONA_GET]: { req: { id: string }; res: Result<Persona, AppError> }
@@ -167,6 +220,7 @@ export interface IPCMap {
     req: Partial<Omit<Persona, 'id' | 'createdAt' | 'updatedAt'>> & { id: string }
     res: Result<Persona, AppError>
   }
+  [IPC_CHANNELS.PERSONA_DELETE]: { req: { id: string }; res: Result<void, AppError> }
 
   [IPC_CHANNELS.INTENT_LIST]: {
     req: { personaId?: string }
@@ -185,6 +239,14 @@ export interface IPCMap {
   [IPC_CHANNELS.TREND_LIST]: {
     req: { limit?: number }
     res: Result<TrendCluster[], AppError>
+  }
+  [IPC_CHANNELS.TREND_REFRESH]: {
+    req: Record<string, never>
+    res: Result<void, AppError>
+  }
+  [IPC_CHANNELS.TREND_DISMISS]: {
+    req: { id: string }
+    res: Result<void, AppError>
   }
 
   [IPC_CHANNELS.AUTH_CONNECT]: {

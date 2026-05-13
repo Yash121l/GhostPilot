@@ -1,41 +1,24 @@
-/**
- * @module App
- * Root application component. Sets up layout shell and navigation.
- * Upgraded with premium UI/UX, Lucide icons, and refined layouts.
- */
-
-import { useState, type ReactElement } from 'react'
+import { useState, useEffect, type ReactElement } from 'react'
 import {
-  PenTool,
-  CalendarDays,
-  Inbox,
-  Target,
-  TrendingUp,
-  UserCircle2,
-  BarChart3,
-  Settings,
-  DatabaseZap,
-  Bot,
-  Sparkles,
-  Command,
-  Ghost
+  PenTool, CalendarDays, Inbox, Target, TrendingUp,
+  UserCircle2, BarChart3, Settings, DatabaseZap, Bot, Sparkles, Ghost,
 } from 'lucide-react'
+import { ipc, IPC_CHANNELS } from './lib/ipc'
+import type { AuthStatusOutput } from '@shared/ipc-types'
+import { Platform } from '@shared/types/platform'
 
-type Page =
-  | 'composer'
-  | 'calendar'
-  | 'inbox'
-  | 'goals'
-  | 'trends'
-  | 'personas'
-  | 'analytics'
-  | 'settings'
+import ComposerPage from './pages/ComposerPage'
+import CalendarPage from './pages/CalendarPage'
+import InboxPage from './pages/InboxPage'
+import GoalsPage from './pages/GoalsPage'
+import TrendsPage from './pages/TrendsPage'
+import PersonasPage from './pages/PersonasPage'
+import AnalyticsPage from './pages/AnalyticsPage'
+import SettingsPage from './pages/SettingsPage'
 
-interface NavEntry {
-  id: Page
-  label: string
-  icon: React.ElementType
-}
+type Page = 'composer' | 'calendar' | 'inbox' | 'goals' | 'trends' | 'personas' | 'analytics' | 'settings'
+
+interface NavEntry { id: Page; label: string; icon: React.ElementType }
 
 const NAV: NavEntry[] = [
   { id: 'composer',  label: 'Composer',  icon: PenTool },
@@ -48,41 +31,57 @@ const NAV: NavEntry[] = [
   { id: 'settings',  label: 'Settings',  icon: Settings },
 ]
 
-function Placeholder({ page }: { page: Page }): ReactElement {
-  const activeNav = NAV.find((n) => n.id === page)
-  const Icon = activeNav?.icon || Ghost
-
-  return (
-    <div className="flex-1 flex flex-col items-center justify-center h-full w-full p-8 animate-slide-up">
-      <div className="flex flex-col items-center max-w-md w-full text-center">
-        {/* Soft glowing icon container */}
-        <div className="relative mb-8">
-          <div className="absolute inset-0 bg-[var(--color-brand-primary)] opacity-20 blur-2xl rounded-full" />
-          <div className="relative bg-white/5 p-5 rounded-3xl border border-white/10 backdrop-blur-md">
-            <Icon size={42} strokeWidth={1.5} className="text-[var(--color-text-primary)]" />
-          </div>
-        </div>
-        
-        <h2 className="text-2xl font-semibold mb-3 tracking-tight text-white/90">{activeNav?.label}</h2>
-        
-        <p className="text-[var(--color-text-muted)] mb-10 text-sm leading-relaxed">
-          This module is part of the GhostPilot architecture. It will be implemented in a subsequent phase.
-        </p>
-        
-        {/* Sleek status indicator */}
-        <div className="flex items-center gap-2.5 bg-black/20 px-5 py-2.5 rounded-full border border-white/5 shadow-sm">
-          <div className="w-2 h-2 rounded-full bg-[var(--color-brand-primary)] animate-pulse" />
-          <span className="text-[11px] font-medium tracking-widest text-[var(--color-text-secondary)] uppercase">
-            Scaffold Complete
-          </span>
-        </div>
-      </div>
-    </div>
-  )
+const PAGES: Record<Page, ReactElement> = {
+  composer:  <ComposerPage />,
+  calendar:  <CalendarPage />,
+  inbox:     <InboxPage />,
+  goals:     <GoalsPage />,
+  trends:    <TrendsPage />,
+  personas:  <PersonasPage />,
+  analytics: <AnalyticsPage />,
+  settings:  <SettingsPage />,
 }
 
 export default function App(): ReactElement {
-  const [page, setPage] = useState<Page>('calendar')
+  const [page, setPage] = useState<Page>('composer')
+  const [connections, setConnections] = useState<AuthStatusOutput[]>([])
+  const [aiConfigured, setAiConfigured] = useState(false)
+  const [dbOk] = useState(true)
+
+  // Load connection + AI status on mount
+  useEffect(() => {
+    ipc.invoke(IPC_CHANNELS.AUTH_STATUS, {}).then((res) => {
+      if (res.ok) setConnections(res.value)
+    })
+    ipc.invoke(IPC_CHANNELS.AI_KEYS_LIST, {}).then((res) => {
+      if (res.ok) setAiConfigured(res.value.length > 0)
+    })
+    // Also check Ollama
+    ipc.invoke(IPC_CHANNELS.AI_OLLAMA_STATUS, {}).then((res) => {
+      if (res.ok && res.value.available) setAiConfigured(true)
+    })
+  }, [])
+
+  // Listen for auth events from main process
+  useEffect(() => {
+    const unsub = window.api?.on('auth:connected', () => {
+      ipc.invoke(IPC_CHANNELS.AUTH_STATUS, {}).then((res) => {
+        if (res.ok) setConnections(res.value)
+      })
+    })
+    return () => unsub?.()
+  }, [])
+
+  // Listen for programmatic nav events (e.g., Composer → Calendar)
+  useEffect(() => {
+    const handler = (e: Event): void => {
+      const detail = (e as CustomEvent<Page | { page: Page; prefill?: string }>).detail
+      const target = typeof detail === 'string' ? detail : detail.page
+      if (NAV.some((n) => n.id === target)) setPage(target)
+    }
+    window.addEventListener('nav', handler)
+    return () => window.removeEventListener('nav', handler)
+  }, [])
 
   return (
     <div className="app-shell">
@@ -95,18 +94,16 @@ export default function App(): ReactElement {
           </div>
         </div>
         <div className="flex-1" />
-        <div className="badge badge-brand animate-pulse-glow flex items-center gap-1.5 shadow-lg opacity-90 scale-90 origin-right">
+        <div className="badge badge-brand flex items-center gap-1.5 shadow-lg opacity-90 scale-90 origin-right">
           <Sparkles size={10} />
-          <span className="text-[9px]">Phase 0</span>
+          <span className="text-[9px]">Phase 1</span>
         </div>
       </header>
 
       {/* ── Sidebar ── */}
       <nav className="sidebar pt-6 flex flex-col" aria-label="Main navigation">
-        <div className="sidebar-header">
-          Workspace
-        </div>
-        
+        <div className="sidebar-header">Workspace</div>
+
         <div className="flex-1 flex flex-col gap-0.5 px-3">
           {NAV.map((item) => {
             const Icon = item.icon
@@ -124,48 +121,60 @@ export default function App(): ReactElement {
           })}
         </div>
 
-        {/* Connection status indicators */}
+        {/* Connection status */}
         <div style={{ marginTop: 'auto', paddingBottom: '32px', paddingTop: '24px' }}>
-          <div className="sidebar-header">
-            Connections
-          </div>
-          
+          <div className="sidebar-header">Connections</div>
           <div className="connection-list">
             {[
-              { id: 'linkedin', label: 'LinkedIn' },
-              { id: 'twitter', label: 'X (Twitter)' },
-              { id: 'instagram', label: 'Instagram' }
-            ].map((p) => (
-              <div key={p.id} className="connection-item">
-                <span className="connection-label">{p.label}</span>
-                <div className="connection-dot" />
-              </div>
-            ))}
+              { id: Platform.LINKEDIN, label: 'LinkedIn' },
+              { id: Platform.TWITTER, label: 'X (Twitter)' },
+              { id: Platform.INSTAGRAM, label: 'Instagram' },
+            ].map((p) => {
+              const connected = connections.find((c) => c.platform === p.id)?.connected
+              return (
+                <div
+                  key={p.id}
+                  className="connection-item"
+                  onClick={() => setPage('inbox')}
+                >
+                  <span className="connection-label">{p.label}</span>
+                  <div
+                    className="connection-dot"
+                    style={{
+                      background: connected ? 'var(--color-success)' : undefined,
+                      boxShadow: connected ? '0 0 8px var(--color-success)' : undefined,
+                    }}
+                  />
+                </div>
+              )
+            })}
           </div>
         </div>
       </nav>
 
       {/* ── Main Content ── */}
       <main className="main-content" key={page}>
-        <Placeholder page={page} />
+        <div className="animate-slide-up h-full">
+          {PAGES[page]}
+        </div>
       </main>
 
       {/* ── Status Bar ── */}
       <footer className="statusbar select-none text-[10px]">
         <div className="flex items-center gap-2 opacity-80">
-          <DatabaseZap size={12} className="text-[var(--color-success)]" />
-          <span className="tracking-wide">DB: Connected</span>
+          <DatabaseZap size={12} className={dbOk ? 'text-[var(--color-success)]' : 'text-[var(--color-error)]'} />
+          <span className="tracking-wide">DB: {dbOk ? 'Connected' : 'Error'}</span>
         </div>
-        
         <div className="flex items-center gap-2 opacity-80">
-          <Bot size={12} className="text-[var(--color-text-muted)]" />
-          <span className="tracking-wide">AI: Not configured</span>
+          <Bot size={12} className={aiConfigured ? 'text-[var(--color-brand-primary)]' : 'text-[var(--color-text-muted)]'} />
+          <span className="tracking-wide">AI: {aiConfigured ? 'Ready' : 'Not configured'}</span>
         </div>
-        
         <div className="flex-1" />
-        
-        <div className="flex items-center gap-1.5 opacity-50 hover:opacity-100 transition-opacity cursor-default">
-          <Command size={10} />
+        <div
+          className="flex items-center gap-1.5 opacity-50 hover:opacity-100 transition-opacity cursor-pointer"
+          onClick={() => setPage('settings')}
+        >
+          <Settings size={10} />
           <span className="font-mono">v1.0.0</span>
         </div>
       </footer>

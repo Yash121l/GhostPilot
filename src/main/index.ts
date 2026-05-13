@@ -1,32 +1,17 @@
-/**
- * @module main/index
- * Electron main process entry point.
- *
- * Boot order:
- *  1. initDb()           — open SQLite, WAL mode
- *  2. runMigrations()    — apply pending SQL migrations
- *  3. Register services  — DI wiring
- *  4. Register IPC handlers
- *  5. Create BrowserWindow
- *  6. Setup Tray
- *  7. Register URL scheme for OAuth callbacks
- */
-
-import { app, BrowserWindow, Tray, nativeImage, dialog, shell, protocol } from 'electron'
+import { app, BrowserWindow, Tray, nativeImage, dialog, shell, protocol, Notification } from 'electron'
 import { join } from 'path'
 import { electronApp, optimizer } from '@electron-toolkit/utils'
 import { initDb, closeDb } from './infrastructure/db/connection'
 import { runMigrations } from './infrastructure/db/migration-runner'
 import { createLogger } from './infrastructure/logger/logger'
 import { registerAllHandlers } from './ipc'
+import { initServices, getServices } from './services/index'
 import { APP_NAME, APP_URL_SCHEME } from '../shared/constants'
 
 const logger = createLogger('Main')
 
 let mainWindow: BrowserWindow | null = null
 let tray: Tray | null = null
-
-// ─── Startup ──────────────────────────────────────────────────────────────────
 
 async function bootstrap(): Promise<void> {
   logger.info({ msg: 'App starting', version: app.getVersion() })
@@ -45,10 +30,25 @@ async function bootstrap(): Promise<void> {
     return
   }
 
-  // 2. IPC handlers
+  // 2. IPC handlers (must be before services so handles are registered)
   registerAllHandlers()
 
-  // 3. Create main window
+  // 3. Application services
+  try {
+    await initServices()
+  } catch (e) {
+    logger.error({ msg: 'Service initialisation failed', error: String(e) })
+    // Non-fatal — app still works; user just needs to configure providers
+  }
+
+  // 4. Start scheduler
+  try {
+    getServices().schedulerService.start()
+  } catch {
+    // Services may not be ready if DB failed partially
+  }
+
+  // 5. Main window
   mainWindow = createMainWindow()
 }
 
@@ -69,12 +69,10 @@ function createMainWindow(): BrowserWindow {
   })
 
   win.webContents.setWindowOpenHandler(({ url }) => {
-    // Open all external links in system browser.
     shell.openExternal(url)
     return { action: 'deny' }
   })
 
-  // Content Security Policy
   win.webContents.session.webRequest.onHeadersReceived((details, callback) => {
     callback({
       responseHeaders: {
@@ -88,7 +86,6 @@ function createMainWindow(): BrowserWindow {
     })
   })
 
-  // Load renderer
   if (process.env['ELECTRON_RENDERER_URL']) {
     win.loadURL(process.env['ELECTRON_RENDERER_URL'])
     win.webContents.openDevTools()
@@ -101,31 +98,39 @@ function createMainWindow(): BrowserWindow {
     logger.info({ msg: 'Main window ready' })
   })
 
+  // When window is closed, keep app alive in tray
+  win.on('close', (e) => {
+    if (process.platform === 'darwin') {
+      e.preventDefault()
+      win.hide()
+    }
+  })
+
   return win
 }
 
-// ─── OAuth URL scheme ─────────────────────────────────────────────────────────
-
 function registerOAuthScheme(): void {
-  // Must be called before app.whenReady()
   protocol.registerSchemesAsPrivileged([
     { scheme: APP_URL_SCHEME, privileges: { secure: true, standard: true } },
   ])
 }
 
-// ─── Tray ─────────────────────────────────────────────────────────────────────
-
 function createTray(): void {
-  const icon = nativeImage.createFromPath(join(__dirname, '../../resources/icons/tray.png'))
-  tray = new Tray(icon.resize({ width: 16, height: 16 }))
-  tray.setToolTip(APP_NAME)
-  tray.on('click', () => {
-    mainWindow?.show()
-    mainWindow?.focus()
-  })
+  try {
+    const icon = nativeImage.createFromPath(join(__dirname, '../../resources/icons/tray.png'))
+    tray = new Tray(icon.resize({ width: 16, height: 16 }))
+    tray.setToolTip(APP_NAME)
+    tray.on('click', () => {
+      mainWindow?.show()
+      mainWindow?.focus()
+    })
+  } catch {
+    // Tray icon missing — not fatal in dev
+    logger.warn({ msg: 'Tray icon not found — skipping tray setup' })
+  }
 }
 
-// ─── App lifecycle ────────────────────────────────────────────────────────────
+// ─── App lifecycle ─────────────────────────────────────────────────────────────
 
 registerOAuthScheme()
 
@@ -153,13 +158,28 @@ app.on('window-all-closed', () => {
 })
 
 app.on('before-quit', () => {
-  logger.info({ msg: 'App quitting — closing DB' })
+  logger.info({ msg: 'App quitting — stopping scheduler & closing DB' })
+  try {
+    getServices().schedulerService.stop()
+  } catch {
+    // services may not have init'd
+  }
   closeDb()
   tray?.destroy()
 })
 
 // Handle OAuth callback via custom URL scheme
-app.on('open-url', (_event, url) => {
-  logger.info({ msg: 'OAuth callback received', url: url.split('?')[0] })
-  mainWindow?.webContents.send('auth:oauth-callback', url)
+app.on('open-url', async (_event, url) => {
+  logger.info({ msg: 'OAuth callback received', path: url.split('?')[0] })
+  try {
+    await getServices().oauthManager.handleCallback(url)
+    mainWindow?.webContents.send('auth:connected')
+    new Notification({
+      title: 'GhostPilot',
+      body: 'Platform connected successfully',
+    }).show()
+  } catch (e) {
+    logger.error({ msg: 'OAuth callback failed', error: String(e) })
+    mainWindow?.webContents.send('auth:error', String(e))
+  }
 })

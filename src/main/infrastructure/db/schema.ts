@@ -187,6 +187,19 @@ export const contextChunks = sqliteTable('context_chunks', {
   createdAt: integer('created_at', { mode: 'timestamp' }).notNull(),
 })
 
+// ─── AI Provider Keys ─────────────────────────────────────────────────────────
+
+export const aiProviderKeys = sqliteTable('ai_provider_keys', {
+  id: text('id').primaryKey(),
+  provider: text('provider').notNull(), // 'openai' | 'anthropic' | 'ollama' | 'openrouter' | 'groq'
+  label: text('label').notNull().default(''),
+  /** Keychain reference — actual secret is NEVER stored in DB. */
+  keychainKey: text('keychain_key').notNull(),
+  isDefault: integer('is_default', { mode: 'boolean' }).default(false),
+  lastUsedAt: integer('last_used_at', { mode: 'timestamp' }),
+  createdAt: integer('created_at', { mode: 'timestamp' }).notNull(),
+})
+
 // ─── Settings ─────────────────────────────────────────────────────────────────
 
 export const settings = sqliteTable('settings', {

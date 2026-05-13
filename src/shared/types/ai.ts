@@ -3,7 +3,6 @@
  * AI-related shared types for the AI Gateway and usage ledger.
  */
 
-/** All task types the AI Gateway can perform. */
 export enum AITask {
   DRAFT_POST = 'draft_post',
   ADAPT_VARIANT = 'adapt_variant',
@@ -16,17 +15,34 @@ export enum AITask {
   MODERATION = 'moderation',
 }
 
-/** Hint to the routing policy for model selection. */
 export enum ModelHint {
-  /** Cheapest available model that can handle the task. */
   ECONOMY = 'economy',
-  /** Best quality model for critical operations. */
   PREMIUM = 'premium',
-  /** Prefer local models (Ollama / LM Studio) — offline-safe. */
   LOCAL = 'local',
 }
 
-/** Token + cost record for a single LLM call. */
+export enum AIProvider {
+  OPENAI = 'openai',
+  ANTHROPIC = 'anthropic',
+  OLLAMA = 'ollama',
+  OPENROUTER = 'openrouter',
+  GROQ = 'groq',
+}
+
+export interface ProviderKeyConfig {
+  id: string
+  provider: AIProvider | string
+  label: string
+  isDefault: boolean
+  lastUsedAt?: Date
+  createdAt: Date
+}
+
+export interface OllamaStatus {
+  available: boolean
+  models: string[]
+}
+
 export interface LLMUsage {
   id: string
   ts: Date
@@ -35,27 +51,23 @@ export interface LLMUsage {
   task: AITask
   promptTokens: number
   completionTokens: number
-  /** Cost in USD (estimated from pricing tables). */
   estimatedCostUsd: number
   postId?: string
   personaId?: string
 }
 
-/** Input to the AI Gateway complete() method. */
 export interface AIGatewayRequest {
   task: AITask
   hint: ModelHint
-  /** Rendered prompt (already assembled by PromptBuilder). */
   prompt: string
-  /** Optional system message override. */
   systemMessage?: string
   maxTokens?: number
   temperature?: number
-  /** Trace ID for correlating across IPC / logs. */
   traceId: string
+  postId?: string
+  personaId?: string
 }
 
-/** Output from the AI Gateway. */
 export interface AIGatewayResponse {
   text: string
   provider: string
