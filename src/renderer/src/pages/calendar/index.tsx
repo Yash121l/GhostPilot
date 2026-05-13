@@ -26,7 +26,6 @@ const LABELS: Record<Platform, string> = {
   [Platform.TWITTER]: 'X',
   [Platform.INSTAGRAM]: 'Instagram',
 }
-const RATE_LABEL: Record<Platform, string> = LABELS
 
 interface DayPost {
   id: string

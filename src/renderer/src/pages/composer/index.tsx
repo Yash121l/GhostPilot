@@ -5,7 +5,7 @@ import {
 } from 'lucide-react'
 import { ipc, IPC_CHANNELS } from '../../lib/ipc'
 import type { Post } from '@shared/types/post'
-import { Platform, PLATFORM_CHAR_LIMITS, PLATFORM_LABELS } from '@shared/types/platform'
+import { Platform, PLATFORM_LABELS } from '@shared/types/platform'
 import { useVariantGenerator } from '../../hooks/useVariantGenerator'
 import { TiptapEditor } from '../../components/composer/TiptapEditor'
 import { StyleDriftMeter } from '../../components/composer/StyleDriftMeter'
@@ -198,7 +198,6 @@ export default function ComposerPage(): ReactElement {
   }
 
   const activeVariant = genState.variantMap[activePlatform]
-  const charLimit = PLATFORM_CHAR_LIMITS[activePlatform]
   const charCount = activeVariant?.charCount ?? 0
   const generating = genState.status === 'loading'
 
