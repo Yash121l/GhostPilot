@@ -56,17 +56,23 @@ META_APP_SECRET=
 
 ## 4. How the OAuth callback works
 
-GhostPilot does **not** use a custom URL scheme. Instead, when you click Connect, it:
+The redirect URI for all three platforms is:
 
-1. Spins up a temporary `http://127.0.0.1:{random-port}/oauth/callback` server
-2. Opens the platform's OAuth page in your browser
-3. Waits for the redirect back to localhost
-4. Exchanges the code for tokens, stores them in the macOS Keychain, then shuts the server down
+```
+https://ghostpilot.yashlunawat.com/oauth/callback
+```
 
-The browser tab shows a "✓ Connected — you can close this tab" page when done.
+**Flow:**
+1. You click Connect in the app → browser opens the platform's OAuth page
+2. You authorize → platform redirects to `https://ghostpilot.yashlunawat.com/oauth/callback?code=...&state=...`
+3. That page immediately fires `ghostpilot://oauth/callback?code=...&state=...` (a deep link)
+4. Electron catches the deep link via `app.on('open-url')`, exchanges the code for tokens, stores them in the macOS Keychain
+5. The browser tab shows "✓ Connected — you can close this tab"
 
-**What to register as redirect URI in every platform app:** `http://127.0.0.1`  
-(Each platform accepts any port on 127.0.0.1 without needing an exact port match.)
+**Register this exact URI in every platform app:**
+```
+https://ghostpilot.yashlunawat.com/oauth/callback
+```
 
 ---
 
@@ -77,7 +83,7 @@ The browser tab shows a "✓ Connected — you can close this tab" page when don
 1. Go to [linkedin.com/developers/apps](https://www.linkedin.com/developers/apps) → **Create app**
 2. Fill in App name, LinkedIn Page, logo (any image)
 3. **Auth tab → OAuth 2.0 settings → Authorized redirect URLs:**
-   - Add `http://127.0.0.1`
+   - Add `https://ghostpilot.yashlunawat.com/oauth/callback`
 4. **Products tab** — request both:
    - **Sign In with LinkedIn using OpenID Connect** → gives `openid`, `profile`
    - **Share on LinkedIn** → gives `w_member_social`
@@ -121,7 +127,7 @@ The browser tab shows a "✓ Connected — you can close this tab" page when don
 3. **App settings → User authentication settings:**
    - Enable **OAuth 2.0**
    - App type: **Native App**
-   - Callback URI: `http://127.0.0.1`
+   - Callback URI: `https://ghostpilot.yashlunawat.com/oauth/callback`
    - Website URL: anything (e.g. `https://ghostpilot.yashlunawat.com`)
 4. Copy **Client ID** and **Client Secret** → paste into `.env` as `TWITTER_CLIENT_ID` / `TWITTER_CLIENT_SECRET`
 
@@ -167,7 +173,7 @@ Instagram requires a **Meta Business app** with an **Instagram Business or Creat
    - **Facebook Login** (for OAuth)
    - **Instagram Graph API**
 4. **Facebook Login → Settings → Valid OAuth Redirect URIs:**
-   - Add `http://127.0.0.1`
+   - Add `https://ghostpilot.yashlunawat.com/oauth/callback`
 5. Copy **App ID** and **App Secret** → paste into `.env` as `META_APP_ID` / `META_APP_SECRET`
 
 ### Required permissions
@@ -294,9 +300,10 @@ npm run test:coverage # with coverage report
 The env var for that platform is missing. Add it to `.env` and restart `npm run dev`.
 
 ### OAuth callback not received / browser just hangs
-- The app must be running when you complete the OAuth flow
-- The flow times out after 5 minutes — if you took too long, click Connect again
-- Check that the redirect URI in the platform app is `http://127.0.0.1` (not a full URL with port)
+- The app must be running when the platform redirects back
+- The flow times out after 10 minutes — if you took too long, click Connect again
+- Make sure the redirect URI in the platform app is exactly `https://ghostpilot.yashlunawat.com/oauth/callback`
+- If the callback page opens but the app doesn't launch, make sure GhostPilot is running and click "Open GhostPilot" on the callback page
 
 ### "LinkedIn token exchange failed: 401"
 - Double-check `LINKEDIN_CLIENT_ID` and `LINKEDIN_CLIENT_SECRET`

@@ -7,6 +7,13 @@ export const APP_NAME = 'GhostPilot'
 export const APP_URL_SCHEME = 'ghostpilot'
 export const OAUTH_CALLBACK_PATH = '/oauth/callback'
 
+/**
+ * The redirect URI registered in every platform OAuth app.
+ * The website at this URL reads code+state from the query string and
+ * deep-links back to the app via ghostpilot://oauth/callback?code=...&state=...
+ */
+export const OAUTH_REDIRECT_URI = 'https://ghostpilot.yashlunawat.com/oauth/callback'
+
 // ─── Limits ───────────────────────────────────────────────────────────────────
 
 export const MAX_POST_ATTEMPTS = 3

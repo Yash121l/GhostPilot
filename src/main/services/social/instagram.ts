@@ -15,7 +15,6 @@ const logger = createLogger('InstagramConnector')
 
 const APP_ID = process.env['META_APP_ID'] ?? ''
 const APP_SECRET = process.env['META_APP_SECRET'] ?? ''
-const REDIRECT_URI = 'ghostpilot://oauth/callback'
 const GRAPH = 'https://graph.facebook.com/v20.0'
 
 // Instagram limits: 50 API-triggered posts per 24h window; 160 DMs per hour
@@ -42,10 +41,10 @@ export class InstagramConnector implements SocialConnector {
 
   // ─── OAuth ──────────────────────────────────────────────────────────────────
 
-  getAuthURL(state: string, _codeVerifier: string): string {
+  getAuthURL(state: string, _codeVerifier: string, redirectUri: string): string {
     const params = new URLSearchParams({
       client_id: APP_ID,
-      redirect_uri: REDIRECT_URI,
+      redirect_uri: redirectUri,
       scope: [
         'instagram_basic',
         'instagram_content_publish',
@@ -60,11 +59,10 @@ export class InstagramConnector implements SocialConnector {
     return `https://www.facebook.com/dialog/oauth?${params}`
   }
 
-  async handleCallback(code: string, _codeVerifier: string): Promise<ConnectionResult> {
-    // Exchange short-lived code for short-lived token
+  async handleCallback(code: string, _codeVerifier: string, redirectUri: string): Promise<ConnectionResult> {
     const shortRes = await this.gfetch('/oauth/access_token', {
       method: 'POST',
-      body: new URLSearchParams({ client_id: APP_ID, client_secret: APP_SECRET, redirect_uri: REDIRECT_URI, code }),
+      body: new URLSearchParams({ client_id: APP_ID, client_secret: APP_SECRET, redirect_uri: redirectUri, code }),
     })
     if (!shortRes.ok) throw new Error(`Instagram token exchange failed: ${await shortRes.text()}`)
     const shortData = (await shortRes.json()) as { access_token: string }

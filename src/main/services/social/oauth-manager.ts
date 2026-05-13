@@ -11,7 +11,7 @@ import type { SocialConnector, OAuthTokens } from './interface'
 import type { Platform } from '../../../shared/types/platform'
 import { AppError, ErrorCode } from '../../../shared/types/error'
 import { createLogger } from '../../infrastructure/logger/logger'
-import { OAUTH_STATE_TTL_MS } from '../../../shared/constants'
+import { OAUTH_STATE_TTL_MS, OAUTH_REDIRECT_URI } from '../../../shared/constants'
 import type { AuthStatusOutput } from '../../../shared/ipc-types'
 
 const logger = createLogger('OAuthManager')
@@ -34,14 +34,13 @@ export class OAuthManager {
     this.connectors.set(connector.platform, connector)
   }
 
-  /** Return the connector for a platform (for rate-limit queries etc.). */
   getConnector(platform: Platform): SocialConnector | undefined {
     return this.connectors.get(platform)
   }
 
   /**
-   * Build the OAuth URL and store state — WITHOUT opening the browser.
-   * The renderer calls shell.openExternal with the returned URL.
+   * Build the OAuth URL for a platform without opening the browser.
+   * Used by the CONNECTIONS_GET_AUTH_URL IPC handler.
    */
   async getAuthURL(platform: Platform): Promise<string> {
     const connector = this.connectors.get(platform)
@@ -54,10 +53,14 @@ export class OAuthManager {
     const state = nanoid(32)
     const codeVerifier = randomBytes(32).toString('base64url')
     this.pendingStates.set(state, { state, codeVerifier, platform, createdAt: Date.now() })
-    return connector.getAuthURL(state, codeVerifier)
+    return connector.getAuthURL(state, codeVerifier, OAUTH_REDIRECT_URI)
   }
 
-  /** Step 1: Open browser for OAuth. */
+  /**
+   * Open the browser for OAuth.
+   * The platform redirects to ghostpilot.yashlunawat.com/oauth/callback,
+   * which deep-links back via ghostpilot://oauth/callback — caught by handleCallback().
+   */
   async initiateConnect(platform: Platform): Promise<void> {
     const connector = this.connectors.get(platform)
     if (!connector) {
@@ -70,14 +73,9 @@ export class OAuthManager {
     const state = nanoid(32)
     const codeVerifier = randomBytes(32).toString('base64url')
 
-    this.pendingStates.set(state, {
-      state,
-      codeVerifier,
-      platform,
-      createdAt: Date.now(),
-    })
+    this.pendingStates.set(state, { state, codeVerifier, platform, createdAt: Date.now() })
 
-    const authURL = connector.getAuthURL(state, codeVerifier)
+    const authURL = connector.getAuthURL(state, codeVerifier, OAUTH_REDIRECT_URI)
     logger.info({ msg: 'Opening OAuth URL', platform })
 
     this.audit.write({
@@ -91,15 +89,22 @@ export class OAuthManager {
     await shell.openExternal(authURL)
   }
 
-  /** Step 2: Handle the OAuth callback URL received via custom URL scheme. */
+  /**
+   * Handle the deep-link callback: ghostpilot://oauth/callback?code=...&state=...
+   * Called from app.on('open-url') in main/index.ts.
+   */
   async handleCallback(callbackURL: string): Promise<void> {
     const url = new URL(callbackURL)
     const code = url.searchParams.get('code')
     const state = url.searchParams.get('state')
     const error = url.searchParams.get('error')
+    const errorDescription = url.searchParams.get('error_description')
 
     if (error) {
-      throw new AppError({ code: ErrorCode.OAUTH_FAILED, message: `OAuth error: ${error}` })
+      throw new AppError({
+        code: ErrorCode.OAUTH_FAILED,
+        message: `OAuth error: ${error}${errorDescription ? ` — ${errorDescription}` : ''}`,
+      })
     }
     if (!code || !state) {
       throw new AppError({ code: ErrorCode.OAUTH_FAILED, message: 'Missing code or state in OAuth callback' })
@@ -117,9 +122,9 @@ export class OAuthManager {
     this.pendingStates.delete(state)
 
     const connector = this.connectors.get(pending.platform)!
-    const result = await connector.handleCallback(code, pending.codeVerifier)
+    // Pass the same redirect URI used when building the auth URL
+    const result = await connector.handleCallback(code, pending.codeVerifier, OAUTH_REDIRECT_URI)
 
-    // Store tokens in keychain, save connection record in DB
     const connectionId = nanoid()
     const keychainKey = `ghostpilot:social:${pending.platform}:${connectionId}`
     await this.keychain.set(keychainKey, JSON.stringify(result.tokens))
@@ -127,7 +132,6 @@ export class OAuthManager {
     const db = getDb()
     const now = new Date()
 
-    // Remove any existing connection for this platform
     await db.delete(socialConnections).where(eq(socialConnections.platform, pending.platform))
 
     await db.insert(socialConnections).values({

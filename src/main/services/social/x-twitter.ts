@@ -19,7 +19,6 @@ const CLIENT_SECRET = process.env['TWITTER_CLIENT_SECRET'] ?? ''
 // OAuth 1.0a credentials for media uploads (v1.1 API still required for media)
 const CONSUMER_KEY = process.env['TWITTER_CONSUMER_KEY'] ?? ''
 const CONSUMER_SECRET = process.env['TWITTER_CONSUMER_SECRET'] ?? ''
-const REDIRECT_URI = 'ghostpilot://oauth/callback'
 
 const API_V2 = 'https://api.twitter.com/2'
 const _API_V1 = 'https://api.twitter.com/1.1'
@@ -40,12 +39,12 @@ export class XTwitterConnector implements SocialConnector {
 
   // ─── OAuth 2.0 PKCE ─────────────────────────────────────────────────────────
 
-  getAuthURL(state: string, codeVerifier: string): string {
+  getAuthURL(state: string, codeVerifier: string, redirectUri: string): string {
     const codeChallenge = createHash('sha256').update(codeVerifier).digest('base64url')
     const params = new URLSearchParams({
       response_type: 'code',
       client_id: CLIENT_ID,
-      redirect_uri: REDIRECT_URI,
+      redirect_uri: redirectUri,
       state,
       code_challenge: codeChallenge,
       code_challenge_method: 'S256',
@@ -54,7 +53,7 @@ export class XTwitterConnector implements SocialConnector {
     return `https://twitter.com/i/oauth2/authorize?${params}`
   }
 
-  async handleCallback(code: string, codeVerifier: string): Promise<ConnectionResult> {
+  async handleCallback(code: string, codeVerifier: string, redirectUri: string): Promise<ConnectionResult> {
     const credentials = Buffer.from(`${CLIENT_ID}:${CLIENT_SECRET}`).toString('base64')
     const res = await this.fetch(`${API_V2}/oauth2/token`, {
       method: 'POST',
@@ -65,7 +64,7 @@ export class XTwitterConnector implements SocialConnector {
       body: new URLSearchParams({
         grant_type: 'authorization_code',
         code,
-        redirect_uri: REDIRECT_URI,
+        redirect_uri: redirectUri,
         code_verifier: codeVerifier,
       }).toString(),
     })
