@@ -29,14 +29,17 @@ export class VariantGenerator {
   async generate(postId: string, platforms: Platform[], traceId: string): Promise<Post> {
     const post = await this.postService.get(postId)
 
-    // Gracefully handle missing persona — use minimal context rather than throwing
+    // Resolve persona — fall back gracefully if not found or personaId is 'default'
     let personaContext = ''
+    let resolvedPersonaId = post.personaId
+
     try {
       const persona = await this.personaService.get(post.personaId)
+      resolvedPersonaId = persona.id
       personaContext = [
         `Name: ${persona.name}`,
         `Bio: ${persona.bio}`,
-        `Content pillars: ${persona.pillars.join(', ')}`,
+        persona.pillars.length ? `Content pillars: ${persona.pillars.join(', ')}` : '',
         persona.styleHints ? `Style hints: ${persona.styleHints}` : '',
         persona.latestFingerprint
           ? `Voice: ${persona.latestFingerprint.tone}; avg sentence length: ${persona.latestFingerprint.avgSentenceLength} words`
@@ -45,9 +48,9 @@ export class VariantGenerator {
         .filter(Boolean)
         .join('\n')
     } catch {
-      // No persona found — generate without persona context
-      personaContext = 'No persona configured. Write in a clear, professional tone.'
+      // No persona found (e.g. personaId = 'default') — generate without persona context
       logger.warn({ msg: 'Persona not found, generating without context', personaId: post.personaId })
+      personaContext = 'Write in a clear, engaging, professional tone.'
     }
 
     const variants: DraftVariant[] = []
@@ -57,20 +60,23 @@ export class VariantGenerator {
       const instructions = PLATFORM_INSTRUCTIONS[platform] ?? `Write a post for ${platform}.`
       const charLimit = PLATFORM_CHAR_LIMITS[platform] ?? 2000
 
-      const prompt = `You are ghostwriting for a creator. Write their ${platform} post based on the draft below.
+      const prompt = [
+        `You are ghostwriting a ${platform} post for a creator. Adapt the draft below for the platform.`,
+        '',
+        personaContext ? `PERSONA:\n${personaContext}` : '',
+        '',
+        `PLATFORM INSTRUCTIONS:\n${instructions}`,
+        '',
+        `SOURCE DRAFT:\n${post.body}`,
+        '',
+        'OUTPUT: Return ONLY the finished post text. No explanation. No meta-commentary.',
+      ]
+        .filter((l) => l !== undefined)
+        .join('\n')
+        .trim()
 
-PERSONA:
-${personaContext}
-
-PLATFORM INSTRUCTIONS:
-${instructions}
-
-SOURCE DRAFT:
-${post.body}
-
-OUTPUT: Return ONLY the finished post text. No explanation. No meta-commentary.`
-
-      const systemMessage = `You are a professional social media ghostwriter who perfectly mimics the persona's authentic voice. You never break character.`
+      const systemMessage =
+        'You are a professional social media ghostwriter. Adapt the draft faithfully for the platform. Never add meta-commentary or explanations.'
 
       try {
         const res = await this.ai.complete({
@@ -81,7 +87,7 @@ OUTPUT: Return ONLY the finished post text. No explanation. No meta-commentary.`
           maxTokens: Math.ceil(charLimit * 1.2),
           traceId,
           postId,
-          personaId: persona.id,
+          personaId: resolvedPersonaId,
         })
 
         const body = res.text.trim().slice(0, charLimit)
@@ -92,7 +98,7 @@ OUTPUT: Return ONLY the finished post text. No explanation. No meta-commentary.`
           platform,
           body,
           charCount: body.length,
-          styleDriftScore: 0, // TODO: compute cosine similarity against fingerprint
+          styleDriftScore: 0,
           createdAt: now,
           provider: res.provider,
           modelId: res.modelId,
@@ -101,7 +107,6 @@ OUTPUT: Return ONLY the finished post text. No explanation. No meta-commentary.`
         logger.info({ msg: 'Variant generated', platform, postId, chars: body.length })
       } catch (e) {
         logger.error({ msg: 'Variant generation failed', platform, postId, error: String(e) })
-        // Push a placeholder so the caller knows this platform failed
         variants.push({
           id: nanoid(),
           postId,
