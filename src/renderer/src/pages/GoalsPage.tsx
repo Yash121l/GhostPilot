@@ -3,37 +3,55 @@ import { Target, Plus, Trash2, Loader2, AlertCircle, ChevronDown, ChevronRight }
 import { ipc, IPC_CHANNELS } from '../lib/ipc'
 import type { Intent, KeyResult } from '@shared/types/intent'
 
-function ProgressBar({ current, target }: { current: number; target: number }): ReactElement {
-  const pct = Math.min(100, target > 0 ? (current / target) * 100 : 0)
+function ProgressRing({ pct }: { pct: number }): ReactElement {
+  const r = 18
+  const circ = 2 * Math.PI * r
+  const dash = (pct / 100) * circ
   return (
-    <div className="w-full h-1.5 rounded-full bg-[var(--color-surface-3)] overflow-hidden">
-      <div
-        className="h-full rounded-full transition-all"
-        style={{
-          width: `${pct}%`,
-          background: pct >= 100 ? 'var(--color-success)' : pct >= 60 ? 'var(--color-brand-primary)' : 'var(--color-warning)',
-        }}
+    <svg width={44} height={44} className="shrink-0">
+      <circle cx={22} cy={22} r={r} fill="none" stroke="var(--color-surface-3)" strokeWidth={3} />
+      <circle
+        cx={22} cy={22} r={r}
+        fill="none"
+        stroke={pct >= 100 ? 'var(--color-success)' : pct >= 60 ? 'var(--color-brand-primary)' : 'var(--color-warning)'}
+        strokeWidth={3}
+        strokeDasharray={`${dash} ${circ}`}
+        strokeLinecap="round"
+        transform="rotate(-90 22 22)"
+        style={{ transition: 'stroke-dasharray 0.6s cubic-bezier(0.16,1,0.3,1)' }}
       />
-    </div>
+      <text x={22} y={22} textAnchor="middle" dominantBaseline="central" fill="white" fontSize={9} fontWeight={700}>
+        {pct.toFixed(0)}%
+      </text>
+    </svg>
   )
 }
 
 function KRRow({ kr }: { kr: KeyResult }): ReactElement {
+  const pct = Math.min(100, kr.target > 0 ? (kr.current / kr.target) * 100 : 0)
   return (
-    <div className="ml-6 border-l border-[var(--color-border-subtle)] pl-4 py-2">
-      <div className="flex items-center justify-between mb-1.5">
-        <span className="text-xs text-[var(--color-text-secondary)]">{kr.title}</span>
+    <div className="pl-4 py-3 border-l border-[var(--color-border-subtle)] ml-5">
+      <div className="flex items-center justify-between mb-2">
+        <span className="text-xs text-[var(--color-text-secondary)] font-medium">{kr.title}</span>
         <span className="text-xs font-mono text-[var(--color-text-muted)]">
-          {kr.current}/{kr.target} {kr.unit}
+          {kr.current} / {kr.target} {kr.unit}
         </span>
       </div>
-      <ProgressBar current={kr.current} target={kr.target} />
-      <div className="flex gap-3 mt-1.5">
+      <div className="progress-track">
+        <div
+          className="progress-fill"
+          style={{
+            width: `${pct}%`,
+            background: pct >= 100 ? 'var(--color-success)' : pct >= 60 ? 'var(--color-brand-primary)' : 'var(--color-warning)',
+          }}
+        />
+      </div>
+      <div className="flex gap-4 mt-2">
         <span className="text-[10px] text-[var(--color-text-muted)]">
           {kr.weeklyQuota.postsPerWeek} posts/week
         </span>
         {Object.entries(kr.weeklyQuota.breakdown).map(([platform, count]) => (
-          <span key={platform} className="text-[10px] text-[var(--color-text-muted)]">
+          <span key={platform} className="text-[10px] text-[var(--color-text-muted)] capitalize">
             {platform}: {count}
           </span>
         ))}
@@ -46,6 +64,10 @@ function IntentCard({ intent, onDelete }: { intent: Intent; onDelete: () => void
   const [expanded, setExpanded] = useState(true)
   const [deleting, setDeleting] = useState(false)
 
+  const avgPct = intent.keyResults.length > 0
+    ? intent.keyResults.reduce((sum, kr) => sum + Math.min(100, kr.target > 0 ? (kr.current / kr.target) * 100 : 0), 0) / intent.keyResults.length
+    : 0
+
   const handleDelete = async (): Promise<void> => {
     setDeleting(true)
     await ipc.invoke(IPC_CHANNELS.INTENT_DELETE, { id: intent.id })
@@ -53,34 +75,40 @@ function IntentCard({ intent, onDelete }: { intent: Intent; onDelete: () => void
   }
 
   return (
-    <div className="glass-card rounded-2xl overflow-hidden">
+    <div className="glass-card rounded-2xl overflow-hidden group">
       <div
-        className="flex items-center gap-3 px-5 py-4 cursor-pointer hover:bg-white/5 transition-colors"
+        className="flex items-center gap-4 px-5 py-3.5 cursor-pointer hover:bg-white/[0.02] transition-colors"
         onClick={() => setExpanded((e) => !e)}
       >
-        <div className="w-8 h-8 rounded-xl flex items-center justify-center" style={{ background: 'hsla(265,89%,65%,0.15)' }}>
-          <Target size={14} className="text-[var(--color-brand-primary)]" />
-        </div>
+        <ProgressRing pct={avgPct} />
+
         <div className="flex-1 min-w-0">
           <p className="text-sm font-semibold text-white/90 truncate">{intent.title}</p>
-          <p className="text-xs text-[var(--color-text-muted)]">{intent.horizon} · {intent.keyResults.length} key results</p>
+          <p className="text-xs text-[var(--color-text-muted)] mt-0.5">
+            {intent.horizon} · {intent.keyResults.length} key result{intent.keyResults.length !== 1 ? 's' : ''}
+          </p>
         </div>
+
         <button
           onClick={(e) => { e.stopPropagation(); handleDelete() }}
           disabled={deleting}
-          className="p-1.5 rounded-lg hover:bg-red-500/10 opacity-0 group-hover:opacity-100 transition-all"
+          className="btn btn-ghost btn-icon opacity-0 group-hover:opacity-100 transition-opacity"
+          style={{ color: 'var(--color-error)' }}
         >
           {deleting
-            ? <Loader2 size={12} className="animate-spin text-[var(--color-error)]" />
-            : <Trash2 size={12} className="text-[var(--color-error)]" />
-          }
+            ? <Loader2 size={13} className="animate-spin" />
+            : <Trash2 size={13} />}
         </button>
-        {expanded ? <ChevronDown size={14} className="text-[var(--color-text-muted)]" /> : <ChevronRight size={14} className="text-[var(--color-text-muted)]" />}
+        {expanded
+          ? <ChevronDown size={14} className="text-[var(--color-text-muted)] shrink-0" />
+          : <ChevronRight size={14} className="text-[var(--color-text-muted)] shrink-0" />}
       </div>
 
       {expanded && intent.keyResults.length > 0 && (
-        <div className="px-4 pb-4 space-y-1">
-          {intent.keyResults.map((kr) => <KRRow key={kr.id} kr={kr} />)}
+        <div className="px-4 pb-4 space-y-1" style={{ borderTop: '1px solid var(--color-border-subtle)' }}>
+          <div className="pt-3 space-y-1">
+            {intent.keyResults.map((kr) => <KRRow key={kr.id} kr={kr} />)}
+          </div>
         </div>
       )}
     </div>
@@ -105,60 +133,81 @@ function CreateIntentForm({
   const handleSubmit = async (e: FormEvent): Promise<void> => {
     e.preventDefault()
     if (!title.trim()) { setError('Title is required'); return }
-    if (!personaId) { setError('Create a persona first'); return }
+    if (!personaId) { setError('Create a persona first in the Personas page'); return }
 
     setCreating(true)
     setError(null)
-
     const res = await ipc.invoke(IPC_CHANNELS.INTENT_CREATE, {
       personaId,
       title: title.trim(),
       description: description.trim(),
       horizon: horizon.trim(),
     })
-
     setCreating(false)
-    if (res.ok) {
-      onCreated(res.value)
-    } else {
-      setError(res.error.message)
-    }
+    if (res.ok) onCreated(res.value)
+    else setError(res.error.message)
   }
-
-  const inputClass = 'w-full bg-[var(--color-surface-2)] border border-[var(--color-border)] rounded-xl px-3 py-2 text-sm text-[var(--color-text-primary)] focus:outline-none focus:border-[var(--color-brand-primary)] transition-colors'
 
   return (
     <form onSubmit={handleSubmit} className="glass-card p-5 rounded-2xl space-y-4">
-      <h3 className="text-sm font-semibold text-white/90">New Goal</h3>
-
-      <div>
-        <label className="block text-xs font-medium text-[var(--color-text-muted)] mb-1.5">What do you want to achieve? *</label>
-        <input className={inputClass} value={title} onChange={(e) => setTitle(e.target.value)} placeholder="Grow LinkedIn followers from 1K to 5K" />
+      <div className="flex items-center gap-3">
+        <div
+          className="w-9 h-9 rounded-xl flex items-center justify-center"
+          style={{ background: 'hsla(265,89%,65%,0.15)' }}
+        >
+          <Target size={16} className="text-[var(--color-brand-primary)]" />
+        </div>
+        <h3 className="text-sm font-semibold text-white/90">New Goal</h3>
       </div>
 
       <div>
-        <label className="block text-xs font-medium text-[var(--color-text-muted)] mb-1.5">Why (optional)</label>
-        <textarea className={`${inputClass} resize-none h-16`} value={description} onChange={(e) => setDescription(e.target.value)} placeholder="Context that helps AI break it into actionable steps..." />
+        <label className="form-label">What do you want to achieve? *</label>
+        <input
+          className="form-input"
+          value={title}
+          onChange={(e) => setTitle(e.target.value)}
+          placeholder="Grow LinkedIn followers from 1K to 5K"
+          autoFocus
+        />
       </div>
 
       <div>
-        <label className="block text-xs font-medium text-[var(--color-text-muted)] mb-1.5">Horizon</label>
-        <input className={inputClass} value={horizon} onChange={(e) => setHorizon(e.target.value)} placeholder="Q3 2025" />
+        <label className="form-label">Context (optional)</label>
+        <textarea
+          className="form-input resize-none"
+          style={{ height: 72 }}
+          value={description}
+          onChange={(e) => setDescription(e.target.value)}
+          placeholder="Why this goal matters — AI uses this context to plan your content…"
+        />
+      </div>
+
+      <div>
+        <label className="form-label">Horizon</label>
+        <input
+          className="form-input"
+          value={horizon}
+          onChange={(e) => setHorizon(e.target.value)}
+          placeholder="Q3 2025"
+        />
       </div>
 
       {error && (
-        <div className="flex items-center gap-2 text-[var(--color-error)] text-xs">
+        <div
+          className="flex items-center gap-2 text-xs px-3 py-2.5 rounded-xl"
+          style={{ color: 'var(--color-error)', background: 'hsla(0,84%,60%,0.08)', border: '1px solid hsla(0,84%,60%,0.2)' }}
+        >
           <AlertCircle size={12} />
           {error}
         </div>
       )}
 
-      <div className="flex gap-2">
-        <button type="submit" disabled={creating} className="flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-medium text-white" style={{ background: 'hsla(265,89%,65%,0.9)' }}>
+      <div className="flex gap-2 pt-1">
+        <button type="submit" disabled={creating} className="btn btn-primary">
           {creating ? <Loader2 size={14} className="animate-spin" /> : <Target size={14} />}
-          {creating ? 'Decomposing with AI…' : 'Create Goal'}
+          {creating ? 'AI is planning…' : 'Create Goal'}
         </button>
-        <button type="button" onClick={onCancel} className="px-4 py-2 rounded-xl text-sm font-medium text-[var(--color-text-muted)] hover:bg-white/5">
+        <button type="button" onClick={onCancel} className="btn btn-ghost">
           Cancel
         </button>
       </div>
@@ -186,21 +235,21 @@ export default function GoalsPage(): ReactElement {
   useEffect(() => { load() }, [])
 
   return (
-    <div className="flex flex-col h-full animate-slide-up">
-      <div className="flex items-center justify-between px-6 py-4 border-b border-[var(--color-border-subtle)]">
+    <div className="flex flex-col h-full">
+      <div className="page-header">
         <div>
-          <h1 className="text-base font-semibold text-white/90">Goals</h1>
-          <p className="text-xs text-[var(--color-text-muted)] mt-0.5">AI breaks your north-star into weekly content quotas</p>
+          <h1 className="page-title">Goals</h1>
+          <p className="page-subtitle">AI breaks your north-star into a weekly posting plan</p>
         </div>
         {!creating && (
-          <button onClick={() => setCreating(true)} className="flex items-center gap-2 px-3 py-1.5 rounded-xl text-xs font-medium" style={{ background: 'hsla(265,89%,65%,0.15)', color: 'var(--color-brand-primary)' }}>
-            <Plus size={12} />
+          <button onClick={() => setCreating(true)} className="btn btn-secondary btn-sm">
+            <Plus size={13} />
             New Goal
           </button>
         )}
       </div>
 
-      <div className="flex-1 overflow-y-auto px-6 py-6 space-y-4">
+      <div className="page-body space-y-5 max-w-xl">
         {creating && (
           <CreateIntentForm
             personaId={personaId}
@@ -210,17 +259,19 @@ export default function GoalsPage(): ReactElement {
         )}
 
         {loading ? (
-          <div className="flex items-center justify-center py-12">
-            <Loader2 size={20} className="animate-spin text-[var(--color-brand-primary)]" />
+          <div className="empty-state">
+            <Loader2 size={22} className="animate-spin text-[var(--color-brand-primary)]" />
           </div>
         ) : intents.length === 0 && !creating ? (
-          <div className="flex flex-col items-center justify-center py-16 text-center">
-            <Target size={32} className="text-[var(--color-text-muted)] mb-4" />
-            <p className="text-sm font-medium text-white/70 mb-1">No goals yet</p>
-            <p className="text-xs text-[var(--color-text-muted)] mb-4 max-w-xs">
-              Tell GhostPilot what you want to achieve and AI will decompose it into a weekly posting plan.
+          <div className="empty-state">
+            <div className="empty-icon-wrap">
+              <Target size={24} />
+            </div>
+            <p className="empty-title">No goals yet</p>
+            <p className="empty-text">
+              Tell GhostPilot what you want to achieve — AI decomposes it into measurable key results and weekly quotas.
             </p>
-            <button onClick={() => setCreating(true)} className="flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-medium text-white" style={{ background: 'hsla(265,89%,65%,0.9)' }}>
+            <button onClick={() => setCreating(true)} className="btn btn-primary">
               <Plus size={14} />
               Set your first goal
             </button>

@@ -1,11 +1,19 @@
 import { useState, useEffect, type ReactElement } from 'react'
 import {
-  PenTool, CalendarDays, Inbox, Target, TrendingUp,
+  PenTool, CalendarDays, Link2, Target, TrendingUp,
   UserCircle2, BarChart3, Settings, DatabaseZap, Bot, Sparkles, Ghost,
+  Briefcase, AtSign, Camera,
 } from 'lucide-react'
 import { ipc, IPC_CHANNELS } from './lib/ipc'
 import type { AuthStatusOutput } from '@shared/ipc-types'
 import { Platform } from '@shared/types/platform'
+
+// Single source of truth for sidebar connection icons — add new platforms here
+const SIDEBAR_CONNECTORS = [
+  { platform: Platform.LINKEDIN,  label: 'LinkedIn',    icon: Briefcase, color: '#0077B5' },
+  { platform: Platform.TWITTER,   label: 'X',           icon: AtSign,    color: '#1D9BF0' },
+  { platform: Platform.INSTAGRAM, label: 'Instagram',   icon: Camera,    color: '#E1306C' },
+]
 
 import ComposerPage from './pages/ComposerPage'
 import CalendarPage from './pages/CalendarPage'
@@ -23,7 +31,7 @@ interface NavEntry { id: Page; label: string; icon: React.ElementType }
 const NAV: NavEntry[] = [
   { id: 'composer',  label: 'Composer',  icon: PenTool },
   { id: 'calendar',  label: 'Calendar',  icon: CalendarDays },
-  { id: 'inbox',     label: 'Inbox',     icon: Inbox },
+  { id: 'inbox',     label: 'Connect',   icon: Link2 },
   { id: 'goals',     label: 'Goals',     icon: Target },
   { id: 'trends',    label: 'Trends',    icon: TrendingUp },
   { id: 'personas',  label: 'Personas',  icon: UserCircle2 },
@@ -125,18 +133,16 @@ export default function App(): ReactElement {
         <div style={{ marginTop: 'auto', paddingBottom: '32px', paddingTop: '24px' }}>
           <div className="sidebar-header">Connections</div>
           <div className="connection-list">
-            {[
-              { id: Platform.LINKEDIN, label: 'LinkedIn' },
-              { id: Platform.TWITTER, label: 'X (Twitter)' },
-              { id: Platform.INSTAGRAM, label: 'Instagram' },
-            ].map((p) => {
-              const connected = connections.find((c) => c.platform === p.id)?.connected
+            {SIDEBAR_CONNECTORS.map((p) => {
+              const connected = connections.find((c) => c.platform === p.platform)?.connected
+              const Icon = p.icon
               return (
                 <div
-                  key={p.id}
+                  key={p.platform}
                   className="connection-item"
                   onClick={() => setPage('inbox')}
                 >
+                  <Icon size={12} className="shrink-0" style={{ color: connected ? p.color : 'var(--color-text-muted)', opacity: connected ? 1 : 0.5 }} />
                   <span className="connection-label">{p.label}</span>
                   <div
                     className="connection-dot"

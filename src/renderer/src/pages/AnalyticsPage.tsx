@@ -5,26 +5,49 @@ import type { Post } from '@shared/types/post'
 import { PostStatus } from '@shared/types/post'
 import type { LLMUsage } from '@shared/types/ai'
 
-interface StatCard {
+interface StatDef {
   label: string
   value: string | number
-  sub?: string
+  sub: string
   icon: React.ElementType
   color: string
 }
 
-function StatTile({ stat }: { stat: StatCard }): ReactElement {
+function StatTile({ stat }: { stat: StatDef }): ReactElement {
   const Icon = stat.icon
   return (
-    <div className="glass-card p-5 rounded-2xl">
-      <div className="flex items-center gap-3 mb-2">
-        <div className="p-2 rounded-xl" style={{ background: `${stat.color}20` }}>
+    <div
+      className="glass-card p-5 rounded-2xl flex flex-col gap-3"
+      style={{ background: 'hsla(225,12%,13%,0.9)' }}
+    >
+      <div className="flex items-center justify-between">
+        <span className="text-xs font-medium text-[var(--color-text-muted)]">{stat.label}</span>
+        <div
+          className="w-8 h-8 rounded-xl flex items-center justify-center"
+          style={{ background: `${stat.color}18` }}
+        >
           <Icon size={14} style={{ color: stat.color }} />
         </div>
-        <span className="text-xs text-[var(--color-text-muted)]">{stat.label}</span>
       </div>
-      <p className="text-2xl font-bold text-white/90">{stat.value}</p>
-      {stat.sub && <p className="text-xs text-[var(--color-text-muted)] mt-0.5">{stat.sub}</p>}
+      <div>
+        <p className="text-3xl font-bold tracking-tight" style={{ color: stat.color, letterSpacing: '-0.03em' }}>
+          {stat.value}
+        </p>
+        <p className="text-[11px] text-[var(--color-text-muted)] mt-1">{stat.sub}</p>
+      </div>
+    </div>
+  )
+}
+
+function BarRow({ label, value, max, color }: { label: string; value: number; max: number; color: string }): ReactElement {
+  const pct = max > 0 ? (value / max) * 100 : 0
+  return (
+    <div className="flex items-center gap-3">
+      <span className="text-xs text-[var(--color-text-muted)] w-24 shrink-0 capitalize truncate">{label}</span>
+      <div className="flex-1 progress-track">
+        <div className="progress-fill" style={{ width: `${pct}%`, background: color }} />
+      </div>
+      <span className="text-xs font-semibold text-[var(--color-text-secondary)] w-6 text-right">{value}</span>
     </div>
   )
 }
@@ -52,40 +75,79 @@ export default function AnalyticsPage(): ReactElement {
   const totalCost = usage.reduce((s, u) => s + (u.estimatedCostUsd ?? 0), 0)
   const totalTokens = usage.reduce((s, u) => s + (u.promptTokens ?? 0) + (u.completionTokens ?? 0), 0)
 
-  const stats: StatCard[] = [
-    { label: 'Posts Published', value: published.length, sub: `${scheduled.length} scheduled`, icon: BarChart3, color: 'var(--color-success)' },
-    { label: 'Total Posts', value: posts.length, sub: 'across all statuses', icon: TrendingUp, color: 'var(--color-brand-primary)' },
-    { label: 'AI Spend', value: `$${totalCost.toFixed(4)}`, sub: `${totalTokens.toLocaleString()} tokens total`, icon: DollarSign, color: 'var(--color-warning)' },
-    { label: 'AI Calls', value: usage.length, sub: 'completed generations', icon: Zap, color: 'var(--color-brand-secondary)' },
+  const stats: StatDef[] = [
+    {
+      label: 'Published',
+      value: published.length,
+      sub: `${scheduled.length} in queue`,
+      icon: BarChart3,
+      color: 'var(--color-success)',
+    },
+    {
+      label: 'Total Posts',
+      value: posts.length,
+      sub: 'across all statuses',
+      icon: TrendingUp,
+      color: 'var(--color-brand-primary)',
+    },
+    {
+      label: 'AI Spend',
+      value: `$${totalCost.toFixed(4)}`,
+      sub: `${totalTokens.toLocaleString()} tokens`,
+      icon: DollarSign,
+      color: 'var(--color-warning)',
+    },
+    {
+      label: 'AI Calls',
+      value: usage.length,
+      sub: 'completed generations',
+      icon: Zap,
+      color: 'var(--color-brand-secondary)',
+    },
   ]
 
   const byPlatform = published.reduce<Record<string, number>>((acc, post) => {
-    for (const p of post.platforms) {
-      acc[p] = (acc[p] ?? 0) + 1
-    }
+    for (const p of post.platforms) acc[p] = (acc[p] ?? 0) + 1
     return acc
   }, {})
 
+  const maxPlatform = Math.max(...Object.values(byPlatform), 1)
   const recentCalls = usage.slice(0, 10)
 
+  const platformColors: Record<string, string> = {
+    linkedin: '#0077B5',
+    twitter: '#1D9BF0',
+    instagram: '#E1306C',
+  }
+
   return (
-    <div className="flex flex-col h-full overflow-y-auto animate-slide-up">
-      <div className="flex items-center justify-between px-6 py-4 border-b border-[var(--color-border-subtle)]">
+    <div className="flex flex-col h-full">
+      <div className="page-header">
         <div>
-          <h1 className="text-base font-semibold text-white/90">Analytics</h1>
-          <p className="text-xs text-[var(--color-text-muted)] mt-0.5">Publishing performance and AI cost tracking</p>
+          <h1 className="page-title">Analytics</h1>
+          <p className="page-subtitle">Publishing performance and AI cost tracking</p>
         </div>
-        <button onClick={load} className="p-2 rounded-lg hover:bg-white/5 transition-colors">
-          <RefreshCw size={14} className="text-[var(--color-text-muted)]" />
+        <button onClick={load} className="btn btn-ghost btn-icon" title="Refresh">
+          <RefreshCw size={14} />
         </button>
       </div>
 
       {loading ? (
-        <div className="flex-1 flex items-center justify-center">
-          <Loader2 size={20} className="animate-spin text-[var(--color-brand-primary)]" />
+        <div className="empty-state flex-1">
+          <Loader2 size={22} className="animate-spin text-[var(--color-brand-primary)]" />
+        </div>
+      ) : posts.length === 0 && usage.length === 0 ? (
+        <div className="empty-state flex-1">
+          <div className="empty-icon-wrap">
+            <BarChart3 size={24} />
+          </div>
+          <p className="empty-title">No data yet</p>
+          <p className="empty-text">
+            Start creating and publishing posts — performance metrics and AI cost breakdowns will appear here.
+          </p>
         </div>
       ) : (
-        <div className="px-6 py-6 space-y-6">
+        <div className="page-body space-y-5">
           {/* Stats grid */}
           <div className="grid grid-cols-2 gap-4">
             {stats.map((s) => <StatTile key={s.label} stat={s} />)}
@@ -95,22 +157,16 @@ export default function AnalyticsPage(): ReactElement {
           {Object.keys(byPlatform).length > 0 && (
             <div className="glass-card p-5 rounded-2xl">
               <h3 className="text-sm font-semibold text-white/90 mb-4">Published by Platform</h3>
-              <div className="space-y-3">
-                {Object.entries(byPlatform).map(([platform, count]) => {
-                  const max = Math.max(...Object.values(byPlatform))
-                  return (
-                    <div key={platform} className="flex items-center gap-3">
-                      <span className="text-xs text-[var(--color-text-muted)] w-20 shrink-0 capitalize">{platform}</span>
-                      <div className="flex-1 h-2 rounded-full bg-[var(--color-surface-3)] overflow-hidden">
-                        <div
-                          className="h-full rounded-full"
-                          style={{ width: `${(count / max) * 100}%`, background: 'var(--color-brand-primary)' }}
-                        />
-                      </div>
-                      <span className="text-xs font-medium text-[var(--color-text-secondary)] w-6 text-right">{count}</span>
-                    </div>
-                  )
-                })}
+              <div className="space-y-4">
+                {Object.entries(byPlatform).map(([platform, count]) => (
+                  <BarRow
+                    key={platform}
+                    label={platform}
+                    value={count}
+                    max={maxPlatform}
+                    color={platformColors[platform] ?? 'var(--color-brand-primary)'}
+                  />
+                ))}
               </div>
             </div>
           )}
@@ -119,27 +175,32 @@ export default function AnalyticsPage(): ReactElement {
           {recentCalls.length > 0 && (
             <div className="glass-card p-5 rounded-2xl">
               <h3 className="text-sm font-semibold text-white/90 mb-4">Recent AI Calls</h3>
-              <div className="space-y-2">
+              <div className="space-y-1">
                 {recentCalls.map((u, i) => (
-                  <div key={i} className="flex items-center gap-3 py-2 border-b border-[var(--color-border-subtle)] last:border-0">
+                  <div
+                    key={i}
+                    className="flex items-center gap-3 py-2.5"
+                    style={{
+                      borderBottom: i < recentCalls.length - 1 ? '1px solid var(--color-border-subtle)' : 'none',
+                    }}
+                  >
                     <div className="flex-1 min-w-0">
                       <p className="text-xs font-medium text-[var(--color-text-secondary)]">{u.task}</p>
-                      <p className="text-[10px] text-[var(--color-text-muted)]">{u.provider} · {u.modelId}</p>
+                      <p className="text-[10px] text-[var(--color-text-muted)] mt-0.5">
+                        {u.provider} · {u.modelId}
+                      </p>
                     </div>
-                    <div className="text-right">
-                      <p className="text-xs font-mono text-[var(--color-text-secondary)]">${(u.estimatedCostUsd ?? 0).toFixed(5)}</p>
-                      <p className="text-[10px] text-[var(--color-text-muted)]">{((u.promptTokens ?? 0) + (u.completionTokens ?? 0)).toLocaleString()}t</p>
+                    <div className="text-right shrink-0">
+                      <p className="text-xs font-mono text-[var(--color-text-secondary)]">
+                        ${(u.estimatedCostUsd ?? 0).toFixed(5)}
+                      </p>
+                      <p className="text-[10px] text-[var(--color-text-muted)] mt-0.5">
+                        {((u.promptTokens ?? 0) + (u.completionTokens ?? 0)).toLocaleString()}t
+                      </p>
                     </div>
                   </div>
                 ))}
               </div>
-            </div>
-          )}
-
-          {posts.length === 0 && usage.length === 0 && (
-            <div className="flex flex-col items-center py-16 text-center">
-              <BarChart3 size={32} className="text-[var(--color-text-muted)] mb-3" />
-              <p className="text-sm text-[var(--color-text-muted)]">No data yet — start creating and publishing posts to see analytics</p>
             </div>
           )}
         </div>
