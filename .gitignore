@@ -1,6 +1,8 @@
 node_modules
 dist
 out
+coverage
+*.log*
 .DS_Store
 .eslintcache
-*.log*
+out.txt
