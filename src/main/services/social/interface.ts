@@ -66,11 +66,11 @@ export interface PlatformEvent {
 export interface SocialConnector {
   readonly platform: Platform
 
-  /** Generate the OAuth authorization URL. */
-  getAuthURL(state: string, codeVerifier: string): string
+  /** Generate the OAuth authorization URL. `redirectUri` is the localhost callback URL. */
+  getAuthURL(state: string, codeVerifier: string, redirectUri: string): string
 
-  /** Exchange the callback code for tokens. */
-  handleCallback(code: string, codeVerifier: string): Promise<ConnectionResult>
+  /** Exchange the callback code for tokens. `redirectUri` must match the one used in getAuthURL. */
+  handleCallback(code: string, codeVerifier: string, redirectUri: string): Promise<ConnectionResult>
 
   /** Use a refresh token to get a new access token. */
   refreshTokens(refreshToken: string): Promise<OAuthTokens>

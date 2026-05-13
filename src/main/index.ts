@@ -16,18 +16,31 @@ import { APP_NAME, APP_URL_SCHEME } from '../shared/constants'
 // electron-vite's `define` only substitutes at build time. In dev mode the
 // main process runs from source, so we must load .env ourselves.
 ;(function loadEnv() {
-  const envPath = resolve(process.cwd(), '.env')
-  if (!existsSync(envPath)) return
-  const lines = readFileSync(envPath, 'utf-8').split('\n')
-  for (const line of lines) {
-    const trimmed = line.trim()
-    if (!trimmed || trimmed.startsWith('#')) continue
-    const eq = trimmed.indexOf('=')
-    if (eq === -1) continue
-    const key = trimmed.slice(0, eq).trim()
-    const val = trimmed.slice(eq + 1).trim().replace(/^["']|["']$/g, '')
-    if (key && !(key in process.env)) process.env[key] = val
+  // Try multiple candidate paths — cwd() in electron-vite dev points to the
+  // project root, but __dirname points to out/main/ in the built app.
+  const candidates = [
+    resolve(process.cwd(), '.env'),
+    resolve(__dirname, '../../.env'),   // built: out/main/ → project root
+    resolve(__dirname, '../../../.env'), // extra fallback
+  ]
+  for (const envPath of candidates) {
+    if (!existsSync(envPath)) continue
+    const lines = readFileSync(envPath, 'utf-8').split('\n')
+    for (const line of lines) {
+      const trimmed = line.trim()
+      if (!trimmed || trimmed.startsWith('#')) continue
+      const eq = trimmed.indexOf('=')
+      if (eq === -1) continue
+      const key = trimmed.slice(0, eq).trim()
+      const val = trimmed.slice(eq + 1).trim().replace(/^["']|["']$/g, '')
+      if (key && !(key in process.env)) process.env[key] = val
+    }
+    break // stop after first found
   }
+  // Log which path was used (visible in dev console)
+  const found = candidates.find(p => existsSync(p))
+  if (found) console.log('[env] loaded from', found)
+  else console.warn('[env] .env file not found — OAuth credentials may be missing')
 })()
 
 const logger = createLogger('Main')

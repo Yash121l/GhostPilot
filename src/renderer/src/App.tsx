@@ -1,18 +1,28 @@
 import { useState, useEffect, type ReactElement } from 'react'
 import {
-  PenTool, CalendarDays, Link2, Target, TrendingUp,
-  UserCircle2, BarChart3, Settings, DatabaseZap, Bot, Sparkles, Ghost,
-  Briefcase, AtSign, Camera,
+  PenTool,
+  CalendarDays,
+  Link2,
+  Target,
+  TrendingUp,
+  UserCircle2,
+  BarChart3,
+  Settings,
+  DatabaseZap,
+  Bot,
+  Ghost,
+  Briefcase,
+  AtSign,
+  Camera
 } from 'lucide-react'
 import { ipc, IPC_CHANNELS } from './lib/ipc'
 import type { AuthStatusOutput } from '@shared/ipc-types'
 import { Platform } from '@shared/types/platform'
 
-// Single source of truth for sidebar connection icons — add new platforms here
 const SIDEBAR_CONNECTORS = [
-  { platform: Platform.LINKEDIN,  label: 'LinkedIn',    icon: Briefcase, color: '#0077B5' },
-  { platform: Platform.TWITTER,   label: 'X',           icon: AtSign,    color: '#1D9BF0' },
-  { platform: Platform.INSTAGRAM, label: 'Instagram',   icon: Camera,    color: '#E1306C' },
+  { platform: Platform.LINKEDIN, label: 'LinkedIn', icon: Briefcase, color: '#0a66c2' },
+  { platform: Platform.TWITTER, label: 'X', icon: AtSign, color: '#1d1d1f' },
+  { platform: Platform.INSTAGRAM, label: 'Instagram', icon: Camera, color: '#d6336c' }
 ]
 
 import ComposerPage from './pages/composer'
@@ -24,30 +34,42 @@ import AnalyticsPage from './pages/analytics'
 import ConnectionsPage from './pages/settings/ConnectionsPage'
 import AIProvidersPage from './pages/settings/AIProvidersPage'
 
-type Page = 'composer' | 'calendar' | 'inbox' | 'goals' | 'trends' | 'personas' | 'analytics' | 'settings'
+type Page =
+  | 'composer'
+  | 'calendar'
+  | 'inbox'
+  | 'goals'
+  | 'trends'
+  | 'personas'
+  | 'analytics'
+  | 'settings'
 
-interface NavEntry { id: Page; label: string; icon: React.ElementType }
+interface NavEntry {
+  id: Page
+  label: string
+  icon: React.ElementType
+}
 
 const NAV: NavEntry[] = [
-  { id: 'composer',  label: 'Composer',  icon: PenTool },
-  { id: 'calendar',  label: 'Calendar',  icon: CalendarDays },
-  { id: 'inbox',     label: 'Connect',   icon: Link2 },
-  { id: 'goals',     label: 'Goals',     icon: Target },
-  { id: 'trends',    label: 'Trends',    icon: TrendingUp },
-  { id: 'personas',  label: 'Personas',  icon: UserCircle2 },
+  { id: 'composer', label: 'Composer', icon: PenTool },
+  { id: 'calendar', label: 'Calendar', icon: CalendarDays },
+  { id: 'inbox', label: 'Connect', icon: Link2 },
+  { id: 'goals', label: 'Goals', icon: Target },
+  { id: 'trends', label: 'Trends', icon: TrendingUp },
+  { id: 'personas', label: 'Personas', icon: UserCircle2 },
   { id: 'analytics', label: 'Analytics', icon: BarChart3 },
-  { id: 'settings',  label: 'Settings',  icon: Settings },
+  { id: 'settings', label: 'Settings', icon: Settings }
 ]
 
 const PAGES: Record<Page, ReactElement> = {
-  composer:  <ComposerPage />,
-  calendar:  <CalendarPage />,
-  inbox:     <ConnectionsPage />,
-  goals:     <GoalsPage />,
-  trends:    <TrendsPage />,
-  personas:  <PersonasPage />,
+  composer: <ComposerPage />,
+  calendar: <CalendarPage />,
+  inbox: <ConnectionsPage />,
+  goals: <GoalsPage />,
+  trends: <TrendsPage />,
+  personas: <PersonasPage />,
   analytics: <AnalyticsPage />,
-  settings:  <AIProvidersPage />,
+  settings: <AIProvidersPage />
 }
 
 export default function App(): ReactElement {
@@ -56,7 +78,6 @@ export default function App(): ReactElement {
   const [aiConfigured, setAiConfigured] = useState(false)
   const [dbOk] = useState(true)
 
-  // Load connection + AI status on mount
   useEffect(() => {
     ipc.invoke(IPC_CHANNELS.AUTH_STATUS, {}).then((res) => {
       if (res.ok) setConnections(res.value)
@@ -64,13 +85,11 @@ export default function App(): ReactElement {
     ipc.invoke(IPC_CHANNELS.AI_KEYS_LIST, {}).then((res) => {
       if (res.ok) setAiConfigured(res.value.length > 0)
     })
-    // Also check Ollama
     ipc.invoke(IPC_CHANNELS.AI_OLLAMA_STATUS, {}).then((res) => {
       if (res.ok && res.value.available) setAiConfigured(true)
     })
   }, [])
 
-  // Listen for auth events from main process
   useEffect(() => {
     const unsub = window.api?.on('auth:connected', () => {
       ipc.invoke(IPC_CHANNELS.AUTH_STATUS, {}).then((res) => {
@@ -80,17 +99,17 @@ export default function App(): ReactElement {
     return () => unsub?.()
   }, [])
 
-  // Listen for AI key changes from SettingsPage
   useEffect(() => {
     const handler = (e: Event): void => {
-      const { hasKeys, ollamaAvailable } = (e as CustomEvent<{ hasKeys: boolean; ollamaAvailable: boolean }>).detail
+      const { hasKeys, ollamaAvailable } = (
+        e as CustomEvent<{ hasKeys: boolean; ollamaAvailable: boolean }>
+      ).detail
       setAiConfigured(hasKeys || ollamaAvailable)
     }
     window.addEventListener('ai:status-changed', handler)
     return () => window.removeEventListener('ai:status-changed', handler)
   }, [])
 
-  // Listen for programmatic nav events (e.g., Composer → Calendar)
   useEffect(() => {
     const handler = (e: Event): void => {
       const detail = (e as CustomEvent<Page | { page: Page; prefill?: string }>).detail
@@ -101,98 +120,101 @@ export default function App(): ReactElement {
     return () => window.removeEventListener('nav', handler)
   }, [])
 
+  const connectedCount = connections.filter((c) => c.connected).length
+
   return (
     <div className="app-shell">
-      {/* ── Title Bar ── */}
-      <header className="titlebar select-none">
-        <div className="flex items-center gap-2">
-          <Ghost size={14} strokeWidth={2.5} className="text-[var(--color-primary)]" />
-          <div className="text-[11px] font-bold tracking-[0.15em] uppercase text-gradient">
-            GhostPilot
-          </div>
-        </div>
-        <div className="flex-1" />
-        <div className="badge badge-brand flex items-center gap-1.5">
-          <Sparkles size={10} />
-          <span className="text-[9px]">Phase 1</span>
-        </div>
+      {/* ── Titlebar ── */}
+      <header className="titlebar">
+        <div className="titlebar-title">GhostPilot</div>
       </header>
 
       {/* ── Sidebar ── */}
-      <nav className="sidebar pt-6 flex flex-col" aria-label="Main navigation">
-        <div className="sidebar-header">Workspace</div>
+      <nav className="sidebar" aria-label="Main navigation">
+        {/* Brand */}
+        <div className="brand">
+          <div className="brand-mark">
+            <Ghost size={20} strokeWidth={1.6} />
+          </div>
+          <div className="brand-name">GHOSTPILOT</div>
+        </div>
 
-        <div className="flex-1 flex flex-col gap-0.5 px-3">
+        {/* Nav */}
+        <div className="nav-section">Workspace</div>
+        <div className="nav">
           {NAV.map((item) => {
             const Icon = item.icon
+            const isActive = page === item.id
             return (
               <button
                 key={item.id}
-                id={`nav-${item.id}`}
-                className={`nav-item ${page === item.id ? 'active' : ''}`}
+                className={`nav-item ${isActive ? 'active' : ''}`}
                 onClick={() => setPage(item.id)}
               >
-                <Icon size={16} strokeWidth={page === item.id ? 2.5 : 2} className="opacity-70 transition-all duration-300" />
-                <span className="tracking-wide">{item.label}</span>
+                <Icon size={16} strokeWidth={isActive ? 2.2 : 1.8} />
+                <span>{item.label}</span>
               </button>
             )
           })}
         </div>
 
-        {/* Connection status */}
-        <div style={{ marginTop: 'auto', paddingBottom: '32px', paddingTop: '24px' }}>
+        <div className="nav-spacer" />
+
+        {/* Connections */}
+        <div className="connections">
           <div className="sidebar-header">Connections</div>
-          <div className="connection-list">
-            {SIDEBAR_CONNECTORS.map((p) => {
-              const connected = connections.find((c) => c.platform === p.platform)?.connected
-              const Icon = p.icon
-              return (
-                <div
-                  key={p.platform}
-                  className="connection-item"
-                  onClick={() => setPage('inbox')}
+          {SIDEBAR_CONNECTORS.map((p) => {
+            const connected = connections.find((c) => c.platform === p.platform)?.connected
+            const Icon = p.icon
+            return (
+              <div key={p.platform} className="connection-item" onClick={() => setPage('inbox')}>
+                <Icon
+                  size={13}
+                  style={{ color: connected ? p.color : 'var(--text-4)', flexShrink: 0 }}
+                />
+                <span
+                  className="connection-label"
+                  style={{ color: connected ? 'var(--text-2)' : 'var(--text-4)' }}
                 >
-                  <Icon size={12} className="shrink-0" style={{ color: connected ? p.color : 'var(--color-text-muted)', opacity: connected ? 1 : 0.5 }} />
-                  <span className="connection-label">{p.label}</span>
-                  <div
-                    className="connection-dot"
-                    style={{
-                      background: connected ? 'var(--color-success)' : undefined,
-                      boxShadow: connected ? '0 0 8px var(--color-success)' : undefined,
-                    }}
-                  />
-                </div>
-              )
-            })}
-          </div>
+                  {p.label}
+                </span>
+                <div className={`connection-dot ${connected ? 'on' : ''}`} />
+              </div>
+            )
+          })}
         </div>
       </nav>
 
-      {/* ── Main Content ── */}
+      {/* ── Main content ── */}
       <main className="main-content" key={page}>
-        <div className="animate-slide-up h-full">
-          {PAGES[page]}
-        </div>
+        <div className="animate-slide-up h-full">{PAGES[page]}</div>
       </main>
 
-      {/* ── Status Bar ── */}
-      <footer className="statusbar select-none text-[10px]">
-        <div className="flex items-center gap-2 opacity-80">
-          <DatabaseZap size={12} className={dbOk ? 'text-[var(--color-success)]' : 'text-[var(--color-error)]'} />
-          <span className="tracking-wide">DB: {dbOk ? 'Connected' : 'Error'}</span>
-        </div>
-        <div className="flex items-center gap-2 opacity-80">
-          <Bot size={12} className={aiConfigured ? 'text-[var(--color-brand-primary)]' : 'text-[var(--color-text-muted)]'} />
-          <span className="tracking-wide">AI: {aiConfigured ? 'Ready' : 'Not configured'}</span>
-        </div>
-        <div className="flex-1" />
-        <div
-          className="flex items-center gap-1.5 opacity-50 hover:opacity-100 transition-opacity cursor-pointer"
+      {/* ── Status bar ── */}
+      <footer className="statusbar select-none">
+        <span className="ok">
+          <DatabaseZap size={11} />
+          DB: {dbOk ? 'Connected' : 'Error'}
+        </span>
+        <span
+          style={{
+            display: 'inline-flex',
+            alignItems: 'center',
+            gap: 4,
+            color: aiConfigured ? 'var(--success)' : 'var(--text-3)'
+          }}
+        >
+          <Bot size={11} />
+          AI: {aiConfigured ? 'Ready' : 'Not configured'}
+        </span>
+        <span style={{ color: 'var(--text-3)' }}>{connectedCount} of 3 accounts connected</span>
+        <span
+          className="right mono"
+          style={{ fontSize: 11, color: 'var(--text-3)', cursor: 'pointer' }}
           onClick={() => setPage('settings')}
         >
-          <Settings size={10} />
-          <span className="font-mono">v1.0.0</span>
-        </div>
+          ⌖ v1.0.0
+        </span>
       </footer>
     </div>
   )

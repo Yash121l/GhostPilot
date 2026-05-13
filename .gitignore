@@ -7,3 +7,5 @@ coverage
 .eslintcache
 out.txt
 CLAUDE.md
+.env
+.env.local

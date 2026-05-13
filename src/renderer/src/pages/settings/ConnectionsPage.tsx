@@ -1,342 +1,242 @@
 import { useState, useEffect, useCallback, type ReactElement } from 'react'
-import {
-  Briefcase, AtSign, Camera, RefreshCw, Loader2,
-  CheckCircle, AlertTriangle, XCircle, Link2, Unlink,
-  ShieldCheck, BarChart2,
-} from 'lucide-react'
+import { Briefcase, AtSign, Camera, Link2, ShieldCheck, RefreshCw, Loader2 } from 'lucide-react'
 import { ipc, IPC_CHANNELS } from '../../lib/ipc'
-import type { ConnectionInfo, RateLimitInfo } from '@shared/ipc-types'
-import { Platform, PLATFORM_LABELS } from '@shared/types/platform'
+import { Platform } from '@shared/types/platform'
 
-// ─── Static platform metadata ─────────────────────────────────────────────────
-
-const PLATFORM_DEFS = [
-  {
-    platform: Platform.LINKEDIN,
-    icon: Briefcase,
-    color: '#0077B5',
-    bg: 'rgba(0,119,181,0.08)',
-    description: 'Professional posts, articles, and thought leadership',
-    scopes: 'Read profile · Write posts',
-  },
-  {
-    platform: Platform.TWITTER,
-    icon: AtSign,
-    color: '#1D9BF0',
-    bg: 'rgba(29,155,240,0.08)',
-    description: 'Tweets, threads, and real-time engagement',
-    scopes: 'Read · Write tweets · Moderate',
-  },
-  {
-    platform: Platform.INSTAGRAM,
-    icon: Camera,
-    color: '#E1306C',
-    bg: 'rgba(225,48,108,0.08)',
-    description: 'Visual content, carousels, and caption publishing',
-    scopes: 'Basic · Content Publish · Insights',
-  },
-] as const
-
-type ConnStatus = 'active' | 'expiring' | 'disconnected'
-
-function resolveStatus(conn: ConnectionInfo | undefined): ConnStatus {
-  if (!conn?.connected) return 'disconnected'
-  if (conn.needsReauth) return 'expiring'
-  return 'active'
+interface PlatformDef {
+  id: Platform
+  name: string
+  desc: string
+  Icon: React.ElementType
+  color: string
+  bg: string
 }
 
-const STATUS_META: Record<ConnStatus, { label: string; color: string; bg: string; Icon: React.ElementType }> = {
-  active:       { label: 'Active',         color: 'var(--color-success)',    bg: 'rgba(16,185,129,0.1)', Icon: CheckCircle },
-  expiring:     { label: 'Token expiring', color: 'var(--color-warning)',    bg: 'rgba(245,158,11,0.1)', Icon: AlertTriangle },
-  disconnected: { label: 'Not connected',  color: 'var(--color-text-muted)', bg: 'var(--color-surface-3)', Icon: XCircle },
-}
-
-// ─── Platform connection card ─────────────────────────────────────────────────
-
-interface CardProps {
-  def: (typeof PLATFORM_DEFS)[number]
-  conn: ConnectionInfo | undefined
-  rateLimit: RateLimitInfo | undefined
-  onRefresh: () => void
-}
-
-function ConnectionCard({ def, conn, rateLimit, onRefresh }: CardProps): ReactElement {
-  const [connecting, setConnecting]       = useState(false)
-  const [disconnecting, setDisconnecting] = useState(false)
-  const [cardError, setCardError]         = useState<string | null>(null)
-
-  const Icon      = def.icon
-  const status    = resolveStatus(conn)
-  const meta      = STATUS_META[status]
-  const StatusIcon = meta.Icon
-
-  const ratePct = rateLimit
-    ? Math.max(0, Math.round((rateLimit.remaining / rateLimit.limit) * 100))
-    : null
-
-  const handleConnect = async (): Promise<void> => {
-    setConnecting(true)
-    setCardError(null)
-    const res = await ipc.invoke(IPC_CHANNELS.AUTH_CONNECT, { platform: def.platform })
-    setConnecting(false)
-    if (!res.ok) setCardError(res.error.message)
+const PLATFORMS: PlatformDef[] = [
+  {
+    id: Platform.LINKEDIN,
+    name: 'LinkedIn',
+    Icon: Briefcase,
+    desc: 'Professional posts, articles, and thought leadership',
+    color: 'var(--linkedin)',
+    bg: 'var(--linkedin-soft)'
+  },
+  {
+    id: Platform.TWITTER,
+    name: 'X (Twitter)',
+    Icon: AtSign,
+    desc: 'Tweets, threads, and real-time engagement',
+    color: '#111',
+    bg: 'var(--twitter-soft)'
+  },
+  {
+    id: Platform.INSTAGRAM,
+    name: 'Instagram',
+    Icon: Camera,
+    desc: 'Visual content, carousels, and caption publishing',
+    color: 'var(--instagram)',
+    bg: 'var(--instagram-soft)'
   }
-
-  const handleDisconnect = async (): Promise<void> => {
-    setDisconnecting(true)
-    setCardError(null)
-    const res = await ipc.invoke(IPC_CHANNELS.CONNECTIONS_REVOKE, { platform: def.platform })
-    setDisconnecting(false)
-    if (res.ok) onRefresh()
-    else setCardError(res.error.message)
-  }
-
-  return (
-    <div
-      className="glass-card"
-      style={{
-        padding: '16px 20px',
-        borderLeft: `3px solid ${conn?.connected ? def.color : 'var(--color-border)'}`,
-      }}
-    >
-      <div className="flex items-start gap-4 min-w-0">
-        {/* Platform icon */}
-        <div
-          className="w-10 h-10 rounded-xl flex items-center justify-center shrink-0"
-          style={{ background: conn?.connected ? def.bg : 'var(--color-surface-3)' }}
-        >
-          <Icon size={18} style={{ color: conn?.connected ? def.color : 'var(--color-text-muted)' }} />
-        </div>
-
-        {/* Info */}
-        <div className="flex-1 min-w-0">
-          <div className="flex items-center gap-2 flex-wrap mb-1">
-            <p className="text-sm font-semibold text-[var(--color-text-primary)]">
-              {PLATFORM_LABELS[def.platform]}
-            </p>
-            <span
-              className="flex items-center gap-1 text-[10px] px-2 py-0.5 rounded-full font-semibold shrink-0"
-              style={{ color: meta.color, background: meta.bg }}
-            >
-              <StatusIcon size={9} />
-              {meta.label}
-            </span>
-          </div>
-
-          {conn?.connected && conn.displayName && (
-            <p className="text-xs font-medium mb-1 truncate" style={{ color: 'var(--color-text-secondary)' }}>
-              {conn.displayName}
-            </p>
-          )}
-
-          <p className="text-[11px] leading-relaxed" style={{ color: 'var(--color-text-muted)' }}>
-            {conn?.connected ? def.scopes : def.description}
-          </p>
-
-          {/* Rate-limit bar */}
-          {conn?.connected && ratePct !== null && (
-            <div className="flex items-center gap-2 mt-2.5">
-              <BarChart2
-                size={10}
-                style={{ color: rateLimit?.exceeded ? 'var(--color-error)' : 'var(--color-text-muted)' }}
-              />
-              <div className="progress-track" style={{ width: 88, flexShrink: 0 }}>
-                <div
-                  className="progress-fill"
-                  style={{
-                    width: `${ratePct}%`,
-                    background: rateLimit?.exceeded ? 'var(--color-error)' : def.color,
-                  }}
-                />
-              </div>
-              <span className="text-[10px] font-mono shrink-0" style={{ color: 'var(--color-text-muted)' }}>
-                {rateLimit?.remaining}/{rateLimit?.limit}
-              </span>
-              {rateLimit?.exceeded && (
-                <span className="text-[10px] shrink-0" style={{ color: 'var(--color-error)' }}>
-                  Rate limited
-                </span>
-              )}
-            </div>
-          )}
-
-          {cardError && (
-            <p className="text-[11px] mt-2 flex items-start gap-1.5" style={{ color: 'var(--color-error)' }}>
-              <XCircle size={10} className="shrink-0 mt-0.5" />
-              <span className="line-clamp-2">{cardError}</span>
-            </p>
-          )}
-        </div>
-
-        {/* Actions — column to prevent overflow */}
-        <div className="shrink-0 flex flex-col items-end gap-2">
-          {conn?.connected ? (
-            <>
-              {status === 'expiring' && (
-                <button
-                  onClick={handleConnect}
-                  disabled={connecting}
-                  className="btn btn-secondary btn-sm"
-                >
-                  {connecting
-                    ? <Loader2 size={11} className="animate-spin" />
-                    : <Link2 size={11} />}
-                  Reconnect
-                </button>
-              )}
-              <button
-                onClick={handleDisconnect}
-                disabled={disconnecting}
-                className="btn btn-ghost btn-sm"
-                style={{ color: 'var(--color-error)' }}
-              >
-                {disconnecting
-                  ? <Loader2 size={11} className="animate-spin" />
-                  : <Unlink size={11} />}
-                Disconnect
-              </button>
-            </>
-          ) : (
-            <button
-              onClick={handleConnect}
-              disabled={connecting}
-              className="btn btn-primary btn-sm"
-            >
-              {connecting
-                ? <Loader2 size={11} className="animate-spin" />
-                : <Link2 size={11} />}
-              {connecting ? 'Opening…' : 'Connect'}
-            </button>
-          )}
-        </div>
-      </div>
-    </div>
-  )
-}
-
-// ─── Page ─────────────────────────────────────────────────────────────────────
+]
 
 export default function ConnectionsPage(): ReactElement {
-  const [connections, setConnections] = useState<ConnectionInfo[]>([])
-  const [rateLimits, setRateLimits]   = useState<Map<Platform, RateLimitInfo>>(new Map())
-  const [loading, setLoading]         = useState(true)
-  const [pageError, setPageError]     = useState<string | null>(null)
+  const [connected, setConnected] = useState<Record<string, boolean>>({})
+  const [connecting, setConnecting] = useState<string | null>(null)
+  const [loading, setLoading] = useState(true)
 
   const load = useCallback(async (): Promise<void> => {
     setLoading(true)
-    setPageError(null)
-
-    const [connRes, liRes, twRes, igRes] = await Promise.all([
-      ipc.invoke(IPC_CHANNELS.CONNECTIONS_LIST, {}),
-      ipc.invoke(IPC_CHANNELS.CONNECTIONS_RATE_LIMIT_STATE, { platform: Platform.LINKEDIN }),
-      ipc.invoke(IPC_CHANNELS.CONNECTIONS_RATE_LIMIT_STATE, { platform: Platform.TWITTER }),
-      ipc.invoke(IPC_CHANNELS.CONNECTIONS_RATE_LIMIT_STATE, { platform: Platform.INSTAGRAM }),
-    ])
-
-    if (connRes.ok) {
-      setConnections(connRes.value)
-    } else {
-      setPageError(connRes.error.message)
+    const res = await ipc.invoke(IPC_CHANNELS.AUTH_STATUS, {})
+    if (res.ok) {
+      const map: Record<string, boolean> = {}
+      for (const c of res.value) map[c.platform] = c.connected
+      setConnected(map)
     }
-
-    const map = new Map<Platform, RateLimitInfo>()
-    if (liRes.ok) map.set(Platform.LINKEDIN, liRes.value)
-    if (twRes.ok) map.set(Platform.TWITTER, twRes.value)
-    if (igRes.ok) map.set(Platform.INSTAGRAM, igRes.value)
-    setRateLimits(map)
-
     setLoading(false)
   }, [])
 
   useEffect(() => {
     load()
-    const unsub = window.api.on('auth:connected', () => { load() })
-    return () => { unsub() }
+    const unsub = window.api?.on('auth:connected', () => {
+      void load()
+    })
+    return () => {
+      unsub?.()
+    }
   }, [load])
 
-  const connectedCount = connections.filter((c) => c.connected).length
+  const handleConnect = async (platform: Platform): Promise<void> => {
+    setConnecting(platform)
+    await ipc.invoke(IPC_CHANNELS.AUTH_CONNECT, { platform })
+    setConnecting(null)
+    void load()
+  }
+
+  const handleDisconnect = async (platform: Platform): Promise<void> => {
+    setConnecting(platform)
+    await ipc.invoke(IPC_CHANNELS.CONNECTIONS_REVOKE, { platform })
+    setConnecting(null)
+    void load()
+  }
 
   return (
     <div className="flex flex-col h-full">
       <div className="page-header">
         <div>
-          <h1 className="page-title">Connect Accounts</h1>
-          <p className="page-subtitle">
-            {connectedCount === 0
-              ? 'Link your social accounts to start publishing'
-              : `${connectedCount} of ${PLATFORM_DEFS.length} platforms connected`}
-          </p>
+          <h1 className="page-title">Connect</h1>
+          <p className="page-subtitle">Link your social accounts to start publishing</p>
         </div>
-        <button
-          onClick={load}
-          disabled={loading}
-          className="btn btn-ghost btn-icon"
-          title="Refresh"
-        >
+        <button onClick={load} disabled={loading} className="btn ghost icon">
           <RefreshCw size={14} className={loading ? 'animate-spin' : ''} />
         </button>
       </div>
 
       <div className="page-body">
-        <div style={{ maxWidth: 600 }}>
-          {pageError && (
-            <div
-              className="flex items-center gap-2 text-xs px-4 py-3 rounded-xl mb-6"
-              style={{
-                color: 'var(--color-error)',
-                background: 'rgba(239,68,68,0.06)',
-                border: '1px solid rgba(239,68,68,0.2)',
-              }}
-            >
-              <AlertTriangle size={13} className="shrink-0" />
-              <span className="flex-1 min-w-0 line-clamp-2">{pageError}</span>
-            </div>
-          )}
+        <div className="fade-in" style={{ maxWidth: 780 }}>
+          <div
+            style={{
+              fontSize: 11,
+              letterSpacing: '0.14em',
+              textTransform: 'uppercase',
+              color: 'var(--text-3)',
+              fontWeight: 600,
+              marginBottom: 12
+            }}
+          >
+            Platforms
+          </div>
 
-          {loading ? (
-            <div className="empty-state">
-              <Loader2 size={22} className="animate-spin text-[var(--color-primary)]" />
-            </div>
-          ) : (
-            <div className="space-y-8">
-              <section>
-                <p className="section-label">Platforms</p>
-                <div className="space-y-3">
-                  {PLATFORM_DEFS.map((def) => (
-                    <ConnectionCard
-                      key={def.platform}
-                      def={def}
-                      conn={connections.find((c) => c.platform === def.platform)}
-                      rateLimit={rateLimits.get(def.platform)}
-                      onRefresh={load}
-                    />
-                  ))}
-                </div>
-              </section>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+            {loading ? (
+              <div style={{ display: 'flex', justifyContent: 'center', padding: 40 }}>
+                <Loader2 size={22} className="animate-spin" style={{ color: 'var(--accent)' }} />
+              </div>
+            ) : (
+              PLATFORMS.map((p) => {
+                const isConnected = connected[p.id] ?? false
+                const isConnecting = connecting === p.id
+                return (
+                  <div
+                    key={p.id}
+                    className="card"
+                    style={{ display: 'flex', alignItems: 'center', gap: 16, padding: 16 }}
+                  >
+                    <div
+                      style={{
+                        width: 44,
+                        height: 44,
+                        borderRadius: 10,
+                        flexShrink: 0,
+                        background: p.bg,
+                        color: p.color,
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center'
+                      }}
+                    >
+                      <p.Icon size={20} />
+                    </div>
+                    <div style={{ flex: 1 }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                        <div style={{ fontSize: 15, fontWeight: 600 }}>{p.name}</div>
+                        {isConnected ? (
+                          <span
+                            style={{
+                              fontSize: 11,
+                              color: 'var(--success)',
+                              display: 'inline-flex',
+                              alignItems: 'center',
+                              gap: 4,
+                              fontWeight: 500
+                            }}
+                          >
+                            <span
+                              style={{
+                                width: 6,
+                                height: 6,
+                                borderRadius: '50%',
+                                background: 'var(--success)'
+                              }}
+                            />
+                            Connected
+                          </span>
+                        ) : (
+                          <span
+                            style={{
+                              fontSize: 11,
+                              color: 'var(--text-3)',
+                              display: 'inline-flex',
+                              alignItems: 'center',
+                              gap: 4
+                            }}
+                          >
+                            ✕ Not connected
+                          </span>
+                        )}
+                      </div>
+                      <div style={{ fontSize: 13, color: 'var(--text-3)', marginTop: 2 }}>
+                        {p.desc}
+                      </div>
+                    </div>
+                    {isConnected ? (
+                      <button
+                        className="btn danger"
+                        disabled={isConnecting}
+                        onClick={() => handleDisconnect(p.id)}
+                      >
+                        {isConnecting ? <Loader2 size={13} className="animate-spin" /> : null}
+                        Disconnect
+                      </button>
+                    ) : (
+                      <button
+                        className="btn primary"
+                        disabled={isConnecting}
+                        onClick={() => handleConnect(p.id)}
+                      >
+                        {isConnecting ? (
+                          <Loader2 size={13} className="animate-spin" />
+                        ) : (
+                          <Link2 size={14} />
+                        )}
+                        {isConnecting ? 'Opening…' : 'Connect'}
+                      </button>
+                    )}
+                  </div>
+                )
+              })
+            )}
+          </div>
 
-              <section>
-                <p className="section-label flex items-center gap-2">
-                  <ShieldCheck size={11} />
-                  Privacy &amp; Security
-                </p>
-                <div
-                  className="glass-card text-xs leading-relaxed space-y-2"
-                  style={{ padding: '16px 20px', color: 'var(--color-text-muted)' }}
-                >
-                  <p>
-                    OAuth tokens are stored exclusively in your OS keychain (macOS Keychain / Windows
-                    Credential Manager / libsecret on Linux). They are{' '}
-                    <strong style={{ color: 'var(--color-text-secondary)' }}>never uploaded</strong> to
-                    any server or stored in the database.
-                  </p>
-                  <p>
-                    All publishing requests originate directly from this machine. Disconnecting
-                    immediately deletes the local token.
-                  </p>
-                </div>
-              </section>
-            </div>
-          )}
+          <div
+            style={{
+              marginTop: 28,
+              fontSize: 11,
+              letterSpacing: '0.14em',
+              textTransform: 'uppercase',
+              color: 'var(--text-3)',
+              fontWeight: 600,
+              marginBottom: 10,
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: 6
+            }}
+          >
+            <ShieldCheck size={12} /> Privacy &amp; Security
+          </div>
+          <div
+            className="card"
+            style={{ padding: 18, fontSize: 13.5, color: 'var(--text-2)', lineHeight: 1.7 }}
+          >
+            <p style={{ margin: '0 0 10px' }}>
+              OAuth tokens are stored exclusively in your OS keychain (macOS Keychain / Windows
+              Credential Manager / libsecret on Linux). They are <strong>never uploaded</strong> to
+              any server or stored in the database.
+            </p>
+            <p style={{ margin: 0 }}>
+              All publishing requests originate directly from this machine. Disconnecting
+              immediately deletes the local token.
+            </p>
+          </div>
         </div>
       </div>
     </div>

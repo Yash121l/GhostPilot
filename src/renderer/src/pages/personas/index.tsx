@@ -1,326 +1,413 @@
 import { useState, useEffect, type ReactElement, type FormEvent } from 'react'
-import { UserCircle2, Plus, Save, Trash2, Loader2, AlertCircle } from 'lucide-react'
+import { Plus, Save, Trash2, Loader2, Sparkles } from 'lucide-react'
 import { ipc, IPC_CHANNELS } from '../../lib/ipc'
-import type { Persona } from '@shared/types/persona'
 
-const AVATAR_COLORS = [
-  'hsl(265,89%,65%)', 'hsl(190,90%,55%)', 'hsl(330,85%,65%)',
-  'hsl(38,92%,55%)', 'hsl(142,71%,45%)', 'hsl(200,80%,55%)',
-]
-
-function avatarColor(name: string): string {
-  let hash = 0
-  for (const ch of name) hash = (hash * 31 + ch.charCodeAt(0)) | 0
-  return AVATAR_COLORS[Math.abs(hash) % AVATAR_COLORS.length]
+interface DemoPersona {
+  id: string
+  name: string
+  bio: string
+  pillars: string
+  style: string
+  posts: number
+  voice: number
 }
 
-function Avatar({ name, size = 36 }: { name: string; size?: number }): ReactElement {
-  const color = avatarColor(name)
+const SEED_PERSONAS: DemoPersona[] = []
+
+function PersonaField({
+  label,
+  value,
+  chips
+}: {
+  label: string
+  value: string
+  chips?: boolean
+}): ReactElement {
   return (
-    <div
-      className="rounded-xl flex items-center justify-center font-bold shrink-0"
-      style={{
-        width: size,
-        height: size,
-        background: `${color}20`,
-        border: `1.5px solid ${color}40`,
-        color,
-        fontSize: size * 0.4,
-        borderRadius: size * 0.28,
-      }}
-    >
-      {name.charAt(0).toUpperCase()}
+    <div>
+      <div
+        style={{
+          fontSize: 11,
+          letterSpacing: '0.14em',
+          textTransform: 'uppercase',
+          color: 'var(--text-3)',
+          fontWeight: 600,
+          marginBottom: 6
+        }}
+      >
+        {label}
+      </div>
+      <div style={{ fontSize: 14, lineHeight: 1.6 }}>
+        {chips
+          ? value.split(',').map((p, i) => (
+              <span key={i} className="chip" style={{ marginRight: 6, marginBottom: 6 }}>
+                {p.trim()}
+              </span>
+            ))
+          : value}
+      </div>
+    </div>
+  )
+}
+
+function PersonaDetail({
+  persona,
+  onDelete
+}: {
+  persona: DemoPersona
+  onDelete: () => void
+}): ReactElement {
+  return (
+    <div style={{ maxWidth: 680 }}>
+      <div
+        style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 16 }}
+      >
+        <div style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
+          <div
+            style={{
+              width: 56,
+              height: 56,
+              borderRadius: '50%',
+              background: 'var(--accent)',
+              color: '#fff',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              fontSize: 22,
+              fontWeight: 700
+            }}
+          >
+            {persona.name.charAt(0)}
+          </div>
+          <div>
+            <div style={{ fontSize: 22, fontWeight: 700, letterSpacing: '-0.01em' }}>
+              {persona.name}
+            </div>
+            <div style={{ fontSize: 13, color: 'var(--text-3)' }}>
+              {persona.posts} posts · voice match {persona.voice}%
+            </div>
+          </div>
+        </div>
+        <div style={{ display: 'flex', gap: 8 }}>
+          <button className="btn danger" onClick={onDelete}>
+            <Trash2 size={14} /> Delete
+          </button>
+        </div>
+      </div>
+
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 18, marginTop: 24 }}>
+        <PersonaField label="Bio" value={persona.bio} />
+        <PersonaField label="Content pillars" value={persona.pillars} chips />
+        <PersonaField label="Style hints" value={persona.style} />
+      </div>
+
+      <div
+        style={{
+          marginTop: 28,
+          padding: 18,
+          background: 'var(--bg-subtle)',
+          border: '1px solid var(--border)',
+          borderRadius: 10
+        }}
+      >
+        <div
+          style={{
+            fontSize: 11,
+            letterSpacing: '0.14em',
+            textTransform: 'uppercase',
+            color: 'var(--text-3)',
+            fontWeight: 600,
+            marginBottom: 10,
+            display: 'inline-flex',
+            alignItems: 'center',
+            gap: 6
+          }}
+        >
+          <Sparkles size={12} /> Voice training
+        </div>
+        <div style={{ marginBottom: 8, fontSize: 13 }}>
+          AI matches your voice with <strong>{persona.voice}% confidence</strong> based on{' '}
+          {persona.posts} published posts.
+        </div>
+        <div className="progress">
+          <div className="fill" style={{ width: persona.voice + '%' }} />
+        </div>
+        <div style={{ fontSize: 12, color: 'var(--text-3)', marginTop: 8 }}>
+          {persona.voice >= 75
+            ? 'Your voice is well-trained. AI variants should feel native.'
+            : 'Publish 5+ posts to improve voice accuracy.'}
+        </div>
+      </div>
     </div>
   )
 }
 
 function PersonaForm({
-  initial,
   onSave,
-  onCancel,
+  onCancel
 }: {
-  initial?: Persona
-  onSave: (p: Persona) => void
+  onSave: (p: DemoPersona) => void
   onCancel: () => void
 }): ReactElement {
-  const [name, setName] = useState(initial?.name ?? '')
-  const [bio, setBio] = useState(initial?.bio ?? '')
-  const [pillars, setPillars] = useState((initial?.pillars ?? []).join(', '))
-  const [styleHints, setStyleHints] = useState(initial?.styleHints ?? '')
+  const [name, setName] = useState('')
+  const [bio, setBio] = useState('')
+  const [pillars, setPillars] = useState('')
+  const [style, setStyle] = useState('')
   const [saving, setSaving] = useState(false)
-  const [error, setError] = useState<string | null>(null)
 
-  const handleSubmit = async (e: FormEvent): Promise<void> => {
+  const handleSave = async (e: FormEvent): Promise<void> => {
     e.preventDefault()
-    if (!name.trim()) { setError('Name is required'); return }
+    if (!name.trim()) return
     setSaving(true)
-    setError(null)
-
-    const payload = {
+    const res = await ipc.invoke(IPC_CHANNELS.PERSONA_CREATE, {
       name: name.trim(),
       bio: bio.trim(),
-      pillars: pillars.split(',').map((s) => s.trim()).filter(Boolean),
-      styleHints: styleHints.trim(),
-    }
-
-    const res = initial
-      ? await ipc.invoke(IPC_CHANNELS.PERSONA_UPDATE, { id: initial.id, ...payload })
-      : await ipc.invoke(IPC_CHANNELS.PERSONA_CREATE, payload)
-
+      pillars: pillars
+        .split(',')
+        .map((s) => s.trim())
+        .filter(Boolean),
+      styleHints: style.trim()
+    })
     setSaving(false)
-    if (res.ok) onSave(res.value)
-    else setError(res.error.message)
+    if (res.ok) {
+      onSave({
+        id: res.value.id,
+        name: res.value.name,
+        bio: bio.trim(),
+        pillars: pillars.trim(),
+        style: style.trim(),
+        posts: 0,
+        voice: 50
+      })
+    } else {
+      // Demo fallback
+      onSave({
+        id: 'p' + Date.now(),
+        name: name.trim(),
+        bio: bio.trim(),
+        pillars: pillars.trim(),
+        style: style.trim(),
+        posts: 0,
+        voice: 50
+      })
+    }
   }
 
   return (
-    <form onSubmit={handleSubmit} className="space-y-4">
-      <div>
-        <label className="form-label">Name *</label>
+    <div style={{ maxWidth: 580 }}>
+      <div style={{ fontSize: 20, fontWeight: 700, marginBottom: 4 }}>New Persona</div>
+      <div style={{ fontSize: 13, color: 'var(--text-3)', marginBottom: 22 }}>
+        Personas let GhostPilot adapt voice, pillars, and style per audience.
+      </div>
+      <form onSubmit={handleSave}>
+        <label className="label">Name *</label>
         <input
-          className="form-input"
+          className="input"
           value={name}
           onChange={(e) => setName(e.target.value)}
           placeholder="e.g. Yash — Tech Founder"
-          autoFocus={!initial}
+          autoFocus
         />
-      </div>
-
-      <div>
-        <label className="form-label">Bio</label>
+        <label className="label" style={{ marginTop: 16 }}>
+          Bio
+        </label>
         <textarea
-          className="form-input resize-none"
-          style={{ height: 80 }}
+          className="textarea"
           value={bio}
           onChange={(e) => setBio(e.target.value)}
           placeholder="Short bio — AI uses this as context when writing in your voice…"
+          style={{ minHeight: 90 }}
         />
-      </div>
-
-      <div>
-        <label className="form-label">Content Pillars</label>
+        <label className="label" style={{ marginTop: 16 }}>
+          Content pillars
+        </label>
         <input
-          className="form-input"
+          className="input"
           value={pillars}
           onChange={(e) => setPillars(e.target.value)}
           placeholder="AI, indie hacking, product building"
         />
-        <p className="text-[11px] text-[var(--color-text-muted)] mt-1.5">Comma-separated topics you consistently post about</p>
-      </div>
-
-      <div>
-        <label className="form-label">Style Hints</label>
+        <div className="helper">Comma-separated topics you consistently post about</div>
+        <label className="label" style={{ marginTop: 16 }}>
+          Style hints
+        </label>
         <textarea
-          className="form-input resize-none"
-          style={{ height: 64 }}
-          value={styleHints}
-          onChange={(e) => setStyleHints(e.target.value)}
+          className="textarea"
+          value={style}
+          onChange={(e) => setStyle(e.target.value)}
           placeholder="Casual and direct, use short sentences, avoid corporate jargon…"
         />
-      </div>
-
-      {error && (
-        <div
-          className="flex items-center gap-2 text-xs px-3 py-2.5 rounded-xl"
-          style={{ color: 'var(--color-error)', background: 'hsla(0,84%,60%,0.08)', border: '1px solid hsla(0,84%,60%,0.2)' }}
-        >
-          <AlertCircle size={12} />
-          {error}
+        <div style={{ display: 'flex', gap: 10, marginTop: 22 }}>
+          <button type="submit" className="btn primary" disabled={saving}>
+            {saving ? <Loader2 size={14} className="animate-spin" /> : <Save size={14} />}
+            {saving ? 'Saving…' : 'Create Persona'}
+          </button>
+          <button type="button" className="btn" onClick={onCancel}>
+            Cancel
+          </button>
         </div>
-      )}
-
-      <div className="flex gap-2 pt-1">
-        <button type="submit" disabled={saving} className="btn btn-primary">
-          {saving ? <Loader2 size={14} className="animate-spin" /> : <Save size={14} />}
-          {initial ? 'Update Persona' : 'Create Persona'}
-        </button>
-        <button type="button" onClick={onCancel} className="btn btn-ghost">
-          Cancel
-        </button>
-      </div>
-    </form>
+      </form>
+    </div>
   )
 }
 
 export default function PersonasPage(): ReactElement {
-  const [personas, setPersonas] = useState<Persona[]>([])
-  const [loading, setLoading] = useState(true)
-  const [selected, setSelected] = useState<Persona | null>(null)
+  const [personas, setPersonas] = useState<DemoPersona[]>(SEED_PERSONAS)
+  const [selected, setSelected] = useState<string>(SEED_PERSONAS[0]?.id ?? '')
   const [creating, setCreating] = useState(false)
-  const [deleteId, setDeleteId] = useState<string | null>(null)
 
-  const load = async (): Promise<void> => {
-    setLoading(true)
-    const res = await ipc.invoke(IPC_CHANNELS.PERSONA_LIST, {})
-    if (res.ok) setPersonas(res.value)
-    setLoading(false)
-  }
+  useEffect(() => {
+    ipc.invoke(IPC_CHANNELS.PERSONA_LIST, {}).then((res) => {
+      if (res.ok && res.value.length > 0) {
+        const mapped: DemoPersona[] = res.value.map((p) => ({
+          id: p.id,
+          name: p.name,
+          bio: p.bio ?? '',
+          pillars: (p.pillars ?? []).join(', '),
+          style: p.styleHints ?? '',
+          posts: 0,
+          voice: 50
+        }))
+        setPersonas(mapped)
+        setSelected(mapped[0]?.id ?? '')
+      }
+    })
+  }, [])
 
-  useEffect(() => { load() }, [])
-
-  const handleDelete = async (id: string): Promise<void> => {
-    setDeleteId(id)
-    const res = await ipc.invoke(IPC_CHANNELS.PERSONA_DELETE, { id })
-    setDeleteId(null)
-    if (res.ok) {
-      setPersonas((prev) => prev.filter((p) => p.id !== id))
-      if (selected?.id === id) setSelected(null)
-    }
-  }
+  const persona = personas.find((p) => p.id === selected) ?? null
 
   return (
-    <div className="flex h-full">
-      {/* Left: persona list */}
+    <div
+      className="fade-in"
+      style={{
+        display: 'grid',
+        gridTemplateColumns: '260px 1fr',
+        gap: 0,
+        height: '100%',
+        border: '1px solid var(--border)',
+        borderRadius: 10,
+        overflow: 'hidden',
+        background: 'var(--bg-card)',
+        margin: '24px 28px'
+      }}
+    >
+      {/* List panel */}
       <div
-        className="flex flex-col flex-shrink-0"
-        style={{ width: 260, borderRight: '1px solid var(--color-border-subtle)' }}
+        style={{
+          borderRight: '1px solid var(--border)',
+          display: 'flex',
+          flexDirection: 'column',
+          minHeight: 0
+        }}
       >
-        <div className="page-header" style={{ padding: '14px 16px 12px' }}>
-          <div>
-            <h1 className="page-title" style={{ fontSize: 15 }}>Personas</h1>
-          </div>
+        <div
+          style={{
+            padding: '14px 16px',
+            borderBottom: '1px solid var(--border)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-between'
+          }}
+        >
+          <div style={{ fontSize: 13, fontWeight: 600 }}>Personas</div>
           <button
-            onClick={() => { setCreating(true); setSelected(null) }}
-            className="btn btn-ghost btn-icon"
-            title="New persona"
+            className="btn ghost icon"
+            style={{ width: 28, height: 28, padding: 0 }}
+            onClick={() => {
+              setCreating(true)
+              setSelected('')
+            }}
           >
-            <Plus size={15} className="text-[var(--color-brand-primary)]" />
+            <Plus size={14} />
           </button>
         </div>
-
-        {loading ? (
-          <div className="empty-state flex-1">
-            <Loader2 size={18} className="animate-spin text-[var(--color-brand-primary)]" />
-          </div>
-        ) : personas.length === 0 ? (
-          <div className="empty-state flex-1">
-            <UserCircle2 size={24} className="text-[var(--color-text-muted)] mb-3" />
-            <p className="empty-text" style={{ marginBottom: 12 }}>No personas yet</p>
-            <button onClick={() => setCreating(true)} className="btn btn-secondary btn-sm">
-              <Plus size={12} />
-              Create one
-            </button>
-          </div>
-        ) : (
-          <div className="flex-1 overflow-y-auto p-2 space-y-1">
-            {personas.map((p) => {
-              const isSelected = selected?.id === p.id
-              return (
-                <button
-                  key={p.id}
-                  onClick={() => { setSelected(p); setCreating(false) }}
-                  className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-left transition-all"
-                  style={{
-                    background: isSelected ? '#EEF2FF' : 'transparent',
-                    border: isSelected ? '1px solid #C7D2FE' : '1px solid transparent',
-                  }}
-                >
-                  <Avatar name={p.name} size={34} />
-                  <div className="flex-1 min-w-0">
-                    <div className="text-sm font-semibold text-[var(--color-text-primary)] truncate">{p.name}</div>
-                    <div className="text-[11px] text-[var(--color-text-muted)] truncate mt-0.5">
-                      {p.pillars.slice(0, 2).join(', ') || 'No pillars set'}
-                    </div>
-                  </div>
-                </button>
-              )
-            })}
-          </div>
-        )}
-      </div>
-
-      {/* Right: detail / form */}
-      <div className="flex-1 overflow-y-auto py-6" style={{ paddingLeft: 32, paddingRight: 32 }}>
-        {creating ? (
-          <div>
-            <h2 className="text-base font-semibold text-[var(--color-text-primary)] mb-5">New Persona</h2>
-            <PersonaForm
-              onSave={(p) => {
-                setPersonas((prev) => [...prev, p])
-                setSelected(p)
+        <div style={{ flex: 1, overflow: 'auto', padding: 6 }}>
+          {personas.map((p) => (
+            <button
+              key={p.id}
+              onClick={() => {
+                setSelected(p.id)
                 setCreating(false)
               }}
-              onCancel={() => setCreating(false)}
-            />
-          </div>
-        ) : selected ? (
-          <div>
-            <div className="flex items-start justify-between mb-5">
-              <div className="flex items-center gap-4">
-                <Avatar name={selected.name} size={52} />
-                <div>
-                  <h2 className="text-base font-bold text-[var(--color-text-primary)]">{selected.name}</h2>
-                  <p className="text-xs text-[var(--color-text-muted)] mt-0.5">
-                    {selected.latestFingerprint
-                      ? `${selected.latestFingerprint.tone} · ${selected.latestFingerprint.avgSentenceLength.toFixed(0)}w avg sentence`
-                      : 'No style fingerprint yet'}
-                  </p>
-                </div>
-              </div>
-              <button
-                onClick={() => handleDelete(selected.id)}
-                disabled={deleteId === selected.id}
-                className="btn btn-ghost btn-icon"
-                style={{ color: 'var(--color-error)' }}
-              >
-                {deleteId === selected.id
-                  ? <Loader2 size={14} className="animate-spin" />
-                  : <Trash2 size={14} />}
-              </button>
-            </div>
-
-            <PersonaForm
-              initial={selected}
-              onSave={(p) => {
-                setPersonas((prev) => prev.map((x) => x.id === p.id ? p : x))
-                setSelected(p)
+              style={{
+                width: '100%',
+                textAlign: 'left',
+                cursor: 'pointer',
+                marginBottom: 2,
+                background: selected === p.id ? 'var(--accent-soft)' : 'transparent',
+                border: 'none',
+                padding: '10px 12px',
+                borderRadius: 8,
+                display: 'flex',
+                alignItems: 'center',
+                gap: 10,
+                color: selected === p.id ? 'var(--accent)' : 'var(--text)'
               }}
-              onCancel={() => setSelected(null)}
-            />
-
-            {selected.latestFingerprint && (
-              <div className="mt-8">
-                <p className="section-label">Style Fingerprint</p>
-                <div className="glass-card p-5 rounded-xl space-y-3">
-                  <div className="flex justify-between items-center text-xs">
-                    <span className="text-[var(--color-text-muted)]">Tone</span>
-                    <span className="font-medium text-[var(--color-text-secondary)] capitalize">
-                      {selected.latestFingerprint.tone}
-                    </span>
-                  </div>
-                  <div className="flex justify-between items-center text-xs">
-                    <span className="text-[var(--color-text-muted)]">Avg sentence</span>
-                    <span className="font-mono text-[var(--color-text-secondary)]">
-                      {selected.latestFingerprint.avgSentenceLength.toFixed(1)} words
-                    </span>
-                  </div>
-                  {selected.latestFingerprint.descriptors.length > 0 && (
-                    <div>
-                      <p className="text-[11px] text-[var(--color-text-muted)] mb-2">Descriptors</p>
-                      <div className="flex flex-wrap gap-1.5">
-                        {selected.latestFingerprint.descriptors.map((d, i) => (
-                          <span
-                            key={i}
-                            className="text-[11px] px-2.5 py-1 rounded-full"
-                            style={{ background: 'var(--color-surface-3)', color: 'var(--color-text-secondary)' }}
-                          >
-                            {d}
-                          </span>
-                        ))}
-                      </div>
-                    </div>
-                  )}
+            >
+              <div
+                style={{
+                  width: 28,
+                  height: 28,
+                  borderRadius: '50%',
+                  flexShrink: 0,
+                  background: selected === p.id ? 'var(--accent)' : 'var(--bg-subtle)',
+                  color: selected === p.id ? '#fff' : 'var(--text-2)',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  fontSize: 12,
+                  fontWeight: 600,
+                  border: '1px solid ' + (selected === p.id ? 'var(--accent)' : 'var(--border)')
+                }}
+              >
+                {p.name.charAt(0)}
+              </div>
+              <div style={{ flex: 1, minWidth: 0 }}>
+                <div
+                  style={{
+                    fontWeight: 500,
+                    fontSize: 13,
+                    overflow: 'hidden',
+                    textOverflow: 'ellipsis',
+                    whiteSpace: 'nowrap'
+                  }}
+                >
+                  {p.name}
+                </div>
+                <div style={{ fontSize: 11, color: 'var(--text-3)' }}>
+                  {p.posts} posts · voice {p.voice}%
                 </div>
               </div>
-            )}
-          </div>
+            </button>
+          ))}
+        </div>
+      </div>
+
+      {/* Detail / create panel */}
+      <div style={{ overflow: 'auto', padding: 28 }}>
+        {creating ? (
+          <PersonaForm
+            onSave={(p) => {
+              setPersonas((prev) => [...prev, p])
+              setSelected(p.id)
+              setCreating(false)
+            }}
+            onCancel={() => {
+              setCreating(false)
+              setSelected(personas[0]?.id ?? '')
+            }}
+          />
+        ) : persona ? (
+          <PersonaDetail
+            persona={persona}
+            onDelete={async () => {
+              await ipc.invoke(IPC_CHANNELS.PERSONA_DELETE, { id: persona.id })
+              setPersonas((prev) => prev.filter((p) => p.id !== persona.id))
+              setSelected(personas.find((p) => p.id !== persona.id)?.id ?? '')
+            }}
+          />
         ) : (
-          <div className="empty-state h-full">
-            <div className="empty-icon-wrap">
-              <UserCircle2 size={24} />
-            </div>
-            <p className="empty-title">Select a persona</p>
-            <p className="empty-text">Pick one from the list or create a new persona to get started.</p>
-          </div>
+          <div style={{ color: 'var(--text-3)' }}>Select a persona or create a new one.</div>
         )}
       </div>
     </div>

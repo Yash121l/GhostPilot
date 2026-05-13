@@ -17,8 +17,9 @@ const logger = createLogger('LinkedInConnector')
 const clientId = (): string => process.env['LINKEDIN_CLIENT_ID'] ?? ''
 const clientSecret = (): string => process.env['LINKEDIN_CLIENT_SECRET'] ?? ''
 
-// LinkedIn REST API v202404+
+// LinkedIn REST API — current active version
 const API_BASE = 'https://api.linkedin.com'
+const LI_VERSION = '202501'
 // Scopes that require LinkedIn products to be approved on the app:
 // - openid, profile → requires "Sign In with LinkedIn using OpenID Connect"
 // - w_member_social → requires "Share on LinkedIn"
@@ -161,7 +162,7 @@ export class LinkedInConnector implements SocialConnector {
       headers: {
         Authorization: `Bearer ${tokens.accessToken}`,
         'Content-Type': 'application/json',
-        'LinkedIn-Version': '202404',
+        'LinkedIn-Version': LI_VERSION,
         'X-Restli-Protocol-Version': '2.0.0',
       },
       body: JSON.stringify(body),
@@ -189,7 +190,7 @@ export class LinkedInConnector implements SocialConnector {
       method: 'DELETE',
       headers: {
         Authorization: `Bearer ${tokens.accessToken}`,
-        'LinkedIn-Version': '202404',
+        'LinkedIn-Version': LI_VERSION,
         'X-Restli-Protocol-Version': '2.0.0',
       },
     })
@@ -208,7 +209,7 @@ export class LinkedInConnector implements SocialConnector {
       {
         headers: {
           Authorization: `Bearer ${tokens.accessToken}`,
-          'LinkedIn-Version': '202404',
+          'LinkedIn-Version': LI_VERSION,
           'X-Restli-Protocol-Version': '2.0.0',
         },
       },
@@ -294,7 +295,7 @@ export class LinkedInConnector implements SocialConnector {
         headers: {
           Authorization: `Bearer ${accessToken}`,
           'Content-Type': 'application/json',
-          'LinkedIn-Version': '202404',
+          'LinkedIn-Version': LI_VERSION,
           'X-Restli-Protocol-Version': '2.0.0',
         },
         body: JSON.stringify({
@@ -324,7 +325,7 @@ export class LinkedInConnector implements SocialConnector {
           headers: {
             Authorization: `Bearer ${accessToken}`,
             'Content-Type': 'application/json',
-            'LinkedIn-Version': '202404',
+            'LinkedIn-Version': LI_VERSION,
           },
           body: JSON.stringify({ initializeUploadRequest: { owner: authorUrn } }),
         })

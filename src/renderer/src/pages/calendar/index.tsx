@@ -1,268 +1,134 @@
 import { useState, useEffect, useCallback, type ReactElement } from 'react'
-import {
-  CalendarDays, Clock, Briefcase, AtSign, Camera,
-  CheckCircle, AlertCircle, RefreshCw, ChevronLeft, ChevronRight,
-} from 'lucide-react'
-import {
-  DndContext,
-  DragOverlay,
-  PointerSensor,
-  useSensor,
-  useSensors,
-  type DragStartEvent,
-  type DragEndEvent,
-} from '@dnd-kit/core'
-import { useDroppable, useDraggable } from '@dnd-kit/core'
-import { CSS } from '@dnd-kit/utilities'
+import { Briefcase, AtSign, Camera, ChevronLeft, ChevronRight, CalendarDays } from 'lucide-react'
 import { ipc, IPC_CHANNELS } from '../../lib/ipc'
+import { Platform } from '@shared/types/platform'
 import type { Post } from '@shared/types/post'
 import { PostStatus } from '@shared/types/post'
-import { Platform } from '@shared/types/platform'
 import type { RateLimitInfo } from '@shared/ipc-types'
 
-const PLATFORM_ICONS: Record<Platform, React.ElementType> = {
+const ICONS: Record<Platform, React.ElementType> = {
   [Platform.LINKEDIN]: Briefcase,
   [Platform.TWITTER]: AtSign,
   [Platform.INSTAGRAM]: Camera,
 }
+const COLORS: Record<Platform, string> = {
+  [Platform.LINKEDIN]: 'var(--linkedin)',
+  [Platform.TWITTER]: '#111',
+  [Platform.INSTAGRAM]: 'var(--instagram)',
+}
+const BG: Record<Platform, string> = {
+  [Platform.LINKEDIN]: 'var(--linkedin-soft)',
+  [Platform.TWITTER]: 'var(--twitter-soft)',
+  [Platform.INSTAGRAM]: 'var(--instagram-soft)',
+}
+const LABELS: Record<Platform, string> = {
+  [Platform.LINKEDIN]: 'LinkedIn',
+  [Platform.TWITTER]: 'X',
+  [Platform.INSTAGRAM]: 'Instagram',
+}
+const RATE_LABEL: Record<Platform, string> = LABELS
 
-const PLATFORM_COLORS: Record<Platform, string> = {
-  [Platform.LINKEDIN]: '#0077B5',
-  [Platform.TWITTER]: '#1D9BF0',
-  [Platform.INSTAGRAM]: '#E1306C',
+interface DayPost {
+  id: string
+  day: number
+  hour: number
+  platform: Platform
+  title: string
+  status: string
 }
 
-const STATUS_CONFIG: Record<string, { color: string; label: string }> = {
-  [PostStatus.DRAFT]:            { color: 'var(--color-text-muted)', label: 'Draft' },
-  [PostStatus.PENDING_APPROVAL]: { color: 'var(--color-warning)',    label: 'Pending' },
-  [PostStatus.APPROVED]:         { color: 'var(--color-info)',       label: 'Approved' },
-  [PostStatus.SCHEDULED]:        { color: 'var(--color-primary)',    label: 'Scheduled' },
-  [PostStatus.PUBLISHING]:       { color: 'var(--color-warning)',    label: 'Publishing' },
-  [PostStatus.PUBLISHED]:        { color: 'var(--color-success)',    label: 'Published' },
-  [PostStatus.FAILED]:           { color: 'var(--color-error)',      label: 'Failed' },
-  [PostStatus.ARCHIVED]:         { color: 'var(--color-text-muted)', label: 'Archived' },
-}
-
-function fmtDate(d: Date | string): string {
-  return new Date(d).toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' })
-}
-
-function fmtTime(d: Date | string): string {
-  return new Date(d).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' })
-}
-
-function dayKey(d: Date | string): string {
-  const dt = new Date(d)
-  return `${dt.getFullYear()}-${String(dt.getMonth() + 1).padStart(2, '0')}-${String(dt.getDate()).padStart(2, '0')}`
-}
-
-function groupByDate(posts: Post[]): Map<string, Post[]> {
-  const map = new Map<string, Post[]>()
-  const sorted = [...posts].sort((a, b) => {
-    const da = a.scheduledAt ?? a.createdAt
-    const db = b.scheduledAt ?? b.createdAt
-    return new Date(da).getTime() - new Date(db).getTime()
-  })
-  for (const post of sorted) {
-    const key = fmtDate(post.scheduledAt ?? post.createdAt)
-    const arr = map.get(key) ?? []
-    arr.push(post)
-    map.set(key, arr)
+function toDayPost(p: Post): DayPost {
+  const dt = new Date(p.scheduledAt ?? p.createdAt)
+  return {
+    id: p.id,
+    day: dt.getDate(),
+    hour: dt.getHours(),
+    platform: (p.platforms[0] as Platform) ?? Platform.LINKEDIN,
+    title: p.body.slice(0, 80),
+    status: p.status,
   }
-  return map
 }
 
-// ─── Draggable post card ─────────────────────────────────────────────────────
-
-function DraggablePostCard({ post, rateLimits }: { post: Post; rateLimits: Map<Platform, RateLimitInfo> }): ReactElement {
-  const { attributes, listeners, setNodeRef, transform, isDragging } = useDraggable({ id: post.id })
-  const cfg = STATUS_CONFIG[post.status] ?? STATUS_CONFIG[PostStatus.DRAFT]
-  const dt = post.scheduledAt ?? post.createdAt
-
-  // Check if any platform in this post has exceeded rate limit
-  const hasRateLimitIssue = post.platforms.some((p) => rateLimits.get(p)?.exceeded)
-
+function PostRow({ post, onDelete }: { post: DayPost; onDelete: () => void }): ReactElement {
+  const Icon = ICONS[post.platform] ?? Briefcase
+  const color = COLORS[post.platform] ?? 'var(--accent)'
+  const bg = BG[post.platform] ?? 'var(--accent-soft)'
+  const label = LABELS[post.platform] ?? post.platform
   return (
     <div
-      ref={setNodeRef}
-      {...listeners}
-      {...attributes}
-      className="glass-card p-4 rounded-xl cursor-grab active:cursor-grabbing"
       style={{
-        borderLeft: `3px solid ${hasRateLimitIssue ? 'var(--color-error)' : cfg.color}`,
-        opacity: isDragging ? 0.4 : 1,
-        transform: CSS.Translate.toString(transform),
-        touchAction: 'none',
+        display: 'flex',
+        alignItems: 'center',
+        gap: 14,
+        padding: '10px 12px',
+        border: '1px solid var(--border)',
+        borderRadius: 10,
+        background: 'var(--bg-card)',
       }}
     >
-      <div className="flex items-start gap-3">
-        <div className="flex-1 min-w-0">
-          <p className="text-sm text-[var(--color-text-secondary)] line-clamp-2 leading-snug">
-            {post.body}
-          </p>
-          <div className="flex items-center gap-3 mt-2.5">
-            <span
-              className="text-[10px] px-2 py-0.5 rounded-full font-semibold"
-              style={{ color: cfg.color, background: `${cfg.color}18` }}
-            >
-              {cfg.label}
-            </span>
-            <div className="flex items-center gap-1 text-[10px] text-[var(--color-text-muted)]">
-              <Clock size={9} />
-              {fmtTime(dt)}
-            </div>
-            {post.status === PostStatus.PUBLISHED && <CheckCircle size={11} className="text-[var(--color-success)]" />}
-            {hasRateLimitIssue && (
-              <span className="text-[10px]" style={{ color: 'var(--color-error)' }}>⚠ Rate limit</span>
-            )}
-          </div>
-        </div>
-        <div className="flex gap-1.5 shrink-0 pt-0.5">
-          {post.platforms.map((p) => {
-            const Icon = PLATFORM_ICONS[p]
-            const limited = rateLimits.get(p)?.exceeded
-            return Icon ? (
-              <Icon key={p} size={12} style={{ opacity: limited ? 1 : 0.5, color: limited ? 'var(--color-error)' : PLATFORM_COLORS[p] }} />
-            ) : null
-          })}
-        </div>
-      </div>
-    </div>
-  )
-}
-
-// ─── Droppable date slot ──────────────────────────────────────────────────────
-
-function DroppableDateSlot({ date, label, posts, rateLimits, isOver }: {
-  date: string
-  label: string
-  posts: Post[]
-  rateLimits: Map<Platform, RateLimitInfo>
-  isOver: boolean
-}): ReactElement {
-  const { setNodeRef } = useDroppable({ id: `slot-${date}` })
-
-  return (
-    <div ref={setNodeRef}>
-      <div className="flex items-center gap-3 mb-3">
-        <span className="text-[11px] font-bold text-[var(--color-text-muted)] uppercase tracking-wider">
-          {label}
-        </span>
-        <div
-          className="flex-1 h-px"
-          style={{ background: isOver ? 'var(--color-primary)' : 'var(--color-border)' }}
-        />
-        <span className="text-[10px] text-[var(--color-text-muted)]">
-          {posts.length} post{posts.length !== 1 ? 's' : ''}
-        </span>
+      <div className="mono" style={{ width: 50, color: 'var(--text-3)', fontSize: 13 }}>
+        {String(post.hour).padStart(2, '0')}:00
       </div>
       <div
-        className="space-y-2 pl-1 rounded-xl transition-colors"
         style={{
-          minHeight: 60,
-          padding: isOver ? '8px' : undefined,
-          background: isOver ? 'rgba(99,102,241,0.04)' : undefined,
-          border: isOver ? '1.5px dashed var(--color-primary)' : undefined,
+          width: 32,
+          height: 32,
+          borderRadius: 8,
+          background: bg,
+          color,
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
         }}
       >
-        {posts.map((post) => (
-          <DraggablePostCard key={post.id} post={post} rateLimits={rateLimits} />
-        ))}
-        {posts.length === 0 && isOver && (
-          <p className="text-[11px] text-[var(--color-primary)] text-center py-2">Drop here to reschedule</p>
-        )}
+        <Icon size={15} />
       </div>
+      <div style={{ flex: 1, minWidth: 0 }}>
+        <div
+          style={{
+            fontSize: 14,
+            fontWeight: 500,
+            overflow: 'hidden',
+            textOverflow: 'ellipsis',
+            whiteSpace: 'nowrap',
+          }}
+        >
+          {post.title}
+        </div>
+        <div style={{ fontSize: 12, color: 'var(--text-3)', marginTop: 2 }}>
+          {post.status === PostStatus.SCHEDULED ? (
+            <span style={{ color: 'var(--success)' }}>● Scheduled</span>
+          ) : (
+            <span>○ {post.status}</span>
+          )}
+          {' · '}
+          {label}
+        </div>
+      </div>
+      <button
+        className="btn ghost icon"
+        onClick={onDelete}
+        style={{ width: 28, height: 28, padding: 0, fontSize: 16, color: 'var(--text-3)' }}
+      >
+        ×
+      </button>
     </div>
   )
 }
-
-// ─── Mini Calendar ────────────────────────────────────────────────────────────
-
-function MiniCalendar({ posts }: { posts: Post[] }): ReactElement {
-  const today = new Date()
-  const [year, setYear] = useState(today.getFullYear())
-  const [month, setMonth] = useState(today.getMonth())
-
-  const firstDay = new Date(year, month, 1)
-  const daysInMonth = new Date(year, month + 1, 0).getDate()
-  const startDow = firstDay.getDay()
-  const monthLabel = firstDay.toLocaleString('en-US', { month: 'long', year: 'numeric' })
-
-  const postDays = new Set(
-    posts
-      .map((p) => {
-        const d = new Date(p.scheduledAt ?? p.createdAt)
-        if (d.getFullYear() === year && d.getMonth() === month) return d.getDate()
-        return null
-      })
-      .filter((x): x is number => x !== null),
-  )
-
-  const cells: (number | null)[] = []
-  for (let i = 0; i < startDow; i++) cells.push(null)
-  for (let d = 1; d <= daysInMonth; d++) cells.push(d)
-
-  const isToday = (d: number): boolean =>
-    d === today.getDate() && month === today.getMonth() && year === today.getFullYear()
-
-  return (
-    <div className="px-5 pt-4 pb-3">
-      <div className="flex items-center justify-between mb-3">
-        <button onClick={() => month === 0 ? (setYear(y => y - 1), setMonth(11)) : setMonth(m => m - 1)} className="btn btn-ghost btn-icon">
-          <ChevronLeft size={13} />
-        </button>
-        <span className="text-xs font-semibold text-[var(--color-text-secondary)]">{monthLabel}</span>
-        <button onClick={() => month === 11 ? (setYear(y => y + 1), setMonth(0)) : setMonth(m => m + 1)} className="btn btn-ghost btn-icon">
-          <ChevronRight size={13} />
-        </button>
-      </div>
-      <div className="grid grid-cols-7 gap-0.5 mb-1">
-        {['Su', 'Mo', 'Tu', 'We', 'Th', 'Fr', 'Sa'].map((d) => (
-          <div key={d} className="text-[9px] text-center text-[var(--color-text-muted)] py-1 font-semibold tracking-wide">{d}</div>
-        ))}
-      </div>
-      <div className="grid grid-cols-7 gap-0.5">
-        {cells.map((d, i) =>
-          d === null ? <div key={`e${i}`} /> : (
-            <div
-              key={d}
-              className="relative flex flex-col items-center justify-center aspect-square rounded-lg text-[11px] transition-colors"
-              style={{
-                color: isToday(d) ? '#fff' : postDays.has(d) ? 'var(--color-text-primary)' : 'var(--color-text-muted)',
-                background: isToday(d) ? 'var(--color-primary)' : 'transparent',
-                fontWeight: isToday(d) || postDays.has(d) ? '600' : '400',
-              }}
-            >
-              {d}
-              {postDays.has(d) && !isToday(d) && (
-                <div className="absolute bottom-1 w-1 h-1 rounded-full" style={{ background: 'var(--color-primary)' }} />
-              )}
-            </div>
-          ),
-        )}
-      </div>
-    </div>
-  )
-}
-
-// ─── Main page ────────────────────────────────────────────────────────────────
 
 export default function CalendarPage(): ReactElement {
+  const today = new Date()
+  const [selectedDay, setSelectedDay] = useState(today.getDate())
+  const [year, setYear] = useState(today.getFullYear())
+  const [month, setMonth] = useState(today.getMonth())
   const [posts, setPosts] = useState<Post[]>([])
-  const [loading, setLoading] = useState(true)
-  const [error, setError] = useState<string | null>(null)
   const [rateLimits, setRateLimits] = useState<Map<Platform, RateLimitInfo>>(new Map())
-  const [activeId, setActiveId] = useState<string | null>(null)
-  const [overSlot, setOverSlot] = useState<string | null>(null)
-
-  const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 8 } }))
+  const [loading, setLoading] = useState(true)
 
   const load = useCallback(async (): Promise<void> => {
     setLoading(true)
-    setError(null)
     const res = await ipc.invoke(IPC_CHANNELS.POST_LIST, { limit: 200 })
     if (res.ok) setPosts(res.value)
-    else setError(res.error.message)
     setLoading(false)
   }, [])
 
@@ -277,214 +143,374 @@ export default function CalendarPage(): ReactElement {
   }, [])
 
   useEffect(() => {
-    load()
-    loadRateLimits()
+    void load()
+    void loadRateLimits()
+    const unsub1 = ipc.on('job:published', () => void load())
+    const unsub2 = ipc.on('job:failed', () => void load())
+    return () => {
+      unsub1()
+      unsub2()
+    }
   }, [load, loadRateLimits])
 
-  // Listen for publisher events
-  useEffect(() => {
-    const unsub1 = ipc.on('job:published', () => { load() })
-    const unsub2 = ipc.on('job:failed', () => { load() })
-    return () => { unsub1(); unsub2() }
-  }, [load])
+  const firstDay = new Date(year, month, 1).getDay()
+  const daysInMonth = new Date(year, month + 1, 0).getDate()
+  const monthLabel = new Date(year, month, 1).toLocaleString('en-US', {
+    month: 'long',
+    year: 'numeric',
+  })
+  const cells: (number | null)[] = [
+    ...Array(firstDay).fill(null),
+    ...Array.from({ length: daysInMonth }, (_, i) => i + 1),
+  ]
 
-  const handleDragStart = ({ active }: DragStartEvent): void => {
-    setActiveId(active.id as string)
-  }
+  const dayPosts: DayPost[] = posts
+    .filter((p) => {
+      const dt = new Date(p.scheduledAt ?? p.createdAt)
+      return (
+        dt.getFullYear() === year &&
+        dt.getMonth() === month &&
+        dt.getDate() === selectedDay
+      )
+    })
+    .map(toDayPost)
+    .sort((a, b) => a.hour - b.hour)
 
-  const handleDragEnd = useCallback(async ({ active, over }: DragEndEvent): Promise<void> => {
-    setActiveId(null)
-    setOverSlot(null)
-    if (!over) return
-
-    const overId = over.id as string
-    if (!overId.startsWith('slot-')) return
-
-    const slotDate = overId.replace('slot-', '')
-    const post = posts.find((p) => p.id === active.id)
-    if (!post || !post.scheduledAt) return
-
-    // Reschedule: keep same time, change date
-    const orig = new Date(post.scheduledAt)
-    const [y, mo, d] = slotDate.split('-').map(Number)
-    const newDt = new Date(y, mo - 1, d, orig.getHours(), orig.getMinutes())
-
-    if (newDt.getTime() === orig.getTime()) return
-
-    // Pick the first variant matching the first platform
-    const platform = post.platforms[0]
-    const variant = post.variants.find((v) => v.platform === platform)
-    if (!variant) return
-
-    const res = await ipc.invoke(IPC_CHANNELS.POST_SCHEDULE, {
-      postId: post.id,
-      variantId: variant.id,
-      platform,
-      scheduledAt: newDt.toISOString(),
+  const hasPosts = (d: number): boolean =>
+    posts.some((p) => {
+      const dt = new Date(p.scheduledAt ?? p.createdAt)
+      return dt.getFullYear() === year && dt.getMonth() === month && dt.getDate() === d
     })
 
-    if (res.ok) {
-      setPosts((prev) =>
-        prev.map((p) => p.id === post.id ? { ...p, scheduledAt: newDt } : p),
-      )
-    }
-  }, [posts])
+  const scheduledCount = posts.filter((p) => p.status === PostStatus.SCHEDULED).length
+  const draftCount = posts.filter(
+    (p) => p.status === PostStatus.DRAFT || p.status === PostStatus.PENDING_APPROVAL,
+  ).length
+  const publishedCount = posts.filter((p) => p.status === PostStatus.PUBLISHED).length
 
-  const scheduled = posts.filter((p) =>
-    [PostStatus.SCHEDULED, PostStatus.APPROVED, PostStatus.PUBLISHED, PostStatus.FAILED].includes(p.status as PostStatus),
-  )
-  const drafts = posts.filter((p) =>
-    [PostStatus.DRAFT, PostStatus.PENDING_APPROVAL].includes(p.status as PostStatus),
-  )
-  const grouped = groupByDate(scheduled)
+  const isToday = (d: number): boolean =>
+    d === today.getDate() && month === today.getMonth() && year === today.getFullYear()
 
-  const activePost = activeId ? posts.find((p) => p.id === activeId) : null
+  const selDate = new Date(year, month, selectedDay)
+  const dayName = selDate.toLocaleString('en-US', { weekday: 'short' })
+  const monthName = selDate.toLocaleString('en-US', { month: 'long' })
+
+  const prevMonth = (): void => {
+    if (month === 0) {
+      setYear((y) => y - 1)
+      setMonth(11)
+    } else setMonth((m) => m - 1)
+  }
+  const nextMonth = (): void => {
+    if (month === 11) {
+      setYear((y) => y + 1)
+      setMonth(0)
+    } else setMonth((m) => m + 1)
+  }
+
+  const RATE_ROWS: { platform: Platform; label: string }[] = [
+    { platform: Platform.LINKEDIN, label: 'LinkedIn' },
+    { platform: Platform.TWITTER, label: 'X' },
+    { platform: Platform.INSTAGRAM, label: 'Instagram' },
+  ]
 
   return (
-    <div className="flex flex-col h-full">
-      <div className="page-header">
-        <div>
-          <h1 className="page-title">Calendar</h1>
-          <p className="page-subtitle">{posts.length} posts · {scheduled.length} scheduled</p>
+    <div
+      className="fade-in"
+      style={{
+        display: 'grid',
+        gridTemplateColumns: '1fr 360px',
+        gap: 24,
+        height: '100%',
+        padding: '24px 28px',
+        overflow: 'hidden',
+      }}
+    >
+      {/* ── DAY DETAIL ── */}
+      <div style={{ display: 'flex', flexDirection: 'column', minHeight: 0 }}>
+        <div style={{ display: 'flex', alignItems: 'baseline', gap: 14, marginBottom: 16 }}>
+          <div style={{ fontSize: 28, fontWeight: 700, letterSpacing: '-0.02em' }}>
+            {dayName}, {monthName} {selectedDay}
+          </div>
+          <div style={{ color: 'var(--text-3)', fontSize: 13 }}>{dayPosts.length} scheduled</div>
         </div>
-        <button onClick={load} className="btn btn-ghost btn-icon" title="Refresh">
-          <RefreshCw size={14} />
-        </button>
+
+        <div className="card" style={{ flex: 1, overflow: 'auto', padding: 0 }}>
+          {loading ? (
+            <div
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                height: '100%',
+              }}
+            >
+              <span
+                style={{
+                  width: 20,
+                  height: 20,
+                  borderRadius: '50%',
+                  border: '2px solid var(--accent)',
+                  borderTopColor: 'transparent',
+                  animation: 'spin 900ms linear infinite',
+                  display: 'inline-block',
+                }}
+              />
+            </div>
+          ) : dayPosts.length === 0 ? (
+            <div style={{ padding: '60px 20px', textAlign: 'center', color: 'var(--text-3)' }}>
+              <div
+                style={{
+                  width: 48,
+                  height: 48,
+                  margin: '0 auto 14px',
+                  borderRadius: 12,
+                  background: 'var(--bg-subtle)',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  border: '1px solid var(--border)',
+                }}
+              >
+                <CalendarDays size={20} style={{ color: 'var(--text-3)' }} />
+              </div>
+              <div style={{ color: 'var(--text)', fontSize: 16, fontWeight: 600 }}>
+                Nothing scheduled
+              </div>
+              <div style={{ marginTop: 4 }}>Open Composer to draft and schedule a post.</div>
+              <button
+                className="btn primary"
+                style={{ marginTop: 18 }}
+                onClick={() =>
+                  window.dispatchEvent(new CustomEvent('nav', { detail: 'composer' }))
+                }
+              >
+                Open Composer
+              </button>
+            </div>
+          ) : (
+            <div style={{ padding: 18, display: 'flex', flexDirection: 'column', gap: 10 }}>
+              {dayPosts.map((p) => (
+                <PostRow
+                  key={p.id}
+                  post={p}
+                  onDelete={async () => {
+                    await ipc.invoke(IPC_CHANNELS.POST_DELETE, { id: p.id })
+                    setPosts((prev) => prev.filter((x) => x.id !== p.id))
+                  }}
+                />
+              ))}
+            </div>
+          )}
+        </div>
       </div>
 
-      {loading ? (
-        <div className="empty-state flex-1">
-          <span className="w-5 h-5 rounded-full border-2 border-[var(--color-primary)] border-t-transparent animate-spin inline-block" />
-        </div>
-      ) : error ? (
-        <div className="empty-state flex-1">
-          <div className="empty-icon-wrap"><AlertCircle size={22} className="text-[var(--color-error)]" /></div>
-          <p className="empty-title">Failed to load</p>
-          <p className="empty-text">{error}</p>
-          <button onClick={load} className="btn btn-secondary btn-sm">Retry</button>
-        </div>
-      ) : (
-        <DndContext
-          sensors={sensors}
-          onDragStart={handleDragStart}
-          onDragEnd={handleDragEnd}
-          onDragOver={({ over }) => setOverSlot(over ? (over.id as string) : null)}
-        >
-          <div className="flex flex-1 overflow-hidden">
-            {/* Timeline */}
-            <div className="flex-1 page-body space-y-5">
-              {grouped.size === 0 ? (
-                <div className="empty-state">
-                  <div className="empty-icon-wrap"><CalendarDays size={24} /></div>
-                  <p className="empty-title">Nothing scheduled</p>
-                  <p className="empty-text">Create a post in Composer and schedule it.</p>
-                  <button
-                    className="btn btn-primary btn-sm"
-                    onClick={() => window.dispatchEvent(new CustomEvent('nav', { detail: 'composer' }))}
-                  >
-                    Open Composer
-                  </button>
-                </div>
-              ) : (
-                [...grouped.entries()].map(([dateLabel, datePosts]) => {
-                  const slotDate = dayKey(datePosts[0].scheduledAt ?? datePosts[0].createdAt)
-                  return (
-                    <DroppableDateSlot
-                      key={dateLabel}
-                      date={slotDate}
-                      label={dateLabel}
-                      posts={datePosts}
-                      rateLimits={rateLimits}
-                      isOver={overSlot === `slot-${slotDate}`}
-                    />
-                  )
-                })
-              )}
-            </div>
-
-            {/* Right sidebar */}
+      {/* ── RIGHT PANEL ── */}
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 14, overflow: 'auto' }}>
+        {/* Mini calendar */}
+        <div className="card" style={{ padding: 14, flexShrink: 0 }}>
+          <div
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'space-between',
+              marginBottom: 12,
+            }}
+          >
             <div
-              className="w-64 flex flex-col flex-shrink-0"
-              style={{ borderLeft: '1px solid var(--color-border)' }}
+              style={{
+                fontSize: 11,
+                letterSpacing: '0.14em',
+                textTransform: 'uppercase',
+                color: 'var(--text-3)',
+                fontWeight: 600,
+              }}
             >
-              <div className="sub-panel-header">
-                <CalendarDays size={12} className="text-[var(--color-text-muted)]" />
-                <span className="sub-panel-title">Overview</span>
-              </div>
-              <MiniCalendar posts={posts} />
-
-              {/* Rate limit badges */}
-              {rateLimits.size > 0 && (
-                <>
-                  <div className="sub-panel-header" style={{ borderTop: '1px solid var(--color-border)' }}>
-                    <span className="sub-panel-title">Rate Limits</span>
-                  </div>
-                  <div className="px-4 pb-3 space-y-2">
-                    {([Platform.LINKEDIN, Platform.TWITTER, Platform.INSTAGRAM] as Platform[]).map((p) => {
-                      const rl = rateLimits.get(p)
-                      if (!rl) return null
-                      const pct = Math.round((rl.remaining / rl.limit) * 100)
-                      const Icon = PLATFORM_ICONS[p]
-                      return (
-                        <div key={p} className="flex items-center gap-2">
-                          <Icon size={10} style={{ color: rl.exceeded ? 'var(--color-error)' : PLATFORM_COLORS[p] }} />
-                          <div className="flex-1 h-1 rounded-full" style={{ background: 'var(--color-border)' }}>
-                            <div
-                              className="h-full rounded-full"
-                              style={{
-                                width: `${pct}%`,
-                                background: rl.exceeded ? 'var(--color-error)' : PLATFORM_COLORS[p],
-                              }}
-                            />
-                          </div>
-                          <span className="text-[10px] font-mono" style={{ color: rl.exceeded ? 'var(--color-error)' : 'var(--color-text-muted)' }}>
-                            {rl.remaining}/{rl.limit}
-                          </span>
-                        </div>
-                      )
-                    })}
-                  </div>
-                </>
-              )}
-
-              {drafts.length > 0 && (
-                <>
-                  <div className="sub-panel-header" style={{ borderTop: '1px solid var(--color-border)' }}>
-                    <span className="sub-panel-title">Unscheduled ({drafts.length})</span>
-                  </div>
-                  <div className="flex-1 overflow-y-auto py-3 space-y-2 px-3">
-                    {drafts.map((post) => (
-                      <div
-                        key={post.id}
-                        className="glass-card p-3 rounded-xl"
-                        style={{ borderLeft: '2px solid var(--color-warning)', cursor: 'pointer' }}
-                        onClick={() => window.dispatchEvent(new CustomEvent('nav', { detail: 'composer' }))}
-                      >
-                        <p className="text-[11px] text-[var(--color-text-muted)] line-clamp-2 leading-relaxed">{post.body}</p>
-                        <span className="text-[9px] text-[var(--color-warning)] mt-1.5 block font-semibold uppercase tracking-wide">
-                          {STATUS_CONFIG[post.status]?.label ?? post.status}
-                        </span>
-                      </div>
-                    ))}
-                  </div>
-                </>
-              )}
+              {monthLabel}
+            </div>
+            <div style={{ display: 'flex', gap: 4 }}>
+              <button
+                className="btn ghost icon"
+                style={{ width: 26, height: 26, padding: 0 }}
+                onClick={prevMonth}
+              >
+                <ChevronLeft size={14} />
+              </button>
+              <button
+                className="btn ghost icon"
+                style={{ width: 26, height: 26, padding: 0 }}
+                onClick={nextMonth}
+              >
+                <ChevronRight size={14} />
+              </button>
             </div>
           </div>
-
-          {/* Drag overlay */}
-          <DragOverlay>
-            {activePost ? (
+          <div
+            style={{
+              display: 'grid',
+              gridTemplateColumns: 'repeat(7,1fr)',
+              gap: 4,
+              marginBottom: 6,
+            }}
+          >
+            {['Su', 'Mo', 'Tu', 'We', 'Th', 'Fr', 'Sa'].map((d) => (
               <div
-                className="glass-card p-4 rounded-xl shadow-lg"
-                style={{ borderLeft: `3px solid ${STATUS_CONFIG[activePost.status]?.color ?? 'var(--color-primary)'}`, opacity: 0.9, width: 340 }}
+                key={d}
+                style={{
+                  fontSize: 10,
+                  color: 'var(--text-3)',
+                  textAlign: 'center',
+                  fontWeight: 600,
+                  letterSpacing: '0.04em',
+                }}
               >
-                <p className="text-sm text-[var(--color-text-secondary)] line-clamp-2">{activePost.body}</p>
+                {d}
               </div>
-            ) : null}
-          </DragOverlay>
-        </DndContext>
-      )}
+            ))}
+          </div>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7,1fr)', gap: 4 }}>
+            {cells.map((d, i) => {
+              if (d === null) return <div key={`e${i}`} />
+              const isSel = d === selectedDay
+              const today_ = isToday(d)
+              return (
+                <button
+                  key={i}
+                  onClick={() => setSelectedDay(d)}
+                  style={{
+                    aspectRatio: '1',
+                    borderRadius: 8,
+                    border: 'none',
+                    cursor: 'pointer',
+                    position: 'relative',
+                    background: isSel
+                      ? 'var(--accent)'
+                      : today_
+                        ? 'var(--accent-soft)'
+                        : 'transparent',
+                    color: isSel ? '#fff' : today_ ? 'var(--accent)' : 'var(--text-2)',
+                    fontSize: 12,
+                    fontWeight: isSel || today_ ? 600 : 500,
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                  }}
+                >
+                  {d}
+                  {hasPosts(d) && !isSel && (
+                    <div
+                      style={{
+                        position: 'absolute',
+                        bottom: 3,
+                        width: 4,
+                        height: 4,
+                        borderRadius: '50%',
+                        background: 'var(--accent)',
+                      }}
+                    />
+                  )}
+                </button>
+              )
+            })}
+          </div>
+        </div>
+
+        {/* Rate limits */}
+        <div className="card" style={{ padding: 14, flexShrink: 0 }}>
+          <div
+            style={{
+              fontSize: 11,
+              letterSpacing: '0.14em',
+              textTransform: 'uppercase',
+              color: 'var(--text-3)',
+              fontWeight: 600,
+              marginBottom: 12,
+            }}
+          >
+            Rate limits
+          </div>
+          {rateLimits.size === 0 ? (
+            <div style={{ fontSize: 12, color: 'var(--text-4)', fontStyle: 'italic' }}>
+              Connect accounts to see rate limits
+            </div>
+          ) : (
+            RATE_ROWS.map(({ platform, label }) => {
+              const rl = rateLimits.get(platform)
+              if (!rl) return null
+              const pct = Math.round((rl.remaining / rl.limit) * 100)
+              const Icon = ICONS[platform]
+              const color = COLORS[platform]
+              return (
+                <div key={platform} style={{ marginBottom: 10 }}>
+                  <div
+                    style={{
+                      display: 'flex',
+                      justifyContent: 'space-between',
+                      fontSize: 12,
+                      marginBottom: 4,
+                    }}
+                  >
+                    <span
+                      style={{
+                        color: 'var(--text-2)',
+                        display: 'inline-flex',
+                        alignItems: 'center',
+                        gap: 6,
+                      }}
+                    >
+                      <Icon size={12} /> {label}
+                    </span>
+                    <span className="mono" style={{ color: 'var(--text-3)' }}>
+                      {rl.remaining}/{rl.limit}
+                    </span>
+                  </div>
+                  <div className="progress">
+                    <div
+                      className="fill"
+                      style={{
+                        width: pct + '%',
+                        background: rl.exceeded ? 'var(--error)' : color,
+                      }}
+                    />
+                  </div>
+                </div>
+              )
+            })
+          )}
+        </div>
+
+        {/* This Week */}
+        <div className="card" style={{ padding: 14, flexShrink: 0 }}>
+          <div
+            style={{
+              fontSize: 11,
+              letterSpacing: '0.14em',
+              textTransform: 'uppercase',
+              color: 'var(--text-3)',
+              fontWeight: 600,
+              marginBottom: 10,
+            }}
+          >
+            This Week
+          </div>
+          <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 13 }}>
+            <div>
+              <div style={{ fontSize: 22, fontWeight: 700 }}>{scheduledCount}</div>
+              <div style={{ color: 'var(--text-3)', fontSize: 12 }}>Scheduled</div>
+            </div>
+            <div>
+              <div style={{ fontSize: 22, fontWeight: 700 }}>{draftCount}</div>
+              <div style={{ color: 'var(--text-3)', fontSize: 12 }}>Drafts</div>
+            </div>
+            <div>
+              <div style={{ fontSize: 22, fontWeight: 700, color: 'var(--success)' }}>
+                {publishedCount}
+              </div>
+              <div style={{ color: 'var(--text-3)', fontSize: 12 }}>Published</div>
+            </div>
+          </div>
+        </div>
+      </div>
     </div>
   )
 }
