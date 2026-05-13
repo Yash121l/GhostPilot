@@ -13,11 +13,11 @@ jobs:
       matrix:
         include:
           - os: macos-latest
-            build_cmd: build:mac
+            platform_flag: --mac
           - os: windows-latest
-            build_cmd: build:win
+            platform_flag: --win
           - os: ubuntu-latest
-            build_cmd: build:linux
+            platform_flag: --linux
 
     runs-on: ${{ matrix.os }}
 
@@ -34,9 +34,7 @@ jobs:
         run: npm ci
 
       - name: Build
-        run: npm run ${{ matrix.build_cmd }}
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: npx electron-vite build && npx electron-builder ${{ matrix.platform_flag }} --publish never
 
       - name: Upload artifacts
         uses: actions/upload-artifact@v4
