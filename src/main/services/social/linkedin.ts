@@ -17,9 +17,10 @@ const logger = createLogger('LinkedInConnector')
 const clientId = (): string => process.env['LINKEDIN_CLIENT_ID'] ?? ''
 const clientSecret = (): string => process.env['LINKEDIN_CLIENT_SECRET'] ?? ''
 
-// LinkedIn REST API — current active version
+// LinkedIn REST API — version format YYYYMM, must be an active version.
+// LinkedIn supports versions for ~12 months. Using 202505 (May 2025).
 const API_BASE = 'https://api.linkedin.com'
-const LI_VERSION = '202501'
+const LI_VERSION = '202505'
 // Scopes that require LinkedIn products to be approved on the app:
 // - openid, profile → requires "Sign In with LinkedIn using OpenID Connect"
 // - w_member_social → requires "Share on LinkedIn"
