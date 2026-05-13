@@ -26,6 +26,10 @@ export const IPC_CHANNELS = {
   POST_APPROVE: 'post:approve',
   POST_SCHEDULE: 'post:schedule',
   POST_DELETE: 'post:delete',
+  POST_UPDATE_BODY: 'post:updateBody',
+
+  // Jobs
+  JOB_LIST: 'job:list',
 
   // AI
   AI_COMPLETE: 'ai:complete',
@@ -34,6 +38,7 @@ export const IPC_CHANNELS = {
   AI_STREAM_END: 'ai:stream:end',
   AI_USAGE_LIST: 'ai:usage:list',
   AI_USAGE_DAILY: 'ai:usage:daily',
+  AI_STYLE_DRIFT: 'ai:styleDrift',
 
   // AI Provider Keys
   AI_KEYS_LIST: 'ai:keys:list',
@@ -42,6 +47,12 @@ export const IPC_CHANNELS = {
   AI_KEYS_SET_DEFAULT: 'ai:keys:set-default',
   AI_KEYS_TEST: 'ai:keys:test',
   AI_OLLAMA_STATUS: 'ai:ollama:status',
+
+  // Connections (extended Phase 1 channels)
+  CONNECTIONS_GET_AUTH_URL: 'connections:getAuthURL',
+  CONNECTIONS_LIST: 'connections:list',
+  CONNECTIONS_REVOKE: 'connections:revoke',
+  CONNECTIONS_RATE_LIMIT_STATE: 'connections:rateLimitState',
 
   // Persona
   PERSONA_GET: 'persona:get',
@@ -275,4 +286,57 @@ export interface IPCMap {
     req: AuditQueryInput
     res: Result<AuditRow[], AppError>
   }
+
+  // Phase 1 — Posts
+  [IPC_CHANNELS.POST_UPDATE_BODY]: {
+    req: { id: string; body: string }
+    res: Result<Post, AppError>
+  }
+
+  // Phase 1 — Jobs
+  [IPC_CHANNELS.JOB_LIST]: {
+    req: { postId?: string; status?: string; limit?: number }
+    res: Result<Job[], AppError>
+  }
+
+  // Phase 1 — AI style drift
+  [IPC_CHANNELS.AI_STYLE_DRIFT]: {
+    req: { personaId: string; text: string }
+    res: Result<{ score: number }, AppError>
+  }
+
+  // Phase 1 — Connections
+  [IPC_CHANNELS.CONNECTIONS_GET_AUTH_URL]: {
+    req: { platform: Platform }
+    res: Result<string, AppError>
+  }
+  [IPC_CHANNELS.CONNECTIONS_LIST]: {
+    req: Record<string, never>
+    res: Result<ConnectionInfo[], AppError>
+  }
+  [IPC_CHANNELS.CONNECTIONS_REVOKE]: {
+    req: { platform: Platform }
+    res: Result<void, AppError>
+  }
+  [IPC_CHANNELS.CONNECTIONS_RATE_LIMIT_STATE]: {
+    req: { platform: Platform }
+    res: Result<RateLimitInfo, AppError>
+  }
+}
+
+export interface ConnectionInfo {
+  platform: Platform
+  connected: boolean
+  displayName?: string
+  expiresAt?: number
+  /** Whether the token is expired or about to expire (<1h). */
+  needsReauth: boolean
+}
+
+export interface RateLimitInfo {
+  platform: Platform
+  remaining: number
+  limit: number
+  resetsAt: number
+  exceeded: boolean
 }

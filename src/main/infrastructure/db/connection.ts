@@ -13,6 +13,7 @@ import { DB_FILE_NAME } from '../../../shared/constants'
 
 let _db: ReturnType<typeof drizzle> | null = null
 let _sqlite: Database.Database | null = null
+let _dbPath: string = ''
 
 /**
  * Initialise the SQLite connection (idempotent).
@@ -22,9 +23,9 @@ export function initDb(): ReturnType<typeof drizzle> {
   if (_db) return _db
 
   const userDataPath = app.getPath('userData')
-  const dbPath = join(userDataPath, DB_FILE_NAME)
+  _dbPath = join(userDataPath, DB_FILE_NAME)
 
-  _sqlite = new Database(dbPath)
+  _sqlite = new Database(_dbPath)
 
   // Enable WAL mode for better concurrency + crash safety.
   _sqlite.pragma('journal_mode = WAL')
@@ -51,6 +52,12 @@ export function getDb(): ReturnType<typeof drizzle> {
 export function getRawDb(): Database.Database {
   if (!_sqlite) throw new Error('DB not initialised — call initDb() first')
   return _sqlite
+}
+
+/** Return the file-system path to the SQLite database file. */
+export function getDbPath(): string {
+  if (!_dbPath) throw new Error('DB not initialised — call initDb() first')
+  return _dbPath
 }
 
 /**

@@ -3,6 +3,10 @@ import { IPC_CHANNELS } from '../../shared/ipc-types'
 import type { CreatePostInput, GenerateVariantsInput, ApprovePostInput, SchedulePostInput } from '../../shared/ipc-types'
 import { ok, err, AppError, ErrorCode } from '../../shared/types/error'
 import { getServices } from '../services/index'
+import { getDb } from '../infrastructure/db/connection'
+import { jobs } from '../infrastructure/db/schema'
+import { eq, desc } from 'drizzle-orm'
+import type { Job } from '../../shared/types/post'
 import { createLogger } from '../infrastructure/logger/logger'
 import type { AuditService } from '../application/audit/audit.service'
 
@@ -72,6 +76,40 @@ export function registerPostHandlers(_auditService: AuditService): void {
       return ok(undefined)
     } catch (e) {
       return err(new AppError({ code: ErrorCode.UNKNOWN, message: String(e) }))
+    }
+  })
+
+  ipcMain.handle(IPC_CHANNELS.POST_UPDATE_BODY, async (_event, { id, body }: { id: string; body: string }) => {
+    try {
+      return ok(await getServices().draftService.updateBody(id, body))
+    } catch (e) {
+      return err(e instanceof AppError ? e : new AppError({ code: ErrorCode.POST_INVALID_TRANSITION, message: String(e) }))
+    }
+  })
+
+  ipcMain.handle(IPC_CHANNELS.JOB_LIST, async (_event, input: { postId?: string; status?: string; limit?: number }) => {
+    try {
+      const db = getDb()
+      const rows = await db
+        .select()
+        .from(jobs)
+        .where(input.postId ? eq(jobs.postId, input.postId) : undefined)
+        .orderBy(desc(jobs.scheduledAt))
+        .limit(input.limit ?? 50)
+
+      const mapped: Job[] = rows.map((r) => ({
+        id: r.id,
+        postId: r.postId,
+        variantId: r.variantId,
+        platform: r.platform as import('../../shared/types/platform').Platform,
+        scheduledAt: r.scheduledAt,
+        attempts: r.attempts,
+        lastError: r.lastError ?? undefined,
+        status: r.status as Job['status'],
+      }))
+      return ok(mapped)
+    } catch (e) {
+      return err(new AppError({ code: ErrorCode.DB_QUERY_FAILED, message: String(e) }))
     }
   })
 }

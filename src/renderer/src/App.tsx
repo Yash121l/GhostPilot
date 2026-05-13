@@ -15,14 +15,14 @@ const SIDEBAR_CONNECTORS = [
   { platform: Platform.INSTAGRAM, label: 'Instagram',   icon: Camera,    color: '#E1306C' },
 ]
 
-import ComposerPage from './pages/ComposerPage'
-import CalendarPage from './pages/CalendarPage'
-import InboxPage from './pages/InboxPage'
-import GoalsPage from './pages/GoalsPage'
-import TrendsPage from './pages/TrendsPage'
-import PersonasPage from './pages/PersonasPage'
-import AnalyticsPage from './pages/AnalyticsPage'
-import SettingsPage from './pages/SettingsPage'
+import ComposerPage from './pages/composer'
+import CalendarPage from './pages/calendar'
+import GoalsPage from './pages/goals'
+import TrendsPage from './pages/trends'
+import PersonasPage from './pages/personas'
+import AnalyticsPage from './pages/analytics'
+import ConnectionsPage from './pages/settings/ConnectionsPage'
+import AIProvidersPage from './pages/settings/AIProvidersPage'
 
 type Page = 'composer' | 'calendar' | 'inbox' | 'goals' | 'trends' | 'personas' | 'analytics' | 'settings'
 
@@ -42,12 +42,12 @@ const NAV: NavEntry[] = [
 const PAGES: Record<Page, ReactElement> = {
   composer:  <ComposerPage />,
   calendar:  <CalendarPage />,
-  inbox:     <InboxPage />,
+  inbox:     <ConnectionsPage />,
   goals:     <GoalsPage />,
   trends:    <TrendsPage />,
   personas:  <PersonasPage />,
   analytics: <AnalyticsPage />,
-  settings:  <SettingsPage />,
+  settings:  <AIProvidersPage />,
 }
 
 export default function App(): ReactElement {

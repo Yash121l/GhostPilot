@@ -11,6 +11,14 @@ export default defineConfig({
         '@main': resolve('src/main'),
       },
     },
+    build: {
+      rollupOptions: {
+        input: {
+          index: resolve('src/main/index.ts'),
+          'workers/publisher.worker': resolve('src/main/workers/publisher.worker.ts'),
+        },
+      },
+    },
   },
   preload: {
     resolve: {

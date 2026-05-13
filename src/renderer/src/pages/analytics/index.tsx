@@ -1,6 +1,6 @@
 import { useState, useEffect, type ReactElement } from 'react'
 import { BarChart3, Loader2, TrendingUp, DollarSign, Zap, RefreshCw } from 'lucide-react'
-import { ipc, IPC_CHANNELS } from '../lib/ipc'
+import { ipc, IPC_CHANNELS } from '../../lib/ipc'
 import type { Post } from '@shared/types/post'
 import { PostStatus } from '@shared/types/post'
 import type { LLMUsage } from '@shared/types/ai'

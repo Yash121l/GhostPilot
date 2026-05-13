@@ -1,6 +1,6 @@
 import { useState, useEffect, type ReactElement, type FormEvent } from 'react'
 import { Target, Plus, Trash2, Loader2, AlertCircle, ChevronDown, ChevronRight } from 'lucide-react'
-import { ipc, IPC_CHANNELS } from '../lib/ipc'
+import { ipc, IPC_CHANNELS } from '../../lib/ipc'
 import type { Intent, KeyResult } from '@shared/types/intent'
 
 function ProgressRing({ pct }: { pct: number }): ReactElement {
@@ -20,7 +20,7 @@ function ProgressRing({ pct }: { pct: number }): ReactElement {
         transform="rotate(-90 22 22)"
         style={{ transition: 'stroke-dasharray 0.6s cubic-bezier(0.16,1,0.3,1)' }}
       />
-      <text x={22} y={22} textAnchor="middle" dominantBaseline="central" fill="white" fontSize={9} fontWeight={700}>
+      <text x={22} y={22} textAnchor="middle" dominantBaseline="central" fill="var(--color-text-secondary)" fontSize={9} fontWeight={700}>
         {pct.toFixed(0)}%
       </text>
     </svg>

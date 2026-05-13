@@ -8,6 +8,7 @@ import { registerPersonaHandlers } from './persona.handlers'
 import { registerIntentHandlers } from './intent.handlers'
 import { registerTrendHandlers } from './trend.handlers'
 import { registerAuthHandlers } from './auth.handlers'
+import { registerConnectionHandlers } from './connections.ipc'
 import { createLogger } from '../infrastructure/logger/logger'
 
 const logger = createLogger('IPC')
@@ -30,6 +31,7 @@ export function registerAllHandlers(): void {
   registerIntentHandlers()
   registerTrendHandlers()
   registerAuthHandlers()
+  registerConnectionHandlers()
 
   ipcMain.handle('app:version', () => process.env['npm_package_version'] ?? '0.0.0')
 

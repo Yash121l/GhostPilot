@@ -3,7 +3,7 @@ import {
   Briefcase, AtSign, Camera, RefreshCw, Loader2, CheckCircle,
   MessageSquare, Inbox, Plus, Link2,
 } from 'lucide-react'
-import { ipc, IPC_CHANNELS } from '../lib/ipc'
+import { ipc, IPC_CHANNELS } from '../../lib/ipc'
 import type { AuthStatusOutput } from '@shared/ipc-types'
 import { Platform, PLATFORM_LABELS } from '@shared/types/platform'
 

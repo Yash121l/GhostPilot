@@ -7,6 +7,7 @@ import { AuditService } from '../application/audit/audit.service'
 import { AIGateway } from './ai-gateway/index'
 import { PersonaService } from './persona/persona.service'
 import { PostService } from './post/post.service'
+import { DraftService } from './post/draft-service'
 import { VariantGenerator } from './post/variant-generator'
 import { IntentService } from './intent/intent.service'
 import { TrendWatcher } from './trends/trend-watcher'
@@ -24,6 +25,7 @@ export interface Services {
   aiGateway: AIGateway
   personaService: PersonaService
   postService: PostService
+  draftService: DraftService
   variantGenerator: VariantGenerator
   intentService: IntentService
   trendWatcher: TrendWatcher
@@ -40,6 +42,7 @@ export async function initServices(): Promise<Services> {
   const aiGateway = new AIGateway(audit)
   const personaService = new PersonaService(audit)
   const postService = new PostService(audit)
+  const draftService = new DraftService(audit, postService)
   const variantGenerator = new VariantGenerator(aiGateway, personaService, postService)
   const intentService = new IntentService(audit, aiGateway)
   const trendWatcher = new TrendWatcher()
@@ -61,6 +64,7 @@ export async function initServices(): Promise<Services> {
     aiGateway,
     personaService,
     postService,
+    draftService,
     variantGenerator,
     intentService,
     trendWatcher,

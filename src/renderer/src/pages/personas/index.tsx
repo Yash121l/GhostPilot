@@ -1,6 +1,6 @@
 import { useState, useEffect, type ReactElement, type FormEvent } from 'react'
 import { UserCircle2, Plus, Save, Trash2, Loader2, AlertCircle } from 'lucide-react'
-import { ipc, IPC_CHANNELS } from '../lib/ipc'
+import { ipc, IPC_CHANNELS } from '../../lib/ipc'
 import type { Persona } from '@shared/types/persona'
 
 const AVATAR_COLORS = [

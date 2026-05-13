@@ -1,17 +1,20 @@
 import { app, BrowserWindow, Tray, nativeImage, dialog, shell, protocol, Notification } from 'electron'
 import { join } from 'path'
+import { Worker } from 'worker_threads'
 import { electronApp, optimizer } from '@electron-toolkit/utils'
-import { initDb, closeDb } from './infrastructure/db/connection'
+import { initDb, closeDb, getDbPath } from './infrastructure/db/connection'
 import { runMigrations } from './infrastructure/db/migration-runner'
 import { createLogger } from './infrastructure/logger/logger'
 import { registerAllHandlers } from './ipc'
 import { initServices, getServices } from './services/index'
+import type { Platform } from '../shared/types/platform'
 import { APP_NAME, APP_URL_SCHEME } from '../shared/constants'
 
 const logger = createLogger('Main')
 
 let mainWindow: BrowserWindow | null = null
 let tray: Tray | null = null
+let publisherWorker: Worker | null = null
 
 async function bootstrap(): Promise<void> {
   logger.info({ msg: 'App starting', version: app.getVersion() })
@@ -41,11 +44,73 @@ async function bootstrap(): Promise<void> {
     // Non-fatal — app still works; user just needs to configure providers
   }
 
-  // 4. Start scheduler
+  // 4. Start scheduler (in-process fallback) + publisher worker
   try {
     getServices().schedulerService.start()
   } catch {
     // Services may not be ready if DB failed partially
+  }
+
+  // 5. Spawn publisher worker thread (handles actual publish dispatch)
+  try {
+    const workerPath = join(__dirname, 'workers/publisher.worker.js')
+    publisherWorker = new Worker(workerPath, { workerData: { dbPath: getDbPath() } })
+
+    publisherWorker.on('message', (msg: { kind: string; jobId?: string; postId?: string; platform?: string; url?: string; error?: string; permanent?: boolean; level?: string; context?: string; msg?: string; fields?: Record<string, unknown> }) => {
+      if (msg.kind === 'log') {
+        const wLogger = createLogger(msg.context ?? 'Worker', 'publisher')
+        const level = (msg.level ?? 'info') as 'debug' | 'info' | 'warn' | 'error'
+        wLogger[level]({ msg: msg.msg, ...msg.fields })
+        return
+      }
+
+      // Relay publish_request to actual connector
+      if (msg.kind === 'publish_request' && msg.jobId) {
+        const jobId = msg.jobId
+        const platform = msg.platform as Platform
+        const body = (msg as unknown as Record<string, string>)['body'] ?? ''
+
+        getServices().oauthManager.getTokens(platform).then(async (tokens) => {
+          if (!tokens) {
+            publisherWorker?.postMessage({ kind: 'publish_error', jobId, error: `No tokens for ${platform}` })
+            return
+          }
+          const connector = getServices().oauthManager.getConnector(platform)
+          if (!connector) {
+            publisherWorker?.postMessage({ kind: 'publish_error', jobId, error: `No connector for ${platform}` })
+            return
+          }
+          try {
+            const result = await connector.publish({ body }, tokens)
+            publisherWorker?.postMessage({ kind: 'publish_result', jobId, url: result.url, externalId: result.externalId })
+          } catch (e) {
+            publisherWorker?.postMessage({ kind: 'publish_error', jobId, error: String(e) })
+          }
+        }).catch((e) => {
+          publisherWorker?.postMessage({ kind: 'publish_error', jobId, error: String(e) })
+        })
+        return
+      }
+
+      // Forward job status events to renderer
+      if ((msg.kind === 'job:published' || msg.kind === 'job:failed') && mainWindow) {
+        mainWindow.webContents.send(msg.kind, msg)
+
+        if (msg.kind === 'job:published') {
+          new Notification({ title: APP_NAME, body: `Post published on ${msg.platform}` }).show()
+        } else if (msg.permanent) {
+          new Notification({ title: APP_NAME, body: `Post failed permanently on ${msg.platform}` }).show()
+        }
+      }
+    })
+
+    publisherWorker.on('error', (e) => logger.error({ msg: 'Publisher worker error', error: e.message }))
+    publisherWorker.on('exit', (code) => {
+      if (code !== 0) logger.warn({ msg: 'Publisher worker exited', code })
+      publisherWorker = null
+    })
+  } catch (e) {
+    logger.warn({ msg: 'Publisher worker failed to start', error: String(e) })
   }
 
   // 5. Main window
@@ -164,6 +229,8 @@ app.on('before-quit', () => {
   } catch {
     // services may not have init'd
   }
+  publisherWorker?.postMessage({ kind: 'shutdown' })
+  publisherWorker?.terminate()
   closeDb()
   tray?.destroy()
 })

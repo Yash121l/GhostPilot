@@ -6,6 +6,6 @@ export default defineConfig({
   dialect: 'sqlite',
   dbCredentials: {
     // Used only for drizzle-kit generate — not the runtime path.
-    url: './dev.db',
-  },
+    url: './dev.db'
+  }
 })

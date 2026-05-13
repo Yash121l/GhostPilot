@@ -1,50 +1,106 @@
 import { nanoid } from 'nanoid'
 import { eq } from 'drizzle-orm'
 import { getDb } from '../../infrastructure/db/connection'
-import { trendClusters, trendEvidence } from '../../infrastructure/db/schema'
+import { trendClusters, trendEvidence, settings } from '../../infrastructure/db/schema'
 import { fetchHackerNews } from './sources/hackernews'
 import { fetchReddit } from './sources/reddit'
 import type { RawTrendItem } from './sources/hackernews'
 import { createLogger } from '../../infrastructure/logger/logger'
-import type { TrendCluster } from '../../../shared/types/trend'
+import type { TrendCluster, TrendConfig } from '../../../shared/types/trend'
+import { DEFAULT_TREND_CONFIG } from '../../../shared/types/trend'
 
 const logger = createLogger('TrendWatcher')
+
+async function readConfig(): Promise<TrendConfig> {
+  try {
+    const db = getDb()
+    const rows = await db.select().from(settings).where(eq(settings.key, 'trend:config'))
+    if (rows[0]) return JSON.parse(rows[0].value) as TrendConfig
+  } catch { /* ignore */ }
+  return DEFAULT_TREND_CONFIG
+}
+
+function velocityScore(cluster: RawTrendItem[]): number {
+  const maxScore = Math.max(...cluster.map((i) => i.score))
+  // log10 scale: score=10→0.25, score=100→0.5, score=1000→0.75, score=10000→1.0
+  return Math.min(1, Math.log10(Math.max(1, maxScore) + 1) / 4)
+}
+
+function noveltyScore(cluster: RawTrendItem[]): number {
+  // Fewer items in cluster = niche/novel; more items = saturated
+  return Math.max(0.2, Math.min(0.95, 1 - (cluster.length - 1) * 0.07))
+}
+
+function relevanceScore(cluster: RawTrendItem[], config: TrendConfig): number {
+  const title = cluster[0].title.toLowerCase()
+  const allWords = cluster.map((i) => i.title.toLowerCase()).join(' ')
+
+  if (config.keywords.length > 0) {
+    const matchCount = config.keywords.filter((kw) =>
+      allWords.includes(kw.toLowerCase()),
+    ).length
+    return Math.min(0.95, 0.3 + (matchCount / config.keywords.length) * 0.65)
+  }
+
+  // No keywords — use source diversity + score magnitude as proxy
+  const sources = new Set(cluster.map((i) => i.source))
+  const avgScore = cluster.reduce((s, i) => s + i.score, 0) / cluster.length
+  const sourceBonus = Math.min(0.25, (sources.size - 1) * 0.15)
+  const scoreBonus = Math.min(0.15, Math.log10(Math.max(1, avgScore) + 1) / 8)
+
+  // Spread relevance across [0.35, 0.85] based on title length diversity
+  const titleLengthFactor = Math.min(0.1, title.split(' ').length * 0.015)
+  return Math.min(0.85, 0.35 + sourceBonus + scoreBonus + titleLengthFactor)
+}
 
 export class TrendWatcher {
   async refresh(): Promise<void> {
     logger.info({ msg: 'Refreshing trends' })
 
-    const [hnItems, redditItems] = await Promise.allSettled([fetchHackerNews(30), fetchReddit(25)])
+    const config = await readConfig()
 
-    const allItems: RawTrendItem[] = [
-      ...(hnItems.status === 'fulfilled' ? hnItems.value : []),
-      ...(redditItems.status === 'fulfilled' ? redditItems.value : []),
-    ]
+    const tasks: Promise<RawTrendItem[]>[] = []
+    if (config.sources.includes('hackernews')) tasks.push(fetchHackerNews(30))
+    if (config.sources.includes('reddit')) tasks.push(fetchReddit(25))
+
+    if (!tasks.length) {
+      logger.warn({ msg: 'All sources disabled — nothing to fetch' })
+      return
+    }
+
+    const settled = await Promise.allSettled(tasks)
+    const allItems: RawTrendItem[] = settled.flatMap((r) =>
+      r.status === 'fulfilled' ? r.value : [],
+    )
 
     if (!allItems.length) {
       logger.warn({ msg: 'No trend items fetched' })
       return
     }
 
-    // Cluster by keyword overlap (simple title word matching)
     const clusters = this.clusterByTitle(allItems)
-
     const db = getDb()
     const now = new Date()
 
+    // Clear stale data so old hardcoded scores don't persist
+    await db.delete(trendEvidence)
+    await db.delete(trendClusters)
+
     for (const cluster of clusters) {
       const id = nanoid()
-      const maxScore = Math.max(...cluster.map((i) => i.score))
-      const normalizedScore = Math.min(1, maxScore / 10_000)
+      const vel = velocityScore(cluster)
+      const nov = noveltyScore(cluster)
+      const rel = relevanceScore(cluster, config)
+      const composite = vel * 0.4 + rel * 0.35 + nov * 0.25
 
       await db.insert(trendClusters).values({
         id,
         title: cluster[0].title,
-        summary: `${cluster.length} signals from ${[...new Set(cluster.map((c) => c.source))].join(', ')}`,
-        relevanceScore: 0.5, // Would need vector similarity vs user pillars for real score
-        velocityScore: normalizedScore,
-        noveltyScore: 0.7,
-        compositeScore: normalizedScore * 0.5 + 0.5 * 0.3 + 0.7 * 0.2,
+        summary: `${cluster.length} signal${cluster.length !== 1 ? 's' : ''} from ${[...new Set(cluster.map((c) => c.source))].join(', ')}`,
+        relevanceScore: rel,
+        velocityScore: vel,
+        noveltyScore: nov,
+        compositeScore: composite,
         detectedAt: now,
       })
 
@@ -65,6 +121,7 @@ export class TrendWatcher {
   }
 
   async list(limit = 20): Promise<TrendCluster[]> {
+    const config = await readConfig()
     const db = getDb()
     const clusters = await db.select().from(trendClusters)
     const evidence = await db.select().from(trendEvidence)
@@ -77,6 +134,7 @@ export class TrendWatcher {
     }
 
     return clusters
+      .filter((c) => c.compositeScore >= config.minScore)
       .sort((a, b) => b.compositeScore - a.compositeScore)
       .slice(0, limit)
       .map((c) => ({
@@ -129,7 +187,8 @@ export class TrendWatcher {
       clusters.push(cluster)
     }
 
-    // Sort clusters by max score descending
-    return clusters.sort((a, b) => Math.max(...b.map((i) => i.score)) - Math.max(...a.map((i) => i.score)))
+    return clusters.sort(
+      (a, b) => Math.max(...b.map((i) => i.score)) - Math.max(...a.map((i) => i.score)),
+    )
   }
 }

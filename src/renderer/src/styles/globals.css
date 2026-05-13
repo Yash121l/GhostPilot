@@ -175,6 +175,7 @@ h3 {
   background: var(--color-surface);
   border: 1px solid var(--color-border);
   border-radius: var(--radius-lg);
+  overflow: hidden;
   transition: transform var(--transition-smooth), box-shadow var(--transition-smooth);
 }
 
@@ -650,8 +651,8 @@ select.form-input {
 /* ─── Progress bar ────────────────────────────────────────────────────────── */
 .progress-track {
   width: 100%;
-  height: 4px;
-  background: var(--color-surface-alt);
+  height: 6px;
+  background: var(--color-surface-3);
   border-radius: var(--radius-full);
   overflow: hidden;
 }

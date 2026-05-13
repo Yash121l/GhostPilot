@@ -34,6 +34,29 @@ export class OAuthManager {
     this.connectors.set(connector.platform, connector)
   }
 
+  /** Return the connector for a platform (for rate-limit queries etc.). */
+  getConnector(platform: Platform): SocialConnector | undefined {
+    return this.connectors.get(platform)
+  }
+
+  /**
+   * Build the OAuth URL and store state — WITHOUT opening the browser.
+   * The renderer calls shell.openExternal with the returned URL.
+   */
+  async getAuthURL(platform: Platform): Promise<string> {
+    const connector = this.connectors.get(platform)
+    if (!connector) {
+      throw new AppError({
+        code: ErrorCode.OAUTH_FAILED,
+        message: `No connector registered for platform: ${platform}`,
+      })
+    }
+    const state = nanoid(32)
+    const codeVerifier = randomBytes(32).toString('base64url')
+    this.pendingStates.set(state, { state, codeVerifier, platform, createdAt: Date.now() })
+    return connector.getAuthURL(state, codeVerifier)
+  }
+
   /** Step 1: Open browser for OAuth. */
   async initiateConnect(platform: Platform): Promise<void> {
     const connector = this.connectors.get(platform)

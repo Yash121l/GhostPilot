@@ -20,6 +20,22 @@ export interface TrendCluster {
   detectedAt: Date
 }
 
+/** User configuration for which trends to surface. */
+export interface TrendConfig {
+  /** Keywords/topics the user wants to track (empty = no filter). */
+  keywords: string[]
+  /** Which sources to pull from. */
+  sources: ('hackernews' | 'reddit')[]
+  /** Hide clusters whose compositeScore is below this value (0–1). */
+  minScore: number
+}
+
+export const DEFAULT_TREND_CONFIG: TrendConfig = {
+  keywords: [],
+  sources: ['hackernews', 'reddit'],
+  minScore: 0,
+}
+
 /** A single signal backing a trend cluster. */
 export interface TrendEvidence {
   id: string

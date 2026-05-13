@@ -5,6 +5,9 @@ import type { AIGatewayRequest } from '../../shared/types/ai'
 import { ok, err } from '../../shared/types/error'
 import { AppError, ErrorCode } from '../../shared/types/error'
 import { getServices } from '../services/index'
+import { getDb } from '../infrastructure/db/connection'
+import { styleFingerprints } from '../infrastructure/db/schema'
+import { eq } from 'drizzle-orm'
 import { createLogger } from '../infrastructure/logger/logger'
 
 const logger = createLogger('AIHandlers')
@@ -86,6 +89,51 @@ export function registerAIHandlers(): void {
       return ok(await getServices().aiGateway.ollamaStatus())
     } catch (e) {
       return err(new AppError({ code: ErrorCode.UNKNOWN, message: String(e) }))
+    }
+  })
+
+  /**
+   * Compute a "sounds like you" score [0, 1] by comparing the current draft
+   * text against the persona's stored style descriptors (keyword overlap).
+   * No AI call — fast enough to debounce while typing.
+   */
+  ipcMain.handle(IPC_CHANNELS.AI_STYLE_DRIFT, async (_event, { personaId, text }: { personaId: string; text: string }) => {
+    try {
+      const db = getDb()
+      const rows = await db.select().from(styleFingerprints).where(eq(styleFingerprints.personaId, personaId))
+
+      if (!rows.length) return ok({ score: 1.0 }) // no fingerprint yet → assume on-brand
+
+      const fp = rows[0]
+      const descriptors: string[] = JSON.parse(fp.descriptors) as string[]
+      if (!descriptors.length) return ok({ score: 1.0 })
+
+      // Jaccard similarity between fingerprint descriptor tokens and text tokens
+      const textWords = new Set(
+        text
+          .toLowerCase()
+          .replace(/[^a-z0-9\s]/g, ' ')
+          .split(/\s+/)
+          .filter((w) => w.length > 3),
+      )
+      const fpWords = new Set(
+        descriptors
+          .join(' ')
+          .toLowerCase()
+          .replace(/[^a-z0-9\s]/g, ' ')
+          .split(/\s+/)
+          .filter((w) => w.length > 3),
+      )
+
+      const intersection = [...textWords].filter((w) => fpWords.has(w)).length
+      const union = new Set([...textWords, ...fpWords]).size
+      const jaccard = union === 0 ? 1 : intersection / union
+
+      // Scale: jaccard > 0.15 = good match, < 0.05 = very different
+      const score = Math.min(1, jaccard / 0.15)
+      return ok({ score: Math.round(score * 100) / 100 })
+    } catch (e) {
+      return err(new AppError({ code: ErrorCode.DB_QUERY_FAILED, message: String(e) }))
     }
   })
 }
