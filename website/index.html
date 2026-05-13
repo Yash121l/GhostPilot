@@ -1,0 +1,699 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>GhostPilot — AI-powered social publishing, local-first</title>
+<meta name="description" content="Write once. GhostPilot adapts your draft for LinkedIn, X, and Instagram using your own AI keys. Runs entirely on your Mac — no subscriptions, no cloud." />
+<meta property="og:title" content="GhostPilot" />
+<meta property="og:description" content="Local-first, BYOK desktop app for AI-powered social publishing." />
+<meta property="og:image" content="https://ghostpilot.yashlunawat.com/og.png" />
+<meta property="og:url" content="https://ghostpilot.yashlunawat.com" />
+<meta name="twitter:card" content="summary_large_image" />
+<link rel="icon" href="favicon.svg" type="image/svg+xml" />
+<style>
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+:root {
+  --bg: #0a0a0a;
+  --bg2: #111;
+  --bg3: #181818;
+  --border: rgba(255,255,255,0.07);
+  --border2: rgba(255,255,255,0.12);
+  --text: #f0f0f0;
+  --text2: #a0a0a0;
+  --text3: #606060;
+  --accent: #6366f1;
+  --accent2: #818cf8;
+  --accent-soft: rgba(99,102,241,0.12);
+  --success: #22c55e;
+  --linkedin: #0a66c2;
+  --twitter: #e7e7e7;
+  --instagram: #e1306c;
+  --radius: 14px;
+  --radius-sm: 8px;
+}
+
+html { scroll-behavior: smooth; }
+
+body {
+  background: var(--bg);
+  color: var(--text);
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", system-ui, sans-serif;
+  font-size: 16px;
+  line-height: 1.6;
+  -webkit-font-smoothing: antialiased;
+  overflow-x: hidden;
+}
+
+a { color: inherit; text-decoration: none; }
+
+/* ── Layout ── */
+.container { max-width: 1080px; margin: 0 auto; padding: 0 24px; }
+
+/* ── Nav ── */
+nav {
+  position: fixed; top: 0; left: 0; right: 0; z-index: 100;
+  border-bottom: 1px solid var(--border);
+  background: rgba(10,10,10,0.85);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+}
+.nav-inner {
+  display: flex; align-items: center; justify-content: space-between;
+  height: 56px; max-width: 1080px; margin: 0 auto; padding: 0 24px;
+}
+.nav-brand {
+  display: flex; align-items: center; gap: 10px;
+  font-size: 15px; font-weight: 700; letter-spacing: -0.01em;
+}
+.nav-brand svg { opacity: 0.9; }
+.nav-links { display: flex; align-items: center; gap: 28px; }
+.nav-links a { font-size: 14px; color: var(--text2); transition: color 0.15s; }
+.nav-links a:hover { color: var(--text); }
+.nav-cta {
+  display: inline-flex; align-items: center; gap: 7px;
+  background: var(--accent); color: #fff;
+  font-size: 13px; font-weight: 600;
+  padding: 8px 16px; border-radius: 8px;
+  transition: opacity 0.15s, transform 0.15s;
+}
+.nav-cta:hover { opacity: 0.88; transform: translateY(-1px); }
+
+/* ── Hero ── */
+.hero {
+  padding: 140px 0 80px;
+  text-align: center;
+  position: relative;
+  overflow: hidden;
+}
+.hero::before {
+  content: '';
+  position: absolute; top: -200px; left: 50%; transform: translateX(-50%);
+  width: 800px; height: 600px;
+  background: radial-gradient(ellipse at center, rgba(99,102,241,0.15) 0%, transparent 70%);
+  pointer-events: none;
+}
+.hero-badge {
+  display: inline-flex; align-items: center; gap: 7px;
+  background: var(--accent-soft); border: 1px solid rgba(99,102,241,0.25);
+  color: var(--accent2); font-size: 12px; font-weight: 600;
+  padding: 5px 12px; border-radius: 100px; margin-bottom: 28px;
+  letter-spacing: 0.04em; text-transform: uppercase;
+}
+.hero-badge span { width: 6px; height: 6px; border-radius: 50%; background: var(--accent2); display: inline-block; }
+h1 {
+  font-size: clamp(38px, 6vw, 68px);
+  font-weight: 800;
+  letter-spacing: -0.03em;
+  line-height: 1.08;
+  margin-bottom: 22px;
+}
+h1 em { font-style: normal; color: var(--accent2); }
+.hero-sub {
+  font-size: clamp(16px, 2vw, 20px);
+  color: var(--text2);
+  max-width: 560px;
+  margin: 0 auto 40px;
+  line-height: 1.6;
+}
+.hero-actions { display: flex; align-items: center; justify-content: center; gap: 12px; flex-wrap: wrap; }
+.btn-primary {
+  display: inline-flex; align-items: center; gap: 8px;
+  background: var(--accent); color: #fff;
+  font-size: 15px; font-weight: 600;
+  padding: 13px 26px; border-radius: 10px; border: none; cursor: pointer;
+  transition: opacity 0.15s, transform 0.15s;
+}
+.btn-primary:hover { opacity: 0.88; transform: translateY(-1px); }
+.btn-secondary {
+  display: inline-flex; align-items: center; gap: 8px;
+  background: transparent; color: var(--text2);
+  font-size: 15px; font-weight: 500;
+  padding: 13px 22px; border-radius: 10px;
+  border: 1px solid var(--border2);
+  cursor: pointer; transition: color 0.15s, border-color 0.15s;
+}
+.btn-secondary:hover { color: var(--text); border-color: rgba(255,255,255,0.25); }
+.hero-note { margin-top: 16px; font-size: 13px; color: var(--text3); }
+
+/* ── App screenshot ── */
+.screenshot-wrap {
+  max-width: 900px; margin: 60px auto 0;
+  border-radius: 16px; overflow: hidden;
+  border: 1px solid var(--border2);
+  box-shadow: 0 40px 120px rgba(0,0,0,0.6), 0 0 0 1px rgba(255,255,255,0.04);
+  background: var(--bg2);
+}
+.screenshot-bar {
+  display: flex; align-items: center; gap: 7px;
+  padding: 12px 16px;
+  background: var(--bg3);
+  border-bottom: 1px solid var(--border);
+}
+.dot { width: 12px; height: 12px; border-radius: 50%; }
+.dot-r { background: #ff5f57; }
+.dot-y { background: #febc2e; }
+.dot-g { background: #28c840; }
+.screenshot-body {
+  display: grid; grid-template-columns: 200px 1fr;
+  min-height: 420px;
+}
+.mock-sidebar {
+  background: var(--bg3); border-right: 1px solid var(--border);
+  padding: 16px 10px; display: flex; flex-direction: column; gap: 4px;
+}
+.mock-brand {
+  display: flex; align-items: center; gap: 8px;
+  padding: 8px 10px; margin-bottom: 12px;
+  font-size: 12px; font-weight: 700; letter-spacing: 0.08em; color: var(--text2);
+}
+.mock-nav-item {
+  display: flex; align-items: center; gap: 9px;
+  padding: 8px 10px; border-radius: 7px;
+  font-size: 13px; color: var(--text3);
+}
+.mock-nav-item.active { background: var(--accent-soft); color: var(--accent2); }
+.mock-nav-dot { width: 14px; height: 14px; border-radius: 3px; background: currentColor; opacity: 0.5; flex-shrink: 0; }
+.mock-main { padding: 24px; display: flex; flex-direction: column; gap: 14px; }
+.mock-header { font-size: 18px; font-weight: 700; }
+.mock-sub { font-size: 12px; color: var(--text3); margin-top: -10px; }
+.mock-editor {
+  background: var(--bg3); border: 1px solid var(--border2);
+  border-radius: 10px; padding: 16px;
+  font-size: 13px; color: var(--text2); line-height: 1.7;
+  min-height: 100px;
+}
+.mock-platforms { display: flex; gap: 8px; }
+.mock-chip {
+  display: inline-flex; align-items: center; gap: 5px;
+  font-size: 11px; font-weight: 600; padding: 4px 10px; border-radius: 100px;
+  border: 1px solid;
+}
+.chip-li { color: var(--linkedin); border-color: rgba(10,102,194,0.4); background: rgba(10,102,194,0.08); }
+.chip-tw { color: var(--twitter); border-color: rgba(231,231,231,0.2); background: rgba(231,231,231,0.05); }
+.chip-ig { color: var(--instagram); border-color: rgba(225,48,108,0.4); background: rgba(225,48,108,0.08); }
+.mock-btn {
+  align-self: flex-start;
+  display: inline-flex; align-items: center; gap: 6px;
+  background: var(--accent); color: #fff;
+  font-size: 12px; font-weight: 600; padding: 8px 14px; border-radius: 7px;
+}
+.mock-variants { display: flex; flex-direction: column; gap: 8px; }
+.mock-variant {
+  background: var(--bg3); border: 1px solid var(--border);
+  border-radius: 8px; padding: 12px;
+  font-size: 12px; color: var(--text2); line-height: 1.6;
+}
+.mock-variant-label {
+  font-size: 10px; font-weight: 700; letter-spacing: 0.1em;
+  text-transform: uppercase; margin-bottom: 6px;
+}
+
+/* ── Features ── */
+.section { padding: 100px 0; }
+.section-label {
+  font-size: 11px; font-weight: 700; letter-spacing: 0.14em;
+  text-transform: uppercase; color: var(--accent2); margin-bottom: 14px;
+}
+.section-title {
+  font-size: clamp(28px, 4vw, 42px);
+  font-weight: 800; letter-spacing: -0.02em; line-height: 1.15;
+  margin-bottom: 16px;
+}
+.section-sub { font-size: 17px; color: var(--text2); max-width: 520px; line-height: 1.6; }
+
+.features-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+  gap: 16px; margin-top: 56px;
+}
+.feature-card {
+  background: var(--bg2); border: 1px solid var(--border);
+  border-radius: var(--radius); padding: 28px;
+  transition: border-color 0.2s, transform 0.2s;
+}
+.feature-card:hover { border-color: var(--border2); transform: translateY(-2px); }
+.feature-icon {
+  width: 44px; height: 44px; border-radius: 10px;
+  background: var(--accent-soft); border: 1px solid rgba(99,102,241,0.2);
+  display: flex; align-items: center; justify-content: center;
+  margin-bottom: 18px; font-size: 20px;
+}
+.feature-title { font-size: 16px; font-weight: 700; margin-bottom: 8px; }
+.feature-desc { font-size: 14px; color: var(--text2); line-height: 1.65; }
+
+/* ── How it works ── */
+.steps { display: flex; flex-direction: column; gap: 0; margin-top: 56px; max-width: 680px; }
+.step { display: flex; gap: 24px; padding-bottom: 40px; position: relative; }
+.step:not(:last-child)::before {
+  content: ''; position: absolute;
+  left: 19px; top: 44px; bottom: 0; width: 1px;
+  background: var(--border2);
+}
+.step-num {
+  width: 40px; height: 40px; border-radius: 50%; flex-shrink: 0;
+  background: var(--accent-soft); border: 1px solid rgba(99,102,241,0.3);
+  color: var(--accent2); font-size: 14px; font-weight: 700;
+  display: flex; align-items: center; justify-content: center;
+}
+.step-content { padding-top: 8px; }
+.step-title { font-size: 16px; font-weight: 700; margin-bottom: 6px; }
+.step-desc { font-size: 14px; color: var(--text2); line-height: 1.65; }
+
+/* ── Platforms ── */
+.platforms-row {
+  display: flex; align-items: center; justify-content: center;
+  gap: 20px; flex-wrap: wrap; margin-top: 48px;
+}
+.platform-pill {
+  display: flex; align-items: center; gap: 10px;
+  background: var(--bg2); border: 1px solid var(--border2);
+  border-radius: 100px; padding: 10px 20px;
+  font-size: 14px; font-weight: 600;
+}
+.platform-dot { width: 10px; height: 10px; border-radius: 50%; }
+
+/* ── Privacy ── */
+.privacy-grid {
+  display: grid; grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+  gap: 14px; margin-top: 48px;
+}
+.privacy-card {
+  background: var(--bg2); border: 1px solid var(--border);
+  border-radius: var(--radius); padding: 22px;
+}
+.privacy-card-title { font-size: 14px; font-weight: 700; margin-bottom: 6px; display: flex; align-items: center; gap: 8px; }
+.privacy-card-desc { font-size: 13px; color: var(--text2); line-height: 1.6; }
+
+/* ── CTA ── */
+.cta-section {
+  padding: 100px 0;
+  text-align: center;
+  position: relative;
+  overflow: hidden;
+}
+.cta-section::before {
+  content: '';
+  position: absolute; bottom: -100px; left: 50%; transform: translateX(-50%);
+  width: 600px; height: 400px;
+  background: radial-gradient(ellipse at center, rgba(99,102,241,0.12) 0%, transparent 70%);
+  pointer-events: none;
+}
+.cta-title { font-size: clamp(28px, 4vw, 48px); font-weight: 800; letter-spacing: -0.02em; margin-bottom: 16px; }
+.cta-sub { font-size: 17px; color: var(--text2); margin-bottom: 36px; }
+
+/* ── Footer ── */
+footer {
+  border-top: 1px solid var(--border);
+  padding: 32px 0;
+}
+.footer-inner {
+  display: flex; align-items: center; justify-content: space-between;
+  flex-wrap: wrap; gap: 16px;
+  max-width: 1080px; margin: 0 auto; padding: 0 24px;
+}
+.footer-brand { font-size: 14px; font-weight: 700; display: flex; align-items: center; gap: 8px; }
+.footer-links { display: flex; gap: 24px; }
+.footer-links a { font-size: 13px; color: var(--text3); transition: color 0.15s; }
+.footer-links a:hover { color: var(--text2); }
+.footer-copy { font-size: 13px; color: var(--text3); }
+
+/* ── Open-app banner ── */
+#open-banner {
+  display: none;
+  position: fixed; bottom: 24px; left: 50%; transform: translateX(-50%);
+  background: var(--bg3); border: 1px solid var(--border2);
+  border-radius: 14px; padding: 16px 24px;
+  box-shadow: 0 20px 60px rgba(0,0,0,0.5);
+  z-index: 200; text-align: center; min-width: 320px;
+}
+#open-banner p { font-size: 14px; color: var(--text2); margin-bottom: 12px; }
+#open-banner .btn-primary { font-size: 14px; padding: 10px 20px; }
+#open-banner .dismiss { font-size: 12px; color: var(--text3); margin-top: 10px; cursor: pointer; }
+#open-banner .dismiss:hover { color: var(--text2); }
+
+@media (max-width: 640px) {
+  .nav-links { display: none; }
+  .screenshot-body { grid-template-columns: 1fr; }
+  .mock-sidebar { display: none; }
+  .footer-inner { flex-direction: column; align-items: flex-start; }
+}
+</style>
+</head>
+<body>
+
+<!-- ── Nav ── -->
+<nav>
+  <div class="nav-inner">
+    <div class="nav-brand">
+      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M9 3H5a2 2 0 0 0-2 2v4m6-6h10a2 2 0 0 1 2 2v4M9 3v18m0 0h10a2 2 0 0 0 2-2v-4M9 21H5a2 2 0 0 1-2-2v-4m0 0h18"/>
+      </svg>
+      GhostPilot
+    </div>
+    <div class="nav-links">
+      <a href="#features">Features</a>
+      <a href="#how-it-works">How it works</a>
+      <a href="#privacy">Privacy</a>
+      <a href="https://github.com/yash121l/GhostPilot" target="_blank" rel="noopener">GitHub</a>
+    </div>
+    <a href="https://github.com/yash121l/GhostPilot/releases/latest" class="nav-cta" id="nav-download">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+      Download
+    </a>
+  </div>
+</nav>
+
+<!-- ── Hero ── -->
+<section class="hero">
+  <div class="container">
+    <div class="hero-badge"><span></span> Free &amp; open source · macOS</div>
+    <h1>Write once.<br><em>Publish everywhere.</em></h1>
+    <p class="hero-sub">GhostPilot adapts your draft for LinkedIn, X, and Instagram using your own AI keys. Runs entirely on your Mac — no subscriptions, no cloud, no data leaving your machine.</p>
+    <div class="hero-actions">
+      <a href="https://github.com/yash121l/GhostPilot/releases/latest" class="btn-primary" id="hero-download">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+        Download for macOS
+      </a>
+      <a href="https://github.com/yash121l/GhostPilot" class="btn-secondary" target="_blank" rel="noopener">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 19c-5 1.5-5-2.5-7-3m14 6v-3.87a3.37 3.37 0 0 0-.94-2.61c3.14-.35 6.44-1.54 6.44-7A5.44 5.44 0 0 0 20 4.77 5.07 5.07 0 0 0 19.91 1S18.73.65 16 2.48a13.38 13.38 0 0 0-7 0C6.27.65 5.09 1 5.09 1A5.07 5.07 0 0 0 5 4.77a5.44 5.44 0 0 0-1.5 3.78c0 5.42 3.3 6.61 6.44 7A3.37 3.37 0 0 0 9 18.13V22"/></svg>
+        View on GitHub
+      </a>
+    </div>
+    <p class="hero-note">macOS 13+ · Free forever · Your keys, your data</p>
+
+    <!-- App mockup -->
+    <div class="screenshot-wrap">
+      <div class="screenshot-bar">
+        <div class="dot dot-r"></div>
+        <div class="dot dot-y"></div>
+        <div class="dot dot-g"></div>
+      </div>
+      <div class="screenshot-body">
+        <div class="mock-sidebar">
+          <div class="mock-brand">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M9 3H5a2 2 0 0 0-2 2v4m6-6h10a2 2 0 0 1 2 2v4M9 3v18m0 0h10a2 2 0 0 0 2-2v-4M9 21H5a2 2 0 0 1-2-2v-4m0 0h18"/></svg>
+            GHOSTPILOT
+          </div>
+          <div class="mock-nav-item active"><div class="mock-nav-dot"></div> Composer</div>
+          <div class="mock-nav-item"><div class="mock-nav-dot"></div> Calendar</div>
+          <div class="mock-nav-item"><div class="mock-nav-dot"></div> Goals</div>
+          <div class="mock-nav-item"><div class="mock-nav-dot"></div> Trends</div>
+          <div class="mock-nav-item"><div class="mock-nav-dot"></div> Personas</div>
+          <div class="mock-nav-item"><div class="mock-nav-dot"></div> Analytics</div>
+          <div class="mock-nav-item"><div class="mock-nav-dot"></div> Settings</div>
+        </div>
+        <div class="mock-main">
+          <div class="mock-header">Composer</div>
+          <div class="mock-sub">Write once — AI adapts for every platform</div>
+          <div class="mock-platforms">
+            <div class="mock-chip chip-li">● LinkedIn</div>
+            <div class="mock-chip chip-tw">● X</div>
+            <div class="mock-chip chip-ig">● Instagram</div>
+          </div>
+          <div class="mock-editor">I spent 6 months building the wrong thing. Here's what I learned about validating ideas before writing a single line of code…</div>
+          <div class="mock-btn">
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="m12 3-1.912 5.813a2 2 0 0 1-1.275 1.275L3 12l5.813 1.912a2 2 0 0 1 1.275 1.275L12 21l1.912-5.813a2 2 0 0 1 1.275-1.275L21 12l-5.813-1.912a2 2 0 0 1-1.275-1.275L12 3Z"/></svg>
+            Generate Variants
+          </div>
+          <div class="mock-variants">
+            <div class="mock-variant">
+              <div class="mock-variant-label" style="color:var(--linkedin)">LinkedIn</div>
+              I spent 6 months building the wrong thing.<br><br>Three things became clear: talking to 5 real users beats 50 hypothetical ones. A landing page tells you more than a prototype…
+            </div>
+            <div class="mock-variant">
+              <div class="mock-variant-label" style="color:var(--twitter)">X · Thread</div>
+              spent 6 months building the wrong thing 🧵<br>here's what i learned about validation the hard way:
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ── Features ── -->
+<section class="section" id="features">
+  <div class="container">
+    <div class="section-label">Features</div>
+    <h2 class="section-title">Everything you need.<br>Nothing you don't.</h2>
+    <p class="section-sub">Built for founders, creators, and indie hackers who want to publish consistently without giving up control.</p>
+
+    <div class="features-grid">
+      <div class="feature-card">
+        <div class="feature-icon">✍️</div>
+        <div class="feature-title">Write once, publish everywhere</div>
+        <div class="feature-desc">Draft in plain text. GhostPilot rewrites it natively for LinkedIn's long-form, X's 280-char limit, and Instagram's caption style — all in one click.</div>
+      </div>
+      <div class="feature-card">
+        <div class="feature-icon">🔑</div>
+        <div class="feature-title">Bring your own AI key</div>
+        <div class="feature-desc">Use OpenAI, Anthropic, Groq, OpenRouter, or a local Ollama model. Your keys are stored in the macOS Keychain — never uploaded anywhere.</div>
+      </div>
+      <div class="feature-card">
+        <div class="feature-icon">🗓️</div>
+        <div class="feature-title">Visual content calendar</div>
+        <div class="feature-desc">Schedule posts across platforms from a single calendar view. A background worker dispatches them at exactly the right time.</div>
+      </div>
+      <div class="feature-card">
+        <div class="feature-icon">🎭</div>
+        <div class="feature-title">Personas &amp; voice matching</div>
+        <div class="feature-desc">Create multiple personas with different bios, content pillars, and style hints. AI learns your voice and keeps variants on-brand.</div>
+      </div>
+      <div class="feature-card">
+        <div class="feature-icon">🎯</div>
+        <div class="feature-title">OKR-style goals</div>
+        <div class="feature-desc">Set a north-star outcome and let AI decompose it into a weekly posting plan with measurable key results.</div>
+      </div>
+      <div class="feature-card">
+        <div class="feature-icon">📈</div>
+        <div class="feature-title">Trend radar</div>
+        <div class="feature-desc">Pulls trending topics from Hacker News and Reddit, scores them for relevance and novelty, and lets you draft directly from a trend card.</div>
+      </div>
+      <div class="feature-card">
+        <div class="feature-icon">💰</div>
+        <div class="feature-title">AI cost tracking</div>
+        <div class="feature-desc">Every LLM call is logged with token counts and estimated cost. Set a monthly spend cap so you never get surprised.</div>
+      </div>
+      <div class="feature-card">
+        <div class="feature-icon">🔒</div>
+        <div class="feature-title">Full audit log</div>
+        <div class="feature-desc">Every action — OAuth flows, key additions, post approvals, publish attempts — is recorded in an append-only local audit log.</div>
+      </div>
+      <div class="feature-card">
+        <div class="feature-icon">🏠</div>
+        <div class="feature-title">100% local-first</div>
+        <div class="feature-desc">SQLite database on your machine. No account required. No telemetry. Works offline for drafting and scheduling.</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ── How it works ── -->
+<section class="section" id="how-it-works" style="background: var(--bg2); border-top: 1px solid var(--border); border-bottom: 1px solid var(--border);">
+  <div class="container">
+    <div class="section-label">How it works</div>
+    <h2 class="section-title">From draft to published<br>in four steps.</h2>
+
+    <div class="steps">
+      <div class="step">
+        <div class="step-num">1</div>
+        <div class="step-content">
+          <div class="step-title">Connect your accounts</div>
+          <div class="step-desc">OAuth flows open in your browser. Tokens are stored in the macOS Keychain — GhostPilot never sees your password and tokens never leave your machine.</div>
+        </div>
+      </div>
+      <div class="step">
+        <div class="step-num">2</div>
+        <div class="step-content">
+          <div class="step-title">Add an AI provider key</div>
+          <div class="step-desc">Paste your OpenAI, Anthropic, Groq, or OpenRouter key in Settings. Or point it at a local Ollama instance — no key needed.</div>
+        </div>
+      </div>
+      <div class="step">
+        <div class="step-num">3</div>
+        <div class="step-content">
+          <div class="step-title">Write your draft &amp; generate variants</div>
+          <div class="step-desc">Type your raw idea in the Composer. Hit Generate — AI produces platform-native variants for each selected network simultaneously.</div>
+        </div>
+      </div>
+      <div class="step">
+        <div class="step-num">4</div>
+        <div class="step-content">
+          <div class="step-title">Approve, schedule, done</div>
+          <div class="step-desc">Review each variant, pick a date and time, and confirm. A background worker thread publishes at the scheduled moment — even if the window is hidden.</div>
+        </div>
+      </div>
+    </div>
+
+    <div style="margin-top: 56px;">
+      <div class="section-label">Supported platforms</div>
+      <div class="platforms-row">
+        <div class="platform-pill">
+          <div class="platform-dot" style="background: var(--linkedin)"></div>
+          LinkedIn
+        </div>
+        <div class="platform-pill">
+          <div class="platform-dot" style="background: #e7e7e7"></div>
+          X (Twitter)
+        </div>
+        <div class="platform-pill">
+          <div class="platform-dot" style="background: var(--instagram)"></div>
+          Instagram
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ── Privacy ── -->
+<section class="section" id="privacy">
+  <div class="container">
+    <div class="section-label">Privacy &amp; Security</div>
+    <h2 class="section-title">Your data stays<br>on your machine.</h2>
+    <p class="section-sub">GhostPilot was designed from day one to never require a server, an account, or trust in a third party.</p>
+
+    <div class="privacy-grid">
+      <div class="privacy-card">
+        <div class="privacy-card-title">🔐 OS Keychain storage</div>
+        <div class="privacy-card-desc">OAuth tokens and API keys are stored exclusively in the macOS Keychain. They are never written to the database or sent to any server.</div>
+      </div>
+      <div class="privacy-card">
+        <div class="privacy-card-title">🗄️ Local SQLite database</div>
+        <div class="privacy-card-desc">All posts, personas, goals, and analytics live in a single SQLite file on your Mac. You own it, you can back it up, you can delete it.</div>
+      </div>
+      <div class="privacy-card">
+        <div class="privacy-card-title">🚫 No telemetry</div>
+        <div class="privacy-card-desc">Zero analytics, zero crash reporting, zero usage tracking. The app makes no outbound requests except to the platforms you explicitly connect.</div>
+      </div>
+      <div class="privacy-card">
+        <div class="privacy-card-title">🔓 Open source</div>
+        <div class="privacy-card-desc">Every line of code is on GitHub. Audit it, fork it, build on it. No hidden behaviour, no obfuscated binaries.</div>
+      </div>
+      <div class="privacy-card">
+        <div class="privacy-card-title">📋 Append-only audit log</div>
+        <div class="privacy-card-desc">Every sensitive action is recorded locally in an immutable audit log. You can query it any time from the app.</div>
+      </div>
+      <div class="privacy-card">
+        <div class="privacy-card-title">💸 BYOK — no markup</div>
+        <div class="privacy-card-desc">AI calls go directly from your machine to the provider. You pay the provider's rate — GhostPilot takes no cut and sees no content.</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ── CTA ── -->
+<section class="cta-section">
+  <div class="container">
+    <h2 class="cta-title">Ready to ship your content?</h2>
+    <p class="cta-sub">Download GhostPilot and start publishing in minutes.</p>
+    <div class="hero-actions">
+      <a href="https://github.com/yash121l/GhostPilot/releases/latest" class="btn-primary">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+        Download for macOS — Free
+      </a>
+      <a href="https://github.com/yash121l/GhostPilot/blob/main/SETUP.md" class="btn-secondary" target="_blank" rel="noopener">
+        Read the setup guide →
+      </a>
+    </div>
+    <p class="hero-note" style="margin-top: 20px;">macOS 13 Ventura or later · Apple Silicon &amp; Intel</p>
+  </div>
+</section>
+
+<!-- ── Footer ── -->
+<footer>
+  <div class="footer-inner">
+    <div class="footer-brand">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M9 3H5a2 2 0 0 0-2 2v4m6-6h10a2 2 0 0 1 2 2v4M9 3v18m0 0h10a2 2 0 0 0 2-2v-4M9 21H5a2 2 0 0 1-2-2v-4m0 0h18"/></svg>
+      GhostPilot
+    </div>
+    <div class="footer-links">
+      <a href="https://github.com/yash121l/GhostPilot" target="_blank" rel="noopener">GitHub</a>
+      <a href="https://github.com/yash121l/GhostPilot/releases" target="_blank" rel="noopener">Releases</a>
+      <a href="https://github.com/yash121l/GhostPilot/blob/main/SETUP.md" target="_blank" rel="noopener">Docs</a>
+      <a href="https://github.com/yash121l/GhostPilot/issues" target="_blank" rel="noopener">Issues</a>
+    </div>
+    <div class="footer-copy">Built by <a href="https://yashlunawat.com" style="color:var(--text2)">Yash Lunawat</a></div>
+  </div>
+</footer>
+
+<!-- ── Open-app banner (shown if app is installed) ── -->
+<div id="open-banner">
+  <p>GhostPilot is installed on this Mac.</p>
+  <a href="ghostpilot://open" class="btn-primary" style="display:inline-flex">
+    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 3H5a2 2 0 0 0-2 2v4m6-6h10a2 2 0 0 1 2 2v4M9 3v18m0 0h10a2 2 0 0 0 2-2v-4M9 21H5a2 2 0 0 1-2-2v-4m0 0h18"/></svg>
+    Open GhostPilot
+  </a>
+  <div class="dismiss" id="banner-dismiss">Dismiss</div>
+</div>
+
+<script>
+// ── Detect if app is installed via custom URL scheme ──────────────────────────
+// We attempt to navigate to ghostpilot://ping and watch for a blur event
+// (the OS switches focus to the app). If no blur within 1.5s, app isn't installed.
+(function () {
+  // Only show on macOS
+  if (!/Mac/.test(navigator.platform) && !/Mac/.test(navigator.userAgentData?.platform ?? '')) return;
+
+  // Don't show if user already dismissed
+  if (sessionStorage.getItem('gp-banner-dismissed')) return;
+
+  var banner = document.getElementById('open-banner');
+  var dismiss = document.getElementById('banner-dismiss');
+  var shown = false;
+
+  function showBanner() {
+    if (shown) return;
+    shown = true;
+    banner.style.display = 'block';
+  }
+
+  // Probe: create a hidden iframe pointing at the custom scheme.
+  // If the app is installed, the OS will handle it (no error thrown in iframe).
+  // We use a short timeout — if the page doesn't blur, the scheme isn't registered.
+  var probeFrame = document.createElement('iframe');
+  probeFrame.style.display = 'none';
+  document.body.appendChild(probeFrame);
+
+  var blurred = false;
+  window.addEventListener('blur', function onBlur() {
+    blurred = true;
+    window.removeEventListener('blur', onBlur);
+    showBanner();
+  }, { once: true });
+
+  // Small delay so page is fully loaded before probing
+  setTimeout(function () {
+    probeFrame.src = 'ghostpilot://ping';
+    // If no blur after 1.5s, app is not installed — remove probe frame
+    setTimeout(function () {
+      if (!blurred) document.body.removeChild(probeFrame);
+    }, 1500);
+  }, 800);
+
+  dismiss.addEventListener('click', function () {
+    banner.style.display = 'none';
+    sessionStorage.setItem('gp-banner-dismissed', '1');
+  });
+})();
+
+// ── Smooth download button OS detection ──────────────────────────────────────
+(function () {
+  var isWin = /Win/.test(navigator.platform);
+  var isLinux = /Linux/.test(navigator.platform);
+  var base = 'https://github.com/yash121l/GhostPilot/releases/latest';
+
+  // Update button labels based on OS
+  document.querySelectorAll('#hero-download, #nav-download').forEach(function (el) {
+    if (isWin) {
+      el.querySelector('span') && (el.querySelector('span').textContent = 'Download for Windows');
+      if (el.id === 'hero-download') el.childNodes[el.childNodes.length - 1].textContent = ' Download for Windows';
+    } else if (isLinux) {
+      if (el.id === 'hero-download') el.childNodes[el.childNodes.length - 1].textContent = ' Download for Linux';
+    }
+  });
+})();
+</script>
+</body>
+</html>
