@@ -210,13 +210,13 @@ export default function PersonasPage(): ReactElement {
                   onClick={() => { setSelected(p); setCreating(false) }}
                   className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-left transition-all"
                   style={{
-                    background: isSelected ? 'hsla(265,89%,65%,0.1)' : 'transparent',
-                    border: isSelected ? '1px solid hsla(265,89%,65%,0.3)' : '1px solid transparent',
+                    background: isSelected ? '#EEF2FF' : 'transparent',
+                    border: isSelected ? '1px solid #C7D2FE' : '1px solid transparent',
                   }}
                 >
                   <Avatar name={p.name} size={34} />
                   <div className="flex-1 min-w-0">
-                    <div className="text-sm font-semibold text-white/90 truncate">{p.name}</div>
+                    <div className="text-sm font-semibold text-[var(--color-text-primary)] truncate">{p.name}</div>
                     <div className="text-[11px] text-[var(--color-text-muted)] truncate mt-0.5">
                       {p.pillars.slice(0, 2).join(', ') || 'No pillars set'}
                     </div>
@@ -232,7 +232,7 @@ export default function PersonasPage(): ReactElement {
       <div className="flex-1 overflow-y-auto py-6" style={{ paddingLeft: 32, paddingRight: 32 }}>
         {creating ? (
           <div>
-            <h2 className="text-base font-semibold text-white/90 mb-5">New Persona</h2>
+            <h2 className="text-base font-semibold text-[var(--color-text-primary)] mb-5">New Persona</h2>
             <PersonaForm
               onSave={(p) => {
                 setPersonas((prev) => [...prev, p])
@@ -248,7 +248,7 @@ export default function PersonasPage(): ReactElement {
               <div className="flex items-center gap-4">
                 <Avatar name={selected.name} size={52} />
                 <div>
-                  <h2 className="text-base font-bold text-white/95">{selected.name}</h2>
+                  <h2 className="text-base font-bold text-[var(--color-text-primary)]">{selected.name}</h2>
                   <p className="text-xs text-[var(--color-text-muted)] mt-0.5">
                     {selected.latestFingerprint
                       ? `${selected.latestFingerprint.tone} · ${selected.latestFingerprint.avgSentenceLength.toFixed(0)}w avg sentence`

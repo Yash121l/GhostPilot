@@ -77,13 +77,13 @@ function IntentCard({ intent, onDelete }: { intent: Intent; onDelete: () => void
   return (
     <div className="glass-card rounded-2xl overflow-hidden group">
       <div
-        className="flex items-center gap-4 px-5 py-3.5 cursor-pointer hover:bg-white/[0.02] transition-colors"
+        className="flex items-center gap-4 px-5 py-3.5 cursor-pointer hover:bg-[var(--color-surface-alt)] transition-colors"
         onClick={() => setExpanded((e) => !e)}
       >
         <ProgressRing pct={avgPct} />
 
         <div className="flex-1 min-w-0">
-          <p className="text-sm font-semibold text-white/90 truncate">{intent.title}</p>
+          <p className="text-sm font-semibold text-[var(--color-text-primary)] truncate">{intent.title}</p>
           <p className="text-xs text-[var(--color-text-muted)] mt-0.5">
             {intent.horizon} · {intent.keyResults.length} key result{intent.keyResults.length !== 1 ? 's' : ''}
           </p>
@@ -153,11 +153,11 @@ function CreateIntentForm({
       <div className="flex items-center gap-3">
         <div
           className="w-9 h-9 rounded-xl flex items-center justify-center"
-          style={{ background: 'hsla(265,89%,65%,0.15)' }}
+          style={{ background: '#EEF2FF' }}
         >
           <Target size={16} className="text-[var(--color-brand-primary)]" />
         </div>
-        <h3 className="text-sm font-semibold text-white/90">New Goal</h3>
+        <h3 className="text-sm font-semibold text-[var(--color-text-primary)]">New Goal</h3>
       </div>
 
       <div>

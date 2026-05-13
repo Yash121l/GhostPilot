@@ -85,14 +85,13 @@ function AddKeyForm({ onAdded }: { onAdded: () => void }): ReactElement {
   const selectedProvider = PROVIDERS.find((p) => p.id === provider)
 
   return (
-    <form onSubmit={handleAdd} className="glass-card p-5 rounded-2xl space-y-4">
+    <form onSubmit={handleAdd} className="glass-card p-5 space-y-4">
       <div className="flex items-center justify-between">
-        <h3 className="text-sm font-semibold text-white/90">Add API Key</h3>
+        <h3 className="text-sm font-semibold text-[var(--color-text-primary)]">Add API Key</h3>
         <button
           type="button"
           onClick={() => setOpen(false)}
           className="btn btn-ghost btn-icon"
-          style={{ color: 'var(--color-text-muted)', fontSize: 18, lineHeight: 1 }}
         >
           ×
         </button>
@@ -122,13 +121,12 @@ function AddKeyForm({ onAdded }: { onAdded: () => void }): ReactElement {
         </div>
       </div>
 
-      {/* Provider-specific note */}
       {selectedProvider?.note && (
         <div
-          className="flex gap-2.5 text-xs px-3 py-3 rounded-xl leading-relaxed"
-          style={{ background: 'hsla(265,89%,65%,0.07)', border: '1px solid hsla(265,89%,65%,0.15)', color: 'var(--color-text-secondary)' }}
+          className="flex gap-2.5 text-xs px-3 py-3 rounded-lg leading-relaxed"
+          style={{ background: '#EEF2FF', border: '1px solid #C7D2FE', color: 'var(--color-text-secondary)' }}
         >
-          <Info size={13} className="shrink-0 mt-0.5 text-[var(--color-brand-primary)]" />
+          <Info size={13} className="shrink-0 mt-0.5 text-[var(--color-primary)]" />
           <span>{selectedProvider.note}</span>
         </div>
       )}
@@ -149,15 +147,15 @@ function AddKeyForm({ onAdded }: { onAdded: () => void }): ReactElement {
 
       {error && (
         <div
-          className="flex items-center gap-2 text-xs px-3 py-2.5 rounded-xl"
-          style={{ color: 'var(--color-error)', background: 'hsla(0,84%,60%,0.08)', border: '1px solid hsla(0,84%,60%,0.2)' }}
+          className="flex items-center gap-2 text-xs px-3 py-2.5 rounded-lg"
+          style={{ color: 'var(--color-error)', background: 'rgba(239,68,68,0.06)', border: '1px solid rgba(239,68,68,0.2)' }}
         >
           <AlertCircle size={12} />
           {error}
         </div>
       )}
 
-      <div className="flex gap-2">
+      <div className="flex gap-2 pt-1">
         <button type="submit" disabled={adding} className="btn btn-primary">
           {adding ? <Loader2 size={14} className="animate-spin" /> : <Plus size={14} />}
           Add Key
@@ -175,13 +173,13 @@ function CostChart({ daily }: { daily: DailyUsage[] }): ReactElement {
   const maxCost = Math.max(...daily.map((d) => d.totalCostUsd), 0.001)
 
   return (
-    <div className="glass-card p-5 rounded-2xl">
+    <div className="glass-card p-5">
       <div className="flex items-center justify-between mb-4">
         <div className="flex items-center gap-2">
-          <Activity size={14} className="text-[var(--color-brand-primary)]" />
-          <h3 className="text-sm font-semibold text-white/90">AI Spend — 30 days</h3>
+          <Activity size={14} className="text-[var(--color-primary)]" />
+          <h3 className="text-sm font-semibold text-[var(--color-text-primary)]">AI Spend — 30 days</h3>
         </div>
-        <span className="text-sm font-mono text-[var(--color-brand-primary)]">${total.toFixed(4)}</span>
+        <span className="text-sm font-mono text-[var(--color-primary)]">${total.toFixed(4)}</span>
       </div>
 
       {daily.length === 0 ? (
@@ -194,7 +192,7 @@ function CostChart({ daily }: { daily: DailyUsage[] }): ReactElement {
               <div className="flex-1 progress-track">
                 <div
                   className="progress-fill"
-                  style={{ width: `${(d.totalCostUsd / maxCost) * 100}%`, background: 'var(--color-brand-primary)' }}
+                  style={{ width: `${(d.totalCostUsd / maxCost) * 100}%`, background: 'var(--color-primary)' }}
                 />
               </div>
               <span className="text-[11px] font-mono text-[var(--color-text-muted)] w-16 text-right">
@@ -248,10 +246,11 @@ export default function SettingsPage(): ReactElement {
   }
 
   const providerMeta = (id: string): ProviderDef =>
-    PROVIDERS.find((p) => p.id === id) ?? { id, label: id, hint: '', color: 'var(--color-brand-primary)' }
+    PROVIDERS.find((p) => p.id === id) ?? { id, label: id, hint: '', color: 'var(--color-primary)' }
 
   return (
     <div className="flex flex-col h-full">
+      {/* Header */}
       <div className="page-header">
         <div>
           <h1 className="page-title">Settings</h1>
@@ -259,121 +258,146 @@ export default function SettingsPage(): ReactElement {
         </div>
       </div>
 
-      <div className="page-body space-y-6" style={{ maxWidth: 600 }}>
+      {/* Body — centered column */}
+      <div className="page-body">
+        <div className="max-w-[600px] mx-auto space-y-8">
 
-        {/* Ollama status */}
-        <div>
-          <p className="section-label">Local Inference</p>
-          <div
-            className="glass-card p-5 rounded-2xl flex items-center gap-4"
-            style={{
-              borderColor: ollamaStatus?.available ? 'hsla(142,71%,45%,0.3)' : 'var(--color-border-subtle)',
-            }}
-          >
+          {/* ── Local Inference ── */}
+          <section>
+            <p className="section-label">Local Inference</p>
             <div
-              className="w-10 h-10 rounded-xl flex items-center justify-center"
-              style={{ background: ollamaStatus?.available ? 'hsla(142,71%,45%,0.12)' : 'var(--color-surface-3)' }}
+              className="glass-card p-4 flex items-center gap-4"
+              style={{ borderColor: ollamaStatus?.available ? 'rgba(16,185,129,0.4)' : 'var(--color-border)' }}
             >
-              <Wifi
-                size={18}
-                style={{ color: ollamaStatus?.available ? 'var(--color-success)' : 'var(--color-text-muted)' }}
-              />
+              <div
+                className="w-10 h-10 rounded-lg flex items-center justify-center shrink-0"
+                style={{ background: ollamaStatus?.available ? 'rgba(16,185,129,0.08)' : 'var(--color-surface-alt)' }}
+              >
+                <Wifi size={18} style={{ color: ollamaStatus?.available ? 'var(--color-success)' : 'var(--color-text-muted)' }} />
+              </div>
+              <div className="flex-1 min-w-0">
+                <p className="text-sm font-semibold text-[var(--color-text-primary)]">Ollama</p>
+                <p className="text-xs text-[var(--color-text-muted)] mt-0.5">
+                  {ollamaStatus == null
+                    ? 'Probing localhost:11434…'
+                    : ollamaStatus.available
+                    ? `${ollamaStatus.models.length} model${ollamaStatus.models.length !== 1 ? 's' : ''} available · ${ollamaStatus.models.slice(0, 3).join(', ')}`
+                    : 'Not running — start Ollama for free local inference'}
+                </p>
+              </div>
+              <span
+                className="text-[11px] font-semibold px-2.5 py-1 rounded-full shrink-0"
+                style={{
+                  background: ollamaStatus?.available ? 'rgba(16,185,129,0.1)' : 'var(--color-surface-alt)',
+                  color: ollamaStatus?.available ? 'var(--color-success)' : 'var(--color-text-muted)',
+                }}
+              >
+                {ollamaStatus == null ? 'Checking' : ollamaStatus.available ? 'Running' : 'Offline'}
+              </span>
             </div>
-            <div className="flex-1">
-              <p className="text-sm font-semibold text-white/90">Ollama (Local LLM)</p>
-              <p className="text-xs text-[var(--color-text-muted)] mt-1">
-                {ollamaStatus == null
-                  ? 'Probing localhost:11434…'
-                  : ollamaStatus.available
-                  ? `${ollamaStatus.models.length} model${ollamaStatus.models.length !== 1 ? 's' : ''} available: ${ollamaStatus.models.slice(0, 3).join(', ')}`
-                  : 'Not running — start Ollama for free local inference'}
+          </section>
+
+          {/* ── Cloud AI Keys ── */}
+          <section>
+            <div className="flex items-center justify-between mb-3">
+              <p className="section-label" style={{ marginBottom: 0, borderBottom: 'none', paddingBottom: 0 }}>
+                <Key size={11} />
+                Cloud AI — API Keys
               </p>
             </div>
             <div
-              className="w-2.5 h-2.5 rounded-full shrink-0"
-              style={{ background: ollamaStatus?.available ? 'var(--color-success)' : 'var(--color-error)' }}
+              style={{ borderBottom: '1px solid var(--color-border)', marginBottom: 16 }}
             />
-          </div>
-        </div>
 
-        {/* API keys */}
-        <div>
-          <p className="section-label flex items-center gap-2">
-            <Key size={11} />
-            Cloud AI — API Keys
-          </p>
-
-          {loadingKeys ? (
-            <div className="flex items-center justify-center py-10">
-              <Loader2 size={18} className="animate-spin text-[var(--color-brand-primary)]" />
-            </div>
-          ) : (
-            <div className="flex flex-col gap-3 mb-4">
-              {keys.map((key) => {
-                const result = testResult[key.id]
-                const meta = providerMeta(key.provider)
-                return (
+            {loadingKeys ? (
+              <div className="flex items-center justify-center py-10">
+                <Loader2 size={18} className="animate-spin text-[var(--color-primary)]" />
+              </div>
+            ) : (
+              <>
+                {keys.length > 0 && (
                   <div
-                    key={key.id}
-                    className="glass-card px-4 py-4 rounded-xl flex items-center gap-3"
+                    className="rounded-xl overflow-hidden mb-4"
+                    style={{ border: '1px solid var(--color-border)' }}
                   >
-                    <div
-                      className="w-9 h-9 rounded-lg flex items-center justify-center shrink-0"
-                      style={{ background: `${meta.color}18` }}
-                    >
-                      <Bot size={15} style={{ color: meta.color }} />
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <p className="text-sm font-semibold text-white/90">{key.label}</p>
-                      <p className="text-xs text-[var(--color-text-muted)] mt-0.5 capitalize">{meta.label}</p>
-                      {result && (
-                        <p
-                          className="text-xs mt-1 flex items-center gap-1"
-                          style={{ color: result.ok ? 'var(--color-success)' : 'var(--color-error)' }}
+                    {keys.map((key, idx) => {
+                      const result = testResult[key.id]
+                      const meta = providerMeta(key.provider)
+                      return (
+                        <div
+                          key={key.id}
+                          className="flex items-center gap-3 px-4 py-3.5 bg-[var(--color-surface)] transition-colors hover:bg-[var(--color-surface-alt)]"
+                          style={{
+                            borderTop: idx > 0 ? '1px solid var(--color-border)' : 'none',
+                          }}
                         >
-                          {result.ok
-                            ? <><CheckCircle size={10} /> {result.latencyMs}ms</>
-                            : <><XCircle size={10} /> {result.error}</>}
-                        </p>
-                      )}
-                    </div>
-                    <div className="flex items-center gap-1 shrink-0">
-                      <button
-                        onClick={() => handleTest(key.id)}
-                        disabled={testingId === key.id}
-                        className="btn btn-ghost btn-sm"
-                        style={{ fontSize: 11 }}
-                      >
-                        {testingId === key.id ? <Loader2 size={11} className="animate-spin" /> : 'Test'}
-                      </button>
-                      <button
-                        onClick={() => handleDelete(key.id)}
-                        disabled={deletingId === key.id}
-                        className="btn btn-ghost btn-icon"
-                        style={{ color: 'var(--color-error)' }}
-                      >
-                        {deletingId === key.id
-                          ? <Loader2 size={12} className="animate-spin" />
-                          : <Trash2 size={12} />}
-                      </button>
-                    </div>
+                          <div
+                            className="w-8 h-8 rounded-lg flex items-center justify-center shrink-0"
+                            style={{ background: `${meta.color}12` }}
+                          >
+                            <Bot size={14} style={{ color: meta.color }} />
+                          </div>
+                          <div className="flex-1 min-w-0">
+                            <p className="text-sm font-medium text-[var(--color-text-primary)]">{key.label}</p>
+                            <p className="text-xs text-[var(--color-text-muted)] capitalize">{meta.label}</p>
+                            {result && (
+                              <p
+                                className="text-[11px] mt-0.5 flex items-center gap-1"
+                                style={{ color: result.ok ? 'var(--color-success)' : 'var(--color-error)' }}
+                              >
+                                {result.ok
+                                  ? <><CheckCircle size={10} /> {result.latencyMs}ms</>
+                                  : <><XCircle size={10} /> {result.error}</>}
+                              </p>
+                            )}
+                          </div>
+                          <div className="flex items-center gap-1 shrink-0">
+                            <button
+                              onClick={() => handleTest(key.id)}
+                              disabled={testingId === key.id}
+                              className="btn btn-secondary btn-sm"
+                              style={{ fontSize: 12 }}
+                            >
+                              {testingId === key.id ? <Loader2 size={11} className="animate-spin" /> : 'Test'}
+                            </button>
+                            <button
+                              onClick={() => handleDelete(key.id)}
+                              disabled={deletingId === key.id}
+                              className="btn btn-ghost btn-icon"
+                              style={{ color: 'var(--color-error)' }}
+                            >
+                              {deletingId === key.id
+                                ? <Loader2 size={12} className="animate-spin" />
+                                : <Trash2 size={12} />}
+                            </button>
+                          </div>
+                        </div>
+                      )
+                    })}
                   </div>
-                )
-              })}
+                )}
 
-              {keys.length === 0 && !loadingKeys && (
-                <p className="text-xs text-[var(--color-text-muted)] py-1">
-                  No keys yet. Add Claude below, or run Ollama locally for free inference.
-                </p>
-              )}
-            </div>
-          )}
+                {keys.length === 0 && (
+                  <p className="text-sm text-[var(--color-text-muted)] mb-4">
+                    No keys yet. Add one below, or run Ollama locally for free inference.
+                  </p>
+                )}
 
-          <AddKeyForm onAdded={loadAll} />
+                <AddKeyForm onAdded={loadAll} />
+              </>
+            )}
+          </section>
+
+          {/* ── AI Spend ── */}
+          <section>
+            <p className="section-label">
+              <Activity size={11} />
+              AI Spend
+            </p>
+            <CostChart daily={daily} />
+          </section>
+
         </div>
-
-        {/* Cost chart */}
-        <CostChart daily={daily} />
       </div>
     </div>
   )

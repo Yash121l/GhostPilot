@@ -58,7 +58,7 @@ function TrendCard({ cluster, onDraft, onDismiss }: {
               {heat}
             </span>
           </div>
-          <h3 className="text-sm font-semibold text-white/90 leading-snug">{cluster.title}</h3>
+          <h3 className="text-sm font-semibold text-[var(--color-text-primary)] leading-snug">{cluster.title}</h3>
         </div>
         <button
           onClick={handleDismiss}

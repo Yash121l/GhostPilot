@@ -95,14 +95,14 @@ export default function App(): ReactElement {
     <div className="app-shell">
       {/* ── Title Bar ── */}
       <header className="titlebar select-none">
-        <div className="flex items-center gap-2 opacity-90">
-          <Ghost size={14} strokeWidth={2.5} className="text-[var(--color-brand-primary)]" />
+        <div className="flex items-center gap-2">
+          <Ghost size={14} strokeWidth={2.5} className="text-[var(--color-primary)]" />
           <div className="text-[11px] font-bold tracking-[0.15em] uppercase text-gradient">
             GhostPilot
           </div>
         </div>
         <div className="flex-1" />
-        <div className="badge badge-brand flex items-center gap-1.5 shadow-lg opacity-90 scale-90 origin-right">
+        <div className="badge badge-brand flex items-center gap-1.5">
           <Sparkles size={10} />
           <span className="text-[9px]">Phase 1</span>
         </div>

@@ -18,7 +18,7 @@ function StatTile({ stat }: { stat: StatDef }): ReactElement {
   return (
     <div
       className="glass-card p-5 rounded-2xl flex flex-col gap-3"
-      style={{ background: 'hsla(225,12%,13%,0.9)' }}
+      style={{ background: 'var(--color-surface)' }}
     >
       <div className="flex items-center justify-between">
         <span className="text-xs font-medium text-[var(--color-text-muted)]">{stat.label}</span>
@@ -156,7 +156,7 @@ export default function AnalyticsPage(): ReactElement {
           {/* Platform breakdown */}
           {Object.keys(byPlatform).length > 0 && (
             <div className="glass-card p-5 rounded-2xl">
-              <h3 className="text-sm font-semibold text-white/90 mb-4">Published by Platform</h3>
+              <h3 className="text-sm font-semibold text-[var(--color-text-primary)] mb-4">Published by Platform</h3>
               <div className="space-y-4">
                 {Object.entries(byPlatform).map(([platform, count]) => (
                   <BarRow
@@ -174,7 +174,7 @@ export default function AnalyticsPage(): ReactElement {
           {/* Recent AI calls */}
           {recentCalls.length > 0 && (
             <div className="glass-card p-5 rounded-2xl">
-              <h3 className="text-sm font-semibold text-white/90 mb-4">Recent AI Calls</h3>
+              <h3 className="text-sm font-semibold text-[var(--color-text-primary)] mb-4">Recent AI Calls</h3>
               <div className="space-y-1">
                 {recentCalls.map((u, i) => (
                   <div

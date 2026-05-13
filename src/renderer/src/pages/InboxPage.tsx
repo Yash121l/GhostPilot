@@ -22,21 +22,21 @@ const CONNECTORS: ConnectorDef[] = [
     icon: Briefcase,
     description: 'Professional posts, articles, and thought leadership',
     color: '#0077B5',
-    bg: 'hsla(201,100%,35%,0.12)',
+    bg: 'rgba(0,119,181,0.08)',
   },
   {
     platform: Platform.TWITTER,
     icon: AtSign,
     description: 'Short-form updates, threads, and real-time engagement',
     color: '#1D9BF0',
-    bg: 'hsla(206,90%,53%,0.12)',
+    bg: 'rgba(29,155,240,0.08)',
   },
   {
     platform: Platform.INSTAGRAM,
     icon: Camera,
     description: 'Visual content, reels, and story-driven posts',
     color: '#E1306C',
-    bg: 'hsla(338,73%,54%,0.12)',
+    bg: 'rgba(225,48,108,0.08)',
   },
 ]
 
@@ -70,7 +70,7 @@ function ConnectCard({
       disabled={connected}
       className={`connector-card ${connected ? 'connected' : ''}`}
     >
-      <div className="connector-icon" style={{ background: connected ? 'hsla(142,71%,45%,0.15)' : def.bg }}>
+      <div className="connector-icon" style={{ background: connected ? 'rgba(16,185,129,0.08)' : def.bg }}>
         <Icon
           size={20}
           style={{ color: connected ? 'var(--color-success)' : def.color }}
@@ -185,7 +185,7 @@ export default function InboxPage(): ReactElement {
                   className="glass-card rounded-2xl p-8 flex flex-col items-center text-center"
                 >
                   <Inbox size={28} className="text-[var(--color-text-muted)] mb-3" />
-                  <p className="text-sm font-medium text-white/60 mb-1">No pending items</p>
+                  <p className="text-sm font-medium text-[var(--color-text-secondary)] mb-1">No pending items</p>
                   <p className="text-xs text-[var(--color-text-muted)] max-w-xs">
                     Auto-replies, DM funnels, and engagement suggestions arrive here in Phase 2.
                   </p>

@@ -48,7 +48,7 @@ export default function ComposerPage(): ReactElement {
     content: '',
     editorProps: {
       attributes: {
-        class: 'prose prose-invert max-w-none min-h-[180px] focus:outline-none text-[var(--color-text-primary)] leading-relaxed text-sm',
+        class: 'min-h-[180px] focus:outline-none leading-relaxed text-sm tiptap',
       },
     },
   })
@@ -157,10 +157,7 @@ export default function ComposerPage(): ReactElement {
 
           <div
             className="flex-1 overflow-y-auto py-5"
-            style={{
-              paddingLeft: 28, paddingRight: 28,
-              background: 'linear-gradient(180deg, hsla(265,89%,65%,0.02) 0%, transparent 30%)',
-            }}
+            style={{ paddingLeft: 28, paddingRight: 28 }}
           >
             <EditorContent editor={editor} />
           </div>
@@ -209,11 +206,10 @@ export default function ComposerPage(): ReactElement {
             {activeVariant?.variant ? (
               <div className="space-y-3">
                 <div
-                  className="text-sm leading-relaxed text-[var(--color-text-secondary)] whitespace-pre-wrap rounded-2xl p-5"
+                  className="text-sm leading-relaxed text-[var(--color-text-secondary)] whitespace-pre-wrap rounded-xl p-5"
                   style={{
-                    background: 'hsla(225,12%,13%,0.9)',
-                    border: `1px solid ${PLATFORM_COLORS[activePlatform]}30`,
-                    boxShadow: `0 0 24px ${PLATFORM_COLORS[activePlatform]}10`,
+                    background: 'var(--color-surface)',
+                    border: `1px solid ${PLATFORM_COLORS[activePlatform]}40`,
                     minHeight: 120,
                   }}
                 >
