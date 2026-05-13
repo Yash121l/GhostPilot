@@ -1,0 +1,40 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - 'v*'
+
+jobs:
+  release:
+    name: Release (${{ matrix.os }})
+    strategy:
+      matrix:
+        include:
+          - os: macos-latest
+            build_cmd: build:mac
+          - os: windows-latest
+            build_cmd: build:win
+          - os: ubuntu-latest
+            build_cmd: build:linux
+
+    runs-on: ${{ matrix.os }}
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build & publish to GitHub Releases
+        run: npm run ${{ matrix.build_cmd }}
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          # TODO(phase-8): CSC_LINK, CSC_KEY_PASSWORD for macOS code signing
+          # TODO(phase-8): WIN_CSC_LINK, WIN_CSC_KEY_PASSWORD for Windows

@@ -1,0 +1,339 @@
+/* globals.css — Tailwind v4 + CSS design tokens for GhostPilot */
+@import "tailwindcss";
+@source "../**/*.{js,ts,jsx,tsx,html}";
+
+/* ─── Design Tokens ───────────────────────────────────────────────────────── */
+:root {
+  /* Brand colors - Neon & Sleek */
+  --color-brand-primary: hsl(265, 89%, 65%);
+  --color-brand-secondary: hsl(190, 90%, 55%);
+  --color-brand-accent: hsl(330, 85%, 65%);
+
+  /* Background gradients */
+  --bg-gradient: radial-gradient(circle at 15% 50%, hsla(265, 89%, 65%, 0.08), transparent 25%),
+    radial-gradient(circle at 85% 30%, hsla(190, 90%, 55%, 0.08), transparent 25%);
+
+  /* Surfaces - Deep, rich darks */
+  --color-bg: hsl(225, 12%, 6%);
+  --color-surface-1: hsl(225, 12%, 9%);
+  --color-surface-2: hsl(225, 12%, 13%);
+  --color-surface-3: hsl(225, 12%, 18%);
+  --color-border: hsl(225, 12%, 16%);
+  --color-border-subtle: hsla(0, 0%, 100%, 0.05);
+
+  /* Text */
+  --color-text-primary: hsl(210, 20%, 98%);
+  --color-text-secondary: hsl(210, 10%, 75%);
+  --color-text-muted: hsl(210, 10%, 50%);
+
+  /* Status */
+  --color-success: hsl(142, 71%, 45%);
+  --color-warning: hsl(38, 92%, 50%);
+  --color-error: hsl(0, 84%, 60%);
+  --color-info: hsl(200, 80%, 55%);
+
+  /* Layout */
+  --sidebar-width: 250px;
+  --titlebar-height: 38px;
+  --statusbar-height: 28px;
+
+  /* Typography */
+  --font-sans: 'Inter', system-ui, -apple-system, sans-serif;
+  --font-mono: 'JetBrains Mono', 'Fira Code', monospace;
+
+  /* Radius */
+  --radius-sm: 8px;
+  --radius-md: 12px;
+  --radius-lg: 18px;
+  --radius-xl: 24px;
+
+  /* Transitions */
+  --transition-fast: 0.15s cubic-bezier(0.4, 0, 0.2, 1);
+  --transition-smooth: 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+/* ─── Reset & Base ────────────────────────────────────────────────────────── */
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+html,
+body,
+#root {
+  height: 100%;
+  width: 100%;
+  overflow: hidden;
+}
+
+body {
+  font-family: var(--font-sans);
+  background-color: var(--color-bg);
+  background-image: var(--bg-gradient);
+  background-attachment: fixed;
+  color: var(--color-text-primary);
+  font-size: 14px;
+  line-height: 1.5;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  -webkit-app-region: no-drag;
+  user-select: none;
+}
+
+/* Allow text selection in content areas */
+p,
+span,
+input,
+textarea,
+[contenteditable],
+h1,
+h2,
+h3 {
+  user-select: text;
+}
+
+/* Scrollbar styling */
+::-webkit-scrollbar {
+  width: 4px;
+  height: 4px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background: var(--color-surface-3);
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: var(--color-text-muted);
+}
+
+/* ─── App Layout Shell ────────────────────────────────────────────────────── */
+.app-shell {
+  display: grid;
+  grid-template-rows: var(--titlebar-height) 1fr var(--statusbar-height);
+  grid-template-columns: var(--sidebar-width) 1fr;
+  height: 100vh;
+  width: 100vw;
+  background: transparent;
+}
+
+.titlebar {
+  grid-column: 1 / -1;
+  background: hsla(225, 12%, 9%, 0.6);
+  backdrop-filter: blur(20px);
+  border-bottom: 1px solid var(--color-border-subtle);
+  -webkit-app-region: drag;
+  display: flex;
+  align-items: center;
+  padding: 0 16px;
+  gap: 16px;
+  z-index: 50;
+  /* Extra left padding on macOS to prevent overlap with traffic light buttons */
+  padding-left: 80px;
+}
+
+.sidebar {
+  background: hsla(225, 12%, 9%, 0.4);
+  backdrop-filter: blur(10px);
+  border-right: 1px solid var(--color-border-subtle);
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+}
+
+.main-content {
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  position: relative;
+  background: transparent;
+}
+
+.statusbar {
+  grid-column: 1 / -1;
+  background: hsla(225, 12%, 9%, 0.8);
+  backdrop-filter: blur(10px);
+  border-top: 1px solid var(--color-border-subtle);
+  display: flex;
+  align-items: center;
+  padding: 0 16px;
+  gap: 20px;
+  font-size: 11px;
+  color: var(--color-text-muted);
+  font-weight: 500;
+  z-index: 40;
+}
+
+/* ─── Glassmorphism card ──────────────────────────────────────────────────── */
+.glass-card {
+  background: hsla(225, 12%, 13%, 0.6);
+  backdrop-filter: blur(16px);
+  border: 1px solid var(--color-border-subtle);
+  border-radius: var(--radius-lg);
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.2);
+  transition: transform var(--transition-smooth), box-shadow var(--transition-smooth);
+}
+
+.glass-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.3);
+  border-color: hsla(265, 89%, 65%, 0.3);
+}
+
+/* ─── Badge ───────────────────────────────────────────────────────────────── */
+.badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 4px 10px;
+  border-radius: 99px;
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+}
+
+.badge-brand {
+  background: linear-gradient(135deg, hsla(265, 89%, 65%, 0.2), hsla(330, 85%, 65%, 0.2));
+  color: var(--color-brand-primary);
+  border: 1px solid hsla(265, 89%, 65%, 0.3);
+}
+
+/* ─── Sidebar nav item ────────────────────────────────────────────────────── */
+.nav-item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 18px;
+  border-radius: var(--radius-md);
+  margin: 2px 12px;
+  color: var(--color-text-secondary);
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all var(--transition-fast);
+  text-decoration: none;
+  border: 1px solid transparent;
+  background: transparent;
+  -webkit-app-region: no-drag;
+}
+
+.nav-item:hover {
+  background: hsla(210, 20%, 98%, 0.04);
+  color: var(--color-text-primary);
+}
+
+.nav-item.active {
+  background: linear-gradient(90deg, hsla(265, 89%, 65%, 0.15), transparent);
+  color: #fff;
+  border-left: 3px solid var(--color-brand-primary);
+  border-radius: 0 var(--radius-md) var(--radius-md) 0;
+  margin-left: 0;
+  padding-left: 27px;
+  /* 12px margin + 15px original padding */
+}
+
+.nav-item.active svg {
+  color: var(--color-brand-primary);
+  filter: drop-shadow(0 0 6px hsla(265, 89%, 65%, 0.6));
+}
+
+/* ─── Micro-animations ────────────────────────────────────────────────────── */
+@keyframes slide-up-fade {
+  from {
+    opacity: 0;
+    transform: translateY(15px) scale(0.98);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+.animate-slide-up {
+  animation: slide-up-fade 0.4s cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+@keyframes pulse-glow {
+
+  0%,
+  100% {
+    box-shadow: 0 0 0 0 hsla(265, 89%, 65%, 0.4);
+  }
+
+  50% {
+    box-shadow: 0 0 0 6px hsla(265, 89%, 65%, 0);
+  }
+}
+
+.animate-pulse-glow {
+  animation: pulse-glow 2.5s ease-in-out infinite;
+}
+
+/* ─── Gradients ───────────────────────────────────────────────────────────── */
+.text-gradient {
+  background: linear-gradient(to right, var(--color-brand-secondary), var(--color-brand-primary), var(--color-brand-accent));
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+/* ─── Bulletproof Sidebar Components ──────────────────────────────────────── */
+.sidebar-header {
+  padding-left: 30px;
+  padding-bottom: 12px;
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.15em;
+  color: hsla(0, 0%, 100%, 0.3);
+  text-transform: uppercase;
+}
+
+.connection-list {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.connection-item {
+  display: flex;
+  align-items: center;
+  margin: 0 12px;
+  padding: 10px 18px;
+  border-radius: 12px;
+  font-size: 13px;
+  color: hsla(0, 0%, 100%, 0.5);
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.connection-item:hover {
+  background: hsla(0, 0%, 100%, 0.05);
+  color: hsla(0, 0%, 100%, 0.9);
+}
+
+.connection-label {
+  font-weight: 500;
+  letter-spacing: 0.02em;
+}
+
+.connection-dot {
+  margin-left: auto;
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: hsla(0, 0%, 100%, 0.1);
+  transition: all 0.2s;
+}
+
+.connection-item:hover .connection-dot {
+  background: var(--color-brand-primary);
+  box-shadow: 0 0 8px var(--color-brand-primary);
+}
