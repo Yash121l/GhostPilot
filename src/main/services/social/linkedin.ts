@@ -41,17 +41,18 @@ export class LinkedInConnector implements SocialConnector {
   // ─── OAuth ──────────────────────────────────────────────────────────────────
 
   getAuthURL(state: string, _codeVerifier: string, redirectUri: string): string {
-    // LinkedIn OAuth 2.0 — scope must be space-separated and NOT percent-encoded.
-    // URLSearchParams encodes spaces as + which LinkedIn rejects, so build manually.
+    // LinkedIn OAuth 2.0 — scope must be space-separated.
+    // Build URL manually; URLSearchParams encodes spaces as + which some
+    // LinkedIn endpoints reject. Use %20 explicitly.
     const base = 'https://www.linkedin.com/oauth/v2/authorization'
-    const scope = SCOPES.join(' ')
-    return (
-      `${base}?response_type=code` +
-      `&client_id=${encodeURIComponent(clientId())}` +
-      `&redirect_uri=${encodeURIComponent(redirectUri)}` +
-      `&state=${encodeURIComponent(state)}` +
-      `&scope=${encodeURIComponent(scope)}`
-    )
+    const qs = [
+      `response_type=code`,
+      `client_id=${encodeURIComponent(clientId())}`,
+      `redirect_uri=${encodeURIComponent(redirectUri)}`,
+      `state=${encodeURIComponent(state)}`,
+      `scope=${SCOPES.join('%20')}`,
+    ].join('&')
+    return `${base}?${qs}`
   }
 
   async handleCallback(code: string, _codeVerifier: string, redirectUri: string): Promise<ConnectionResult> {
