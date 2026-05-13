@@ -28,19 +28,27 @@ export class VariantGenerator {
 
   async generate(postId: string, platforms: Platform[], traceId: string): Promise<Post> {
     const post = await this.postService.get(postId)
-    const persona = await this.personaService.get(post.personaId)
 
-    const personaContext = [
-      `Name: ${persona.name}`,
-      `Bio: ${persona.bio}`,
-      `Content pillars: ${persona.pillars.join(', ')}`,
-      persona.styleHints ? `Style hints: ${persona.styleHints}` : '',
-      persona.latestFingerprint
-        ? `Voice: ${persona.latestFingerprint.tone}; avg sentence length: ${persona.latestFingerprint.avgSentenceLength} words`
-        : '',
-    ]
-      .filter(Boolean)
-      .join('\n')
+    // Gracefully handle missing persona — use minimal context rather than throwing
+    let personaContext = ''
+    try {
+      const persona = await this.personaService.get(post.personaId)
+      personaContext = [
+        `Name: ${persona.name}`,
+        `Bio: ${persona.bio}`,
+        `Content pillars: ${persona.pillars.join(', ')}`,
+        persona.styleHints ? `Style hints: ${persona.styleHints}` : '',
+        persona.latestFingerprint
+          ? `Voice: ${persona.latestFingerprint.tone}; avg sentence length: ${persona.latestFingerprint.avgSentenceLength} words`
+          : '',
+      ]
+        .filter(Boolean)
+        .join('\n')
+    } catch {
+      // No persona found — generate without persona context
+      personaContext = 'No persona configured. Write in a clear, professional tone.'
+      logger.warn({ msg: 'Persona not found, generating without context', personaId: post.personaId })
+    }
 
     const variants: DraftVariant[] = []
     const now = new Date()
@@ -93,7 +101,18 @@ OUTPUT: Return ONLY the finished post text. No explanation. No meta-commentary.`
         logger.info({ msg: 'Variant generated', platform, postId, chars: body.length })
       } catch (e) {
         logger.error({ msg: 'Variant generation failed', platform, postId, error: String(e) })
-        // Continue generating for other platforms; skip failed one
+        // Push a placeholder so the caller knows this platform failed
+        variants.push({
+          id: nanoid(),
+          postId,
+          platform,
+          body: `[Generation failed: ${String(e)}]`,
+          charCount: 0,
+          styleDriftScore: 0,
+          createdAt: now,
+          provider: 'error',
+          modelId: 'error',
+        })
       }
     }
 

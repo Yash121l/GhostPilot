@@ -6,6 +6,7 @@ import {
 import { ipc, IPC_CHANNELS } from '../../lib/ipc'
 import type { TrendCluster, TrendConfig } from '@shared/types/trend'
 import { DEFAULT_TREND_CONFIG } from '@shared/types/trend'
+import { useComposerStore } from '../../store/composer'
 
 const TREND_CONFIG_KEY = 'trend:config'
 
@@ -327,6 +328,7 @@ export default function TrendsPage(): ReactElement {
   const [loading, setLoading]       = useState(true)
   const [refreshing, setRefreshing] = useState(false)
   const [showConfig, setShowConfig] = useState(false)
+  const setPrefill = useComposerStore((s) => s.setPrefill)
 
   const load = useCallback(async (): Promise<void> => {
     setLoading(true)
@@ -345,7 +347,12 @@ export default function TrendsPage(): ReactElement {
   useEffect(() => { load() }, [load])
 
   const handleDraft = (cluster: TrendCluster): void => {
-    window.dispatchEvent(new CustomEvent('nav', { detail: { page: 'composer', prefill: cluster.title } }))
+    // Pre-fill the composer with the trend title + summary as a starting point
+    const prefillText = cluster.summary
+      ? `${cluster.title}\n\n${cluster.summary}`
+      : cluster.title
+    setPrefill(prefillText)
+    window.dispatchEvent(new CustomEvent('nav', { detail: 'composer' }))
   }
 
   return (

@@ -1,7 +1,7 @@
-import { useState, useCallback, useRef, type ReactElement } from 'react'
+import { useState, useCallback, useRef, useEffect, type ReactElement } from 'react'
 import {
   Sparkles, CheckCircle, AlertCircle, Briefcase, AtSign, Camera,
-  CalendarDays, RotateCcw,
+  CalendarDays, RotateCcw, UserCircle2, Save, Send,
 } from 'lucide-react'
 import { ipc, IPC_CHANNELS } from '../../lib/ipc'
 import type { Post } from '@shared/types/post'
@@ -11,6 +11,8 @@ import { TiptapEditor } from '../../components/composer/TiptapEditor'
 import { PlatformPreview } from '../../components/composer/PlatformPreview'
 import { StyleDriftMeter } from '../../components/composer/StyleDriftMeter'
 import type { Editor } from '@tiptap/react'
+import type { Persona } from '@shared/types/persona'
+import { useComposerStore } from '../../store/composer'
 
 const PLATFORMS = [Platform.LINKEDIN, Platform.TWITTER, Platform.INSTAGRAM]
 
@@ -29,7 +31,8 @@ const PLATFORM_COLORS: Record<Platform, string> = {
 type ScheduleStep = 'idle' | 'scheduling'
 
 export default function ComposerPage(): ReactElement {
-  const [personaId] = useState('default')
+  const [personas, setPersonas] = useState<Persona[]>([])
+  const [personaId, setPersonaId] = useState<string>('')
   const [activePlatform, setActivePlatform] = useState<Platform>(Platform.LINKEDIN)
   const [selectedPlatforms, setSelectedPlatforms] = useState<Platform[]>(PLATFORMS)
   const [savedPost, setSavedPost] = useState<Post | null>(null)
@@ -38,9 +41,31 @@ export default function ComposerPage(): ReactElement {
   const [scheduleAt, setScheduleAt] = useState('')
   const [schedulingPlatform, setSchedulingPlatform] = useState<Platform>(Platform.LINKEDIN)
   const [bodyText, setBodyText] = useState('')
+  const [posting, setPosting] = useState(false)
+  const [postSuccess, setPostSuccess] = useState<string | null>(null)
 
   const editorRef = useRef<Editor | null>(null)
   const { state: genState, generate, reset: resetGen } = useVariantGenerator()
+  const { prefill, setPrefill } = useComposerStore()
+
+  // Load personas on mount — pick the first one as default
+  useEffect(() => {
+    ipc.invoke(IPC_CHANNELS.PERSONA_LIST, {}).then((res) => {
+      if (res.ok && res.value.length > 0) {
+        setPersonas(res.value)
+        setPersonaId(res.value[0].id)
+      }
+    })
+  }, [])
+
+  // Apply prefill from Trends "Draft this topic"
+  useEffect(() => {
+    if (prefill && editorRef.current) {
+      editorRef.current.commands.setContent(prefill)
+      setBodyText(prefill)
+      setPrefill(null)
+    }
+  }, [prefill, setPrefill])
 
   const handleEditorChange = useCallback((text: string) => {
     setBodyText(text)
@@ -90,6 +115,68 @@ export default function ComposerPage(): ReactElement {
     }
   }
 
+  /** Save the current draft without generating variants */
+  const handleSaveDraft = async (): Promise<void> => {
+    const body = editorRef.current?.getText().trim() ?? ''
+    if (!body) { setCreateError('Write something first.'); return }
+    setCreateError(null)
+
+    const createRes = await ipc.invoke(IPC_CHANNELS.POST_CREATE, {
+      personaId: personaId || 'default',
+      body,
+      platforms: selectedPlatforms,
+    })
+    if (createRes.ok) {
+      setSavedPost(createRes.value)
+      setPostSuccess('Draft saved')
+      setTimeout(() => setPostSuccess(null), 2500)
+    } else {
+      setCreateError(createRes.error.message)
+    }
+  }
+
+  /** Post immediately to the active platform (schedules 5 seconds from now) */
+  const handlePostNow = async (): Promise<void> => {
+    if (!savedPost) {
+      // Need to save first
+      const body = editorRef.current?.getText().trim() ?? ''
+      if (!body) { setCreateError('Write something first.'); return }
+      const createRes = await ipc.invoke(IPC_CHANNELS.POST_CREATE, {
+        personaId: personaId || 'default',
+        body,
+        platforms: selectedPlatforms,
+      })
+      if (!createRes.ok) { setCreateError(createRes.error.message); return }
+      setSavedPost(createRes.value)
+    }
+
+    const post = savedPost ?? (await ipc.invoke(IPC_CHANNELS.POST_LIST, { limit: 1 })).value?.[0]
+    if (!post) return
+
+    const variant = genState.variantMap[activePlatform]
+    if (!variant) { setCreateError('Generate variants first, then post.'); return }
+
+    setPosting(true)
+    setCreateError(null)
+
+    // Schedule 5 seconds from now = effectively immediate
+    const scheduledAt = new Date(Date.now() + 5000).toISOString()
+    const res = await ipc.invoke(IPC_CHANNELS.POST_SCHEDULE, {
+      postId: post.id,
+      variantId: variant.id,
+      platform: activePlatform,
+      scheduledAt,
+    })
+
+    setPosting(false)
+    if (res.ok) {
+      setPostSuccess(`Posting to ${PLATFORM_LABELS[activePlatform]}…`)
+      setTimeout(() => setPostSuccess(null), 4000)
+    } else {
+      setCreateError(res.error.message)
+    }
+  }
+
   const togglePlatform = (p: Platform): void => {
     setSelectedPlatforms((prev) =>
       prev.includes(p) ? prev.filter((x) => x !== p) : [...prev, p],
@@ -110,12 +197,41 @@ export default function ComposerPage(): ReactElement {
           <p className="page-subtitle">Write once — AI adapts for every platform</p>
         </div>
         <div className="flex items-center gap-2">
+          {/* Persona selector */}
+          {personas.length > 0 ? (
+            <div className="flex items-center gap-1.5" style={{ fontSize: 13 }}>
+              <UserCircle2 size={14} style={{ color: 'var(--color-text-muted)' }} />
+              <select
+                className="form-input text-xs"
+                style={{ padding: '4px 8px', height: 30 }}
+                value={personaId}
+                onChange={(e) => setPersonaId(e.target.value)}
+              >
+                {personas.map((p) => (
+                  <option key={p.id} value={p.id}>{p.name}</option>
+                ))}
+              </select>
+            </div>
+          ) : (
+            <button
+              className="btn btn-ghost btn-sm"
+              style={{ fontSize: 12, color: 'var(--color-warning)' }}
+              onClick={() => window.dispatchEvent(new CustomEvent('nav', { detail: 'personas' }))}
+            >
+              <UserCircle2 size={13} />
+              Create a persona first
+            </button>
+          )}
           {genState.status !== 'idle' && (
             <button onClick={resetGen} className="btn btn-ghost btn-icon" title="Reset">
               <RotateCcw size={14} />
             </button>
           )}
-          <button onClick={handleGenerate} disabled={generating} className="btn btn-primary">
+          <button
+            onClick={handleGenerate}
+            disabled={generating || !personaId}
+            className="btn btn-primary"
+          >
             {generating
               ? <span className="inline-flex items-center gap-1.5"><span className="w-3 h-3 rounded-full bg-white/60 animate-pulse-glow" />Generating…</span>
               : <><Sparkles size={14} />Generate Variants</>}
@@ -271,25 +387,62 @@ export default function ComposerPage(): ReactElement {
             )}
           </div>
 
-          {/* Footer: schedule flow */}
-          {savedPost && activeVariant && (
+          {/* Footer: actions */}
+          {genState.status !== 'idle' && (
             <div
-              className="flex items-center gap-3 py-3"
-              style={{ paddingLeft: 24, paddingRight: 24, borderTop: '1px solid var(--color-border)' }}
+              className="flex items-center gap-2 py-3"
+              style={{ paddingLeft: 24, paddingRight: 24, borderTop: '1px solid var(--color-border)', flexWrap: 'wrap' }}
             >
+              {/* Success message */}
+              {postSuccess && (
+                <span className="text-xs flex-1" style={{ color: 'var(--color-success)' }}>
+                  <CheckCircle size={12} className="inline mr-1" />
+                  {postSuccess}
+                </span>
+              )}
+
               {scheduleStep === 'idle' ? (
                 <>
-                  <CheckCircle size={13} className="text-[var(--color-success)]" />
-                  <span className="text-xs text-[var(--color-text-muted)] flex-1">
-                    Saved · {savedPost.id.slice(0, 8)}
-                  </span>
+                  {savedPost && !postSuccess && (
+                    <span className="text-xs text-[var(--color-text-muted)] flex-1">
+                      Saved · {savedPost.id.slice(0, 8)}
+                    </span>
+                  )}
+                  {!savedPost && !postSuccess && <span className="flex-1" />}
+
+                  {/* Save Draft */}
                   <button
-                    className="btn btn-primary btn-sm"
-                    onClick={() => { setSchedulingPlatform(activePlatform); setScheduleStep('scheduling') }}
+                    className="btn btn-ghost btn-sm"
+                    onClick={handleSaveDraft}
+                    title="Save as draft without posting"
                   >
-                    <CalendarDays size={12} />
-                    Schedule
+                    <Save size={12} />
+                    Save Draft
                   </button>
+
+                  {/* Post Now */}
+                  {activeVariant && (
+                    <button
+                      className="btn btn-secondary btn-sm"
+                      onClick={handlePostNow}
+                      disabled={posting}
+                      title={`Post immediately to ${PLATFORM_LABELS[activePlatform]}`}
+                    >
+                      <Send size={12} />
+                      {posting ? 'Posting…' : `Post Now`}
+                    </button>
+                  )}
+
+                  {/* Schedule */}
+                  {activeVariant && (
+                    <button
+                      className="btn btn-primary btn-sm"
+                      onClick={() => { setSchedulingPlatform(activePlatform); setScheduleStep('scheduling') }}
+                    >
+                      <CalendarDays size={12} />
+                      Schedule
+                    </button>
+                  )}
                 </>
               ) : (
                 <>
@@ -316,6 +469,25 @@ export default function ComposerPage(): ReactElement {
                   <button className="btn btn-ghost btn-sm" onClick={() => setScheduleStep('idle')}>Cancel</button>
                 </>
               )}
+            </div>
+          )}
+
+          {/* Save Draft button even before generating */}
+          {genState.status === 'idle' && (
+            <div
+              className="flex items-center justify-end gap-2 py-3"
+              style={{ paddingLeft: 24, paddingRight: 24, borderTop: '1px solid var(--color-border)' }}
+            >
+              {postSuccess && (
+                <span className="text-xs mr-auto" style={{ color: 'var(--color-success)' }}>
+                  <CheckCircle size={12} className="inline mr-1" />
+                  {postSuccess}
+                </span>
+              )}
+              <button className="btn btn-ghost btn-sm" onClick={handleSaveDraft}>
+                <Save size={12} />
+                Save Draft
+              </button>
             </div>
           )}
         </div>
