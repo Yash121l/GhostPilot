@@ -222,7 +222,14 @@ export default function SettingsPage(): ReactElement {
       ipc.invoke(IPC_CHANNELS.AI_USAGE_DAILY, { days: 30 }),
       ipc.invoke(IPC_CHANNELS.AI_OLLAMA_STATUS, {}),
     ])
-    if (keysRes.ok) setKeys(keysRes.value)
+    if (keysRes.ok) {
+      setKeys(keysRes.value)
+      window.dispatchEvent(
+        new CustomEvent('ai:status-changed', {
+          detail: { hasKeys: keysRes.value.length > 0, ollamaAvailable: ollamaRes.ok && ollamaRes.value.available },
+        }),
+      )
+    }
     if (dailyRes.ok) setDaily(dailyRes.value)
     if (ollamaRes.ok) setOllamaStatus(ollamaRes.value)
     setLoadingKeys(false)

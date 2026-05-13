@@ -24,7 +24,10 @@ export default defineConfig(
       'react-refresh': eslintPluginReactRefresh
     },
     rules: {
-      ...eslintPluginReactHooks.configs.recommended.rules,
+      // Classic hooks rules only — react-hooks v7 bundles React Compiler rules
+      // that don't apply to projects not using the React Compiler.
+      'react-hooks/rules-of-hooks': 'error',
+      'react-hooks/exhaustive-deps': 'warn',
       ...eslintPluginReactRefresh.configs.vite.rules,
       '@typescript-eslint/no-unused-vars': [
         'error',

@@ -80,6 +80,16 @@ export default function App(): ReactElement {
     return () => unsub?.()
   }, [])
 
+  // Listen for AI key changes from SettingsPage
+  useEffect(() => {
+    const handler = (e: Event): void => {
+      const { hasKeys, ollamaAvailable } = (e as CustomEvent<{ hasKeys: boolean; ollamaAvailable: boolean }>).detail
+      setAiConfigured(hasKeys || ollamaAvailable)
+    }
+    window.addEventListener('ai:status-changed', handler)
+    return () => window.removeEventListener('ai:status-changed', handler)
+  }, [])
+
   // Listen for programmatic nav events (e.g., Composer → Calendar)
   useEffect(() => {
     const handler = (e: Event): void => {

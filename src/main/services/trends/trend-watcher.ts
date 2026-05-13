@@ -6,6 +6,7 @@ import { fetchHackerNews } from './sources/hackernews'
 import { fetchReddit } from './sources/reddit'
 import type { RawTrendItem } from './sources/hackernews'
 import { createLogger } from '../../infrastructure/logger/logger'
+import type { TrendCluster } from '../../../shared/types/trend'
 
 const logger = createLogger('TrendWatcher')
 
@@ -63,7 +64,7 @@ export class TrendWatcher {
     logger.info({ msg: 'Trends refreshed', clusters: clusters.length })
   }
 
-  async list(limit = 20) {
+  async list(limit = 20): Promise<TrendCluster[]> {
     const db = getDb()
     const clusters = await db.select().from(trendClusters)
     const evidence = await db.select().from(trendEvidence)

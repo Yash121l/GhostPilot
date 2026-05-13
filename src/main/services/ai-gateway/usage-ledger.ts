@@ -1,6 +1,6 @@
 import { nanoid } from 'nanoid'
 import { getRawDb } from '../../infrastructure/db/connection'
-import type { AITask } from '../../../shared/types/ai'
+import type { AITask, LLMUsage } from '../../../shared/types/ai'
 import type { DailyUsage } from '../../../shared/ipc-types'
 
 export interface RecordUsageParams {
@@ -34,7 +34,7 @@ export class UsageLedger {
     )
   }
 
-  list(limit = 100) {
+  list(limit = 100): LLMUsage[] {
     const db = getRawDb()
     return db
       .prepare(
@@ -43,7 +43,7 @@ export class UsageLedger {
                 post_id as postId, persona_id as personaId
          FROM llm_usage ORDER BY ts DESC LIMIT ?`,
       )
-      .all(limit)
+      .all(limit) as LLMUsage[]
   }
 
   dailySummary(days = 30): DailyUsage[] {
