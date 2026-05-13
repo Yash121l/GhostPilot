@@ -19,7 +19,7 @@ const clientSecret = (): string => process.env['LINKEDIN_CLIENT_SECRET'] ?? ''
 
 // LinkedIn REST API v202404+
 const API_BASE = 'https://api.linkedin.com'
-const SCOPES = ['openid', 'profile', 'w_member_social', 'r_basicprofile']
+const SCOPES = ['openid', 'profile', 'w_member_social']
 
 // LinkedIn rate limits: 500 API calls / day per member token (approximate)
 const DAILY_LIMIT = 500

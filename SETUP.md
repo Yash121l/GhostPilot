@@ -96,7 +96,6 @@ https://ghostpilot.yashlunawat.com/oauth/callback
 | `openid` | Identify the user |
 | `profile` | Get display name |
 | `w_member_social` | Create posts |
-| `r_basicprofile` | Read basic profile |
 
 ### Connect in the app
 
