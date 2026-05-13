@@ -19,6 +19,10 @@ const clientSecret = (): string => process.env['LINKEDIN_CLIENT_SECRET'] ?? ''
 
 // LinkedIn REST API v202404+
 const API_BASE = 'https://api.linkedin.com'
+// Scopes that require LinkedIn products to be approved on the app:
+// - openid, profile → requires "Sign In with LinkedIn using OpenID Connect"
+// - w_member_social → requires "Share on LinkedIn"
+// All three must be added under the Products tab in the LinkedIn Developer Portal.
 const SCOPES = ['openid', 'profile', 'w_member_social']
 
 // LinkedIn rate limits: 500 API calls / day per member token (approximate)
@@ -37,17 +41,17 @@ export class LinkedInConnector implements SocialConnector {
   // ─── OAuth ──────────────────────────────────────────────────────────────────
 
   getAuthURL(state: string, _codeVerifier: string, redirectUri: string): string {
-    // LinkedIn uses standard OAuth 2.0 (PKCE not supported as of 2024)
-    // Build params manually — URLSearchParams encodes spaces as + but LinkedIn
-    // requires %20-encoded spaces in the scope parameter.
-    const params = new URLSearchParams({
-      response_type: 'code',
-      client_id: clientId(),
-      redirect_uri: redirectUri,
-      state,
-    })
-    // Append scope separately so spaces are encoded as %20, not +
-    return `https://www.linkedin.com/oauth/v2/authorization?${params}&scope=${SCOPES.map(encodeURIComponent).join('%20')}`
+    // LinkedIn OAuth 2.0 — scope must be space-separated and NOT percent-encoded.
+    // URLSearchParams encodes spaces as + which LinkedIn rejects, so build manually.
+    const base = 'https://www.linkedin.com/oauth/v2/authorization'
+    const scope = SCOPES.join(' ')
+    return (
+      `${base}?response_type=code` +
+      `&client_id=${encodeURIComponent(clientId())}` +
+      `&redirect_uri=${encodeURIComponent(redirectUri)}` +
+      `&state=${encodeURIComponent(state)}` +
+      `&scope=${encodeURIComponent(scope)}`
+    )
   }
 
   async handleCallback(code: string, _codeVerifier: string, redirectUri: string): Promise<ConnectionResult> {
