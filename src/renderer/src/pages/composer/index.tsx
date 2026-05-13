@@ -90,26 +90,48 @@ export default function ComposerPage(): ReactElement {
     if (!selectedPlatforms.length) { setCreateError('Select at least one platform.'); return }
     setCreateError(null)
 
-    const createRes = await ipc.invoke(IPC_CHANNELS.POST_CREATE, {
-      personaId: personaId || 'default',
-      body,
-      platforms: selectedPlatforms,
-    })
-    if (!createRes.ok) { setCreateError(createRes.error.message); return }
+    // Don't create a DB record yet — just generate variants in memory.
+    // The post is only saved when the user explicitly publishes or schedules.
+    // If we already have a saved post (from a previous generate), reuse it.
+    let post = savedPost
+    if (!post) {
+      const createRes = await ipc.invoke(IPC_CHANNELS.POST_CREATE, {
+        personaId: personaId || 'default',
+        body,
+        platforms: selectedPlatforms,
+      })
+      if (!createRes.ok) { setCreateError(createRes.error.message); return }
+      post = createRes.value
+      setSavedPost(post)
+    } else {
+      // Update the body if it changed since last generate
+      const updateRes = await ipc.invoke(IPC_CHANNELS.POST_UPDATE_BODY, {
+        id: post.id,
+        body,
+      })
+      if (updateRes.ok) {
+        post = updateRes.value
+        setSavedPost(post)
+      }
+    }
 
-    const post = createRes.value
-    setSavedPost(post)
     await generate(post.id, selectedPlatforms)
-  }, [bodyText, personaId, selectedPlatforms, generate])
+  }, [bodyText, personaId, selectedPlatforms, savedPost, generate])
 
-  const handleClear = (): void => {
+  const handleClear = useCallback((): void => {
+    // Delete the draft post from DB if it was never published/scheduled
+    if (savedPost) {
+      ipc.invoke(IPC_CHANNELS.POST_DELETE, { id: savedPost.id }).catch(() => {/* non-fatal */})
+    }
     editorRef.current?.commands.clearContent()
     setBodyText('')
     setSavedPost(null)
     setCreateError(null)
     setSuccessMsg(null)
+    setScheduleStep('idle')
+    setScheduleAt('')
     resetGen()
-  }
+  }, [savedPost, resetGen])
 
   const handleCopy = async (): Promise<void> => {
     const variant = genState.variantMap[activePlatform]
@@ -133,7 +155,10 @@ export default function ComposerPage(): ReactElement {
     if (res.ok) {
       setScheduleStep('idle')
       setSuccessMsg('Scheduled ✓')
-      setTimeout(() => setSuccessMsg(null), 3000)
+      setTimeout(() => {
+        setSuccessMsg(null)
+        handleClear()
+      }, 2000)
       window.dispatchEvent(new CustomEvent('nav', { detail: 'calendar' }))
     } else {
       setCreateError(res.error.message)
@@ -143,25 +168,13 @@ export default function ComposerPage(): ReactElement {
   const handlePublishNow = async (): Promise<void> => {
     const variant = genState.variantMap[activePlatform]
     if (!variant) { setCreateError('Generate variants first.'); return }
-
-    let post = savedPost
-    if (!post) {
-      const body = bodyText.trim()
-      if (!body) { setCreateError('Write something first.'); return }
-      const res = await ipc.invoke(IPC_CHANNELS.POST_CREATE, {
-        personaId: personaId || 'default',
-        body,
-        platforms: selectedPlatforms,
-      })
-      if (!res.ok) { setCreateError(res.error.message); return }
-      post = res.value
-      setSavedPost(post)
-    }
+    if (!savedPost) { setCreateError('Generate variants first.'); return }
+    if (posting) return // prevent double-click
 
     setPosting(true)
     setCreateError(null)
     const res = await ipc.invoke(IPC_CHANNELS.POST_SCHEDULE, {
-      postId: post.id,
+      postId: savedPost.id,
       variantId: variant.id,
       platform: activePlatform,
       scheduledAt: new Date(Date.now() + 5000).toISOString(),
@@ -169,7 +182,11 @@ export default function ComposerPage(): ReactElement {
     setPosting(false)
     if (res.ok) {
       setSuccessMsg(`Publishing to ${PLATFORM_LABELS[activePlatform]}…`)
-      setTimeout(() => setSuccessMsg(null), 4000)
+      // Reset composer after successful publish
+      setTimeout(() => {
+        setSuccessMsg(null)
+        handleClear()
+      }, 3000)
     } else {
       setCreateError(res.error.message)
     }
