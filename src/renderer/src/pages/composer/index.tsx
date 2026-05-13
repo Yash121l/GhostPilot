@@ -67,20 +67,30 @@ export default function ComposerPage(): ReactElement {
     }
   }, [prefill, setPrefill])
 
+  // Store editor instance via callback ref
+  const handleEditorRef = useCallback((e: Editor | null) => {
+    editorRef.current = e
+    // If there's a pending prefill and the editor just mounted, apply it now
+    if (e && prefill) {
+      e.commands.setContent(prefill)
+      setBodyText(prefill)
+      setPrefill(null)
+    }
+  }, [prefill, setPrefill])
+
   const handleEditorChange = useCallback((text: string) => {
     setBodyText(text)
   }, [])
 
   const handleGenerate = useCallback(async (): Promise<void> => {
-    const body = editorRef.current?.getText().trim() ?? ''
+    const body = bodyText.trim()
     if (!body) { setCreateError('Write something first.'); return }
     if (!selectedPlatforms.length) { setCreateError('Select at least one platform.'); return }
 
     setCreateError(null)
 
-    // Create post first, then generate variants
     const createRes = await ipc.invoke(IPC_CHANNELS.POST_CREATE, {
-      personaId,
+      personaId: personaId || 'default',
       body,
       platforms: selectedPlatforms,
     })
@@ -93,7 +103,7 @@ export default function ComposerPage(): ReactElement {
     const post = createRes.value
     setSavedPost(post)
     await generate(post.id, selectedPlatforms)
-  }, [personaId, selectedPlatforms, generate])
+  }, [bodyText, personaId, selectedPlatforms, generate])
 
   const handleSchedule = async (): Promise<void> => {
     if (!savedPost || !scheduleAt) return
@@ -117,7 +127,7 @@ export default function ComposerPage(): ReactElement {
 
   /** Save the current draft without generating variants */
   const handleSaveDraft = async (): Promise<void> => {
-    const body = editorRef.current?.getText().trim() ?? ''
+    const body = bodyText.trim()
     if (!body) { setCreateError('Write something first.'); return }
     setCreateError(null)
 
@@ -137,9 +147,12 @@ export default function ComposerPage(): ReactElement {
 
   /** Post immediately to the active platform (schedules 5 seconds from now) */
   const handlePostNow = async (): Promise<void> => {
-    if (!savedPost) {
-      // Need to save first
-      const body = editorRef.current?.getText().trim() ?? ''
+    const variant = genState.variantMap[activePlatform]
+    if (!variant) { setCreateError('Generate variants first, then post.'); return }
+
+    let post = savedPost
+    if (!post) {
+      const body = bodyText.trim()
       if (!body) { setCreateError('Write something first.'); return }
       const createRes = await ipc.invoke(IPC_CHANNELS.POST_CREATE, {
         personaId: personaId || 'default',
@@ -147,19 +160,13 @@ export default function ComposerPage(): ReactElement {
         platforms: selectedPlatforms,
       })
       if (!createRes.ok) { setCreateError(createRes.error.message); return }
-      setSavedPost(createRes.value)
+      post = createRes.value
+      setSavedPost(post)
     }
-
-    const post = savedPost ?? (await ipc.invoke(IPC_CHANNELS.POST_LIST, { limit: 1 })).value?.[0]
-    if (!post) return
-
-    const variant = genState.variantMap[activePlatform]
-    if (!variant) { setCreateError('Generate variants first, then post.'); return }
 
     setPosting(true)
     setCreateError(null)
 
-    // Schedule 5 seconds from now = effectively immediate
     const scheduledAt = new Date(Date.now() + 5000).toISOString()
     const res = await ipc.invoke(IPC_CHANNELS.POST_SCHEDULE, {
       postId: post.id,
@@ -275,7 +282,7 @@ export default function ComposerPage(): ReactElement {
           <div className="flex-1 overflow-hidden">
             <TiptapEditor
               onChange={handleEditorChange}
-              editorRef={(e) => { editorRef.current = e }}
+              editorRef={handleEditorRef}
             />
           </div>
 
