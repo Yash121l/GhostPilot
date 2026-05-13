@@ -91,9 +91,9 @@ async function bootstrap(): Promise<void> {
 
     publisherWorker.on('message', (msg: { kind: string; jobId?: string; postId?: string; platform?: string; url?: string; error?: string; permanent?: boolean; level?: string; context?: string; msg?: string; fields?: Record<string, unknown> }) => {
       if (msg.kind === 'log') {
-        const wLogger = createLogger(msg.context ?? 'Worker', 'publisher')
+        const wLogger = createLogger(msg.context ?? 'Worker', 'worker:publisher')
         const level = (msg.level ?? 'info') as 'debug' | 'info' | 'warn' | 'error'
-        wLogger[level]({ msg: msg.msg, ...msg.fields })
+        wLogger[level]({ msg: msg.msg ?? '', ...msg.fields })
         return
       }
 

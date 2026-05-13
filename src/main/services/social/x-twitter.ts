@@ -21,7 +21,6 @@ const consumerKey = (): string => process.env['TWITTER_CONSUMER_KEY'] ?? ''
 const consumerSecret = (): string => process.env['TWITTER_CONSUMER_SECRET'] ?? ''
 
 const API_V2 = 'https://api.twitter.com/2'
-const _API_V1 = 'https://api.twitter.com/1.1'
 const UPLOAD_API = 'https://upload.twitter.com/1.1'
 
 // X Basic tier: 100 user tweets per 24-hour rolling window per user
