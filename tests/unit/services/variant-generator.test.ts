@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeAll, beforeEach, afterAll, vi } from 'vitest'
-import { createTestDb, clearTestDb, closeTestDb } from '../../helpers/db'
+import { createTestDb, clearTestDb, closeTestDb, getRawTestDb } from '../../helpers/db'
 import { mockAudit, mockAIGateway } from '../../helpers/mocks'
 import { Platform } from '../../../src/shared/types/platform'
 import { PostStatus } from '../../../src/shared/types/post'
@@ -77,16 +77,19 @@ describe('VariantGenerator.generate()', () => {
   })
 
   it('falls back gracefully when persona not found', async () => {
-    // Create post with a non-existent personaId
+    // Create post with a non-existent personaId — requires disabling FK temporarily
     const { posts } = await import('../../../src/main/infrastructure/db/schema')
     const { nanoid } = await import('nanoid')
     const now = new Date()
     const postId = nanoid()
+    const raw = getRawTestDb()
+    raw.pragma('foreign_keys = OFF')
     await db.insert(posts).values({
       id: postId, personaId: 'nonexistent-persona',
       status: 'draft', body: 'Orphan post', platforms: '["linkedin"]',
       attempts: 0, createdAt: now, updatedAt: now,
     })
+    raw.pragma('foreign_keys = ON')
 
     const ai = mockAIGateway()
     const gen = new VariantGenerator(ai, new PersonaService(mockAudit()), new PostService(mockAudit()))

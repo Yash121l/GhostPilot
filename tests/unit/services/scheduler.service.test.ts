@@ -82,15 +82,15 @@ describe('SchedulerService.start() / stop()', () => {
     svc.stop()
   })
 
-  it('is idempotent — calling start() twice does not create two crons', () => {
+  it('is idempotent — calling start() twice does not create two crons', async () => {
     const cron = await import('node-cron')
-    const scheduleSpy = vi.spyOn(cron, 'schedule')
+    const scheduleMock = vi.mocked(cron.schedule)
+    scheduleMock.mockClear()
     const svc = new SchedulerService(mockAudit(), mockOAuthManager() as any)
     svc.start()
     svc.start() // second call should be no-op
-    expect(scheduleSpy).toHaveBeenCalledTimes(1)
+    expect(scheduleMock).toHaveBeenCalledTimes(1)
     svc.stop()
-    scheduleSpy.mockRestore()
   })
 })
 

@@ -2,7 +2,7 @@
  * E2E: Composer page — draft editing, platform selection, variant generation flow
  */
 import { test, expect } from './fixtures/electron'
-import { ComposerPage, AppShell } from './fixtures/pages'
+import { ComposerPage } from './fixtures/pages'
 
 test.describe('Composer — initial state', () => {
   test('shows Composer heading', async ({ page }) => {

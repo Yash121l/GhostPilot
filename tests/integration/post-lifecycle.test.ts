@@ -5,7 +5,7 @@
  * Uses in-memory SQLite. No Electron, no real AI, no real OAuth.
  */
 import { describe, it, expect, beforeAll, beforeEach, afterAll, vi } from 'vitest'
-import { createTestDb, clearTestDb, closeTestDb } from '../helpers/db'
+import { createTestDb, clearTestDb, closeTestDb, getRawTestDb } from '../helpers/db'
 import { mockAudit, mockAIGateway, mockConnector, mockTokens, mockKeychain } from '../helpers/mocks'
 import { Platform } from '../../src/shared/types/platform'
 import { PostStatus } from '../../src/shared/types/post'
@@ -134,7 +134,7 @@ describe('Full post lifecycle', () => {
 
     // We need a real persona for FK constraint, but test the fallback context
     const persona = await personaSvc.create({ name: 'P', bio: '', pillars: [], styleHints: '' })
-    const post = await postSvc.create({
+    const _post = await postSvc.create({
       personaId: persona.id,
       body: 'Testing without persona context',
       platforms: [Platform.LINKEDIN],
@@ -148,8 +148,8 @@ describe('Full post lifecycle', () => {
     const { posts } = await import('../../src/main/infrastructure/db/schema')
     const { nanoid } = await import('nanoid')
     const orphanPersonaId = nanoid()
-    const orphanPostId = nanoid()
-    const now = new Date()
+    const _orphanPostId = nanoid()
+    const _now = new Date()
 
     // Create a persona just for the FK, then create post, then delete persona
     const tempPersona = await personaSvc.create({ name: 'Temp', bio: '', pillars: [], styleHints: '' })
@@ -159,9 +159,12 @@ describe('Full post lifecycle', () => {
       platforms: [Platform.LINKEDIN],
     })
 
-    // Manually update personaId to non-existent value
+    // Manually update personaId to non-existent value — disable FK temporarily
     const { eq } = await import('drizzle-orm')
+    const rawDb = getRawTestDb()
+    rawDb.pragma('foreign_keys = OFF')
     await db.update(posts).set({ personaId: orphanPersonaId }).where(eq(posts.id, orphanPost.id))
+    rawDb.pragma('foreign_keys = ON')
 
     const ai = mockAIGateway()
     const gen = new VariantGenerator(ai, personaSvc, postSvc)

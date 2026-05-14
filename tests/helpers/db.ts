@@ -217,6 +217,12 @@ export function clearTestDb(): void {
   `)
 }
 
+/** Return the raw better-sqlite3 instance (for mocking getRawDb in unit tests). */
+export function getRawTestDb(): Database.Database {
+  if (!_sqlite) createTestDb()
+  return _sqlite!
+}
+
 /** Close and destroy the test database. */
 export function closeTestDb(): void {
   _sqlite?.close()

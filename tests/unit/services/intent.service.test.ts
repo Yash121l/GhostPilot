@@ -1,7 +1,6 @@
 import { describe, it, expect, beforeAll, beforeEach, afterAll, vi } from 'vitest'
 import { createTestDb, clearTestDb, closeTestDb } from '../../helpers/db'
 import { mockAudit, mockAIGateway } from '../../helpers/mocks'
-import { ErrorCode } from '../../../src/shared/types/error'
 
 vi.mock('electron', () => ({ app: { getPath: () => '/tmp' } }))
 

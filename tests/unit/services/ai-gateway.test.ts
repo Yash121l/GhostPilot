@@ -1,27 +1,32 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest'
+import { describe, it, expect, vi, beforeAll, beforeEach, afterAll } from 'vitest'
 import { mockAudit } from '../../helpers/mocks'
 import { ErrorCode } from '../../../src/shared/types/error'
 import { AITask, ModelHint } from '../../../src/shared/types/ai'
+import { createTestDb, clearTestDb, closeTestDb, getRawTestDb } from '../../helpers/db'
 
 vi.mock('electron', () => ({ app: { getPath: () => '/tmp' } }))
 vi.mock('../../../src/main/infrastructure/db/connection', () => ({
-  getDb: () => ({ select: vi.fn().mockReturnValue({ from: vi.fn().mockReturnValue([]) }) }),
-  getRawDb: () => { throw new Error('not available') },
+  getDb: () => createTestDb(),
+  getRawDb: () => getRawTestDb(),
 }))
 vi.mock('../../../src/main/infrastructure/keychain/keychain.service', () => ({
-  KeychainService: vi.fn().mockImplementation(() => ({
-    get: vi.fn().mockResolvedValue(null),
-    set: vi.fn().mockResolvedValue(undefined),
-    delete: vi.fn().mockResolvedValue(undefined),
-  })),
+  KeychainService: class {
+    get = vi.fn().mockResolvedValue(null)
+    set = vi.fn().mockResolvedValue(undefined)
+    delete = vi.fn().mockResolvedValue(undefined)
+  },
 }))
 vi.mock('../../../src/main/services/ai-gateway/providers/ollama', () => ({
-  OllamaProvider: vi.fn(),
+  OllamaProvider: class {},
   detectOllama: vi.fn().mockResolvedValue({ available: false, models: [] }),
 }))
 
 const { AIGateway } = await import('../../../src/main/services/ai-gateway/index')
 const { UsageLedger } = await import('../../../src/main/services/ai-gateway/usage-ledger')
+
+beforeAll(() => { createTestDb() })
+beforeEach(() => { clearTestDb() })
+afterAll(() => { closeTestDb() })
 
 function makeGateway() {
   return new AIGateway(mockAudit())

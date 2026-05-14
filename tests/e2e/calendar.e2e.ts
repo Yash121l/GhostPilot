@@ -67,7 +67,7 @@ test.describe('Calendar page', () => {
   })
 
   test('can navigate to next month', async ({ page }) => {
-    const initialMonth = await page.locator('text=/\\w+ 20\\d\\d/').first().textContent()
+    const _initialMonth = await page.locator('text=/\\w+ 20\\d\\d/').first().textContent()
     await page.click('button:has(svg)').catch(() => {
       // Try chevron buttons
     })

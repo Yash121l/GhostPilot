@@ -35,5 +35,24 @@ export default defineConfig(
       ]
     }
   },
+  // Relaxed rules for test/config files — strict type annotations and no-any
+  // are counterproductive in test fixtures, mocks, and Playwright helpers.
+  {
+    files: [
+      'tests/**/*.{ts,tsx}',
+      '**/*.test.{ts,tsx}',
+      '**/*.e2e.{ts,tsx}',
+      'playwright.config.ts',
+      'electron.vite.config.ts',
+      'vitest.config.ts',
+    ],
+    rules: {
+      '@typescript-eslint/explicit-function-return-type': 'off',
+      '@typescript-eslint/no-explicit-any': 'off',
+      // Playwright uses use() as a fixture API, not React's use hook
+      'react-hooks/rules-of-hooks': 'off',
+      'no-empty-pattern': 'off',
+    }
+  },
   eslintConfigPrettier
 )

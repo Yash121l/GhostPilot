@@ -1,6 +1,6 @@
 import { describe, it, expect, beforeAll, beforeEach, afterAll, vi } from 'vitest'
 import { createTestDb, clearTestDb, closeTestDb } from '../../helpers/db'
-import { mockAudit, mockConnector, mockTokens, mockKeychain } from '../../helpers/mocks'
+import { mockAudit, mockConnector } from '../../helpers/mocks'
 import { Platform } from '../../../src/shared/types/platform'
 import { ErrorCode } from '../../../src/shared/types/error'
 
@@ -16,10 +16,21 @@ vi.mock('../../../src/main/infrastructure/db/connection', () => ({
   getRawDb: () => { throw new Error('not available') },
 }))
 
-// Mock keychain so we don't touch the real OS keychain
-const keychainStore = mockKeychain()
+// vi.mock is hoisted above module-level declarations, so use vi.hoisted() to
+// define keychainStore before the factory runs. vi.fn() is available here.
+const keychainStore = vi.hoisted(() => {
+  const store = new Map<string, string>()
+  const get = vi.fn((key: string) => Promise.resolve(store.get(key) ?? null))
+  const set = vi.fn((key: string, value: string) => { store.set(key, value); return Promise.resolve() })
+  const del = vi.fn((key: string) => { store.delete(key); return Promise.resolve() })
+  return { get, set, delete: del, _store: store }
+})
 vi.mock('../../../src/main/infrastructure/keychain/keychain.service', () => ({
-  KeychainService: vi.fn().mockImplementation(() => keychainStore),
+  KeychainService: class {
+    get = keychainStore.get
+    set = keychainStore.set
+    delete = keychainStore.delete
+  },
 }))
 
 const { OAuthManager } = await import('../../../src/main/services/social/oauth-manager')

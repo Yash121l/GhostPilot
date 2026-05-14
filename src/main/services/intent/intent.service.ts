@@ -129,7 +129,7 @@ Return ONLY the JSON array.`
       })
 
       const jsonMatch = res.text.match(/\[[\s\S]*\]/)
-      if (!jsonMatch) return []
+      if (!jsonMatch) throw new Error('No JSON array in AI response')
       return JSON.parse(jsonMatch[0]) as Partial<KeyResult>[]
     } catch (e) {
       logger.warn({ msg: 'OKR decomposition failed, using defaults', error: String(e) })

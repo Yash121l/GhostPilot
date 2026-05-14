@@ -59,7 +59,7 @@ test.describe('Connect page', () => {
     await expect(page.locator('h1:has-text("Connect")')).toBeVisible()
   })
 
-  test('Connect button triggers OAuth (opens browser)', async ({ page, electronApp }) => {
+  test('Connect button triggers OAuth (opens browser)', async ({ page, electronApp: _electronApp }) => {
     // We can't complete the OAuth flow in e2e, but we can verify the button
     // triggers the initiateConnect IPC call without crashing the app
     const connectBtn = page.locator('.card:has-text("LinkedIn") button:has-text("Connect")')

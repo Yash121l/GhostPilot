@@ -113,15 +113,23 @@ describe('PostService.list()', () => {
   it('returns all posts ordered by createdAt DESC', async () => {
     const personaId = await seedPersona()
     const svc = makeService()
-    await svc.create({ personaId, body: 'First', platforms: [Platform.LINKEDIN] })
-    await svc.create({ personaId, body: 'Second', platforms: [Platform.LINKEDIN] })
-    await svc.create({ personaId, body: 'Third', platforms: [Platform.LINKEDIN] })
+    const first = await svc.create({ personaId, body: 'First', platforms: [Platform.LINKEDIN] })
+    const second = await svc.create({ personaId, body: 'Second', platforms: [Platform.LINKEDIN] })
+    const third = await svc.create({ personaId, body: 'Third', platforms: [Platform.LINKEDIN] })
 
-    const posts = await svc.list()
-    expect(posts).toHaveLength(3)
+    // createdAt is stored in seconds — force distinct values so ORDER BY is deterministic
+    const { posts } = await import('../../../src/main/infrastructure/db/schema')
+    const { eq } = await import('drizzle-orm')
+    const base = Math.floor(Date.now() / 1000)
+    await db.update(posts).set({ createdAt: new Date((base - 2) * 1000) }).where(eq(posts.id, first.id))
+    await db.update(posts).set({ createdAt: new Date((base - 1) * 1000) }).where(eq(posts.id, second.id))
+    await db.update(posts).set({ createdAt: new Date(base * 1000) }).where(eq(posts.id, third.id))
+
+    const listed = await svc.list()
+    expect(listed).toHaveLength(3)
     // Most recent first
-    expect(posts[0].body).toBe('Third')
-    expect(posts[2].body).toBe('First')
+    expect(listed[0].body).toBe('Third')
+    expect(listed[2].body).toBe('First')
   })
 
   it('filters by personaId', async () => {
