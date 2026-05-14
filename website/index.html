@@ -5,13 +5,124 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
 <title>GhostPilot — AI-powered social publishing, local-first</title>
 <meta name="description" content="Write once. GhostPilot adapts your draft for LinkedIn, X, and Instagram using your own AI keys. Runs on macOS, Windows, and Linux — no subscriptions, no cloud." />
-<meta property="og:title" content="GhostPilot" />
-<meta property="og:description" content="Local-first, BYOK desktop app for AI-powered social publishing." />
+<meta name="keywords" content="AI social media tool, local-first desktop app, BYOK AI, LinkedIn automation, social publishing, open source, macOS Windows Linux, Electron app" />
+<meta name="author" content="Yash Lunawat" />
+<meta name="robots" content="index, follow" />
+<link rel="canonical" href="https://ghostpilot.yashlunawat.com/" />
+<link rel="alternate" hreflang="en" href="https://ghostpilot.yashlunawat.com/" />
+<meta property="og:title" content="GhostPilot — AI-powered social publishing, local-first" />
+<meta property="og:description" content="Write once. GhostPilot adapts your draft for LinkedIn, X, and Instagram using your own AI keys. No subscriptions, no cloud — runs entirely on your machine." />
 <meta property="og:image" content="https://ghostpilot.yashlunawat.com/og.png" />
-<meta property="og:url" content="https://ghostpilot.yashlunawat.com" />
+<meta property="og:url" content="https://ghostpilot.yashlunawat.com/" />
+<meta property="og:type" content="website" />
+<meta property="og:site_name" content="GhostPilot" />
 <meta name="twitter:card" content="summary_large_image" />
+<meta name="twitter:title" content="GhostPilot — AI-powered social publishing, local-first" />
+<meta name="twitter:description" content="Write once. GhostPilot adapts your draft for LinkedIn, X, and Instagram using your own AI keys. Free, open-source, local-first desktop app." />
+<meta name="twitter:image" content="https://ghostpilot.yashlunawat.com/og.png" />
 <link rel="icon" href="favicon.png" type="image/png" />
 <link rel="icon" href="favicon.svg" type="image/svg+xml" />
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "SoftwareApplication",
+  "name": "GhostPilot",
+  "applicationCategory": "BusinessApplication",
+  "operatingSystem": "macOS, Windows, Linux",
+  "offers": {
+    "@type": "Offer",
+    "price": "0",
+    "priceCurrency": "USD"
+  },
+  "description": "Local-first, BYOK desktop app for AI-powered social publishing. Write once and GhostPilot adapts your draft for LinkedIn, X, and Instagram using your own AI API keys. No subscriptions, no cloud, no data leaving your device.",
+  "url": "https://ghostpilot.yashlunawat.com/",
+  "downloadUrl": "https://ghostpilot.yashlunawat.com/releases/",
+  "softwareVersion": "1.0.1",
+  "releaseNotes": "https://ghostpilot.yashlunawat.com/releases/",
+  "author": {
+    "@type": "Person",
+    "name": "Yash Lunawat",
+    "url": "https://yashlunawat.com"
+  },
+  "license": "https://github.com/Yash121l/GhostPilot/blob/main/LICENSE",
+  "codeRepository": "https://github.com/Yash121l/GhostPilot",
+  "keywords": ["social publishing", "AI writing", "LinkedIn", "Twitter", "Instagram", "local-first", "BYOK", "open source"],
+  "featureList": [
+    "Write once, publish to LinkedIn, X, and Instagram",
+    "Bring your own AI key (OpenAI, Anthropic, Groq, OpenRouter, Ollama)",
+    "Visual content calendar with scheduling",
+    "Personas and voice matching",
+    "OKR-style content goals",
+    "Trend radar from Hacker News and Reddit",
+    "AI cost tracking and spend cap",
+    "100% local — SQLite database, no cloud sync"
+  ]
+}
+</script>
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "FAQPage",
+  "mainEntity": [
+    {
+      "@type": "Question",
+      "name": "What is GhostPilot?",
+      "acceptedAnswer": {
+        "@type": "Answer",
+        "text": "GhostPilot is a free, open-source desktop app that uses AI to adapt a single draft into platform-native posts for LinkedIn, X (Twitter), and Instagram simultaneously. It runs entirely on your machine — no cloud account, no subscription."
+      }
+    },
+    {
+      "@type": "Question",
+      "name": "Is GhostPilot free?",
+      "acceptedAnswer": {
+        "@type": "Answer",
+        "text": "Yes. GhostPilot itself is free and open-source (MIT license). You only pay for your own AI API usage, which goes directly to the provider (OpenAI, Anthropic, etc.) at their standard rates. GhostPilot takes no cut."
+      }
+    },
+    {
+      "@type": "Question",
+      "name": "Which AI providers does GhostPilot support?",
+      "acceptedAnswer": {
+        "@type": "Answer",
+        "text": "GhostPilot supports OpenAI (GPT-4o), Anthropic (Claude), Groq (Llama), OpenRouter, and local Ollama models. You paste your own API key in Settings — it is stored in the OS keychain and never uploaded anywhere."
+      }
+    },
+    {
+      "@type": "Question",
+      "name": "Which operating systems does GhostPilot run on?",
+      "acceptedAnswer": {
+        "@type": "Answer",
+        "text": "GhostPilot runs on macOS 13 Ventura or later (Apple Silicon and Intel), Windows 10/11 (x64), and Linux (x64, glibc 2.28+). Download packages include .dmg for macOS, .exe installer and portable for Windows, and AppImage and .deb for Linux."
+      }
+    },
+    {
+      "@type": "Question",
+      "name": "Does GhostPilot send my data to the cloud?",
+      "acceptedAnswer": {
+        "@type": "Answer",
+        "text": "No. All posts, personas, goals, and analytics are stored in a local SQLite database on your machine. OAuth tokens and API keys are stored in the OS keychain (macOS Keychain, Windows Credential Store, or Linux Secret Service). The only outbound network requests are to the social platforms you connect and to the AI provider whose key you supply."
+      }
+    },
+    {
+      "@type": "Question",
+      "name": "Which social platforms does GhostPilot support?",
+      "acceptedAnswer": {
+        "@type": "Answer",
+        "text": "GhostPilot currently supports LinkedIn, X (Twitter), and Instagram for publishing. OAuth is handled via each platform's official API — you authorize GhostPilot from your browser and tokens are stored locally."
+      }
+    },
+    {
+      "@type": "Question",
+      "name": "How does GhostPilot schedule posts?",
+      "acceptedAnswer": {
+        "@type": "Answer",
+        "text": "GhostPilot runs a background worker thread that checks for due posts every minute (using node-cron). When a scheduled time arrives, the worker dispatches the post to the appropriate platform API. This works even when the app window is hidden, as long as the app is running."
+      }
+    }
+  ]
+}
+</script>
 <style>
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
@@ -357,6 +468,7 @@ footer {
       <a href="#features">Features</a>
       <a href="#how-it-works">How it works</a>
       <a href="#privacy">Privacy</a>
+      <a href="/releases/">Releases</a>
       <a href="https://github.com/yash121l/GhostPilot" target="_blank" rel="noopener">GitHub</a>
     </div>
     <a href="https://github.com/yash121l/GhostPilot/releases/latest" class="nav-cta" id="nav-download">
@@ -584,6 +696,66 @@ footer {
   </div>
 </section>
 
+<!-- ── FAQ ── -->
+<section class="section" id="faq">
+  <div class="container">
+    <div class="section-label">FAQ</div>
+    <h2 class="section-title">Common questions</h2>
+
+    <div style="display:flex;flex-direction:column;gap:0;max-width:720px;margin-top:40px;">
+
+      <details style="border-bottom:1px solid var(--border);padding:20px 0;" open>
+        <summary style="font-size:16px;font-weight:700;cursor:pointer;list-style:none;display:flex;justify-content:space-between;align-items:center;">
+          What is GhostPilot?
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0;transition:transform 0.2s;"><polyline points="6 9 12 15 18 9"/></svg>
+        </summary>
+        <p style="margin-top:14px;font-size:14px;color:var(--text2);line-height:1.7;">GhostPilot is a free, open-source desktop app that uses AI to adapt a single draft into platform-native posts for LinkedIn, X (Twitter), and Instagram simultaneously. It runs entirely on your machine — no cloud account, no subscription, no data leaving your device.</p>
+      </details>
+
+      <details style="border-bottom:1px solid var(--border);padding:20px 0;">
+        <summary style="font-size:16px;font-weight:700;cursor:pointer;list-style:none;display:flex;justify-content:space-between;align-items:center;">
+          Is GhostPilot free?
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0;"><polyline points="6 9 12 15 18 9"/></svg>
+        </summary>
+        <p style="margin-top:14px;font-size:14px;color:var(--text2);line-height:1.7;">Yes. GhostPilot itself is free and open-source (MIT license). You only pay for your own AI API usage, which goes directly to the provider (OpenAI, Anthropic, etc.) at their standard rates. GhostPilot takes no cut and never sees your content.</p>
+      </details>
+
+      <details style="border-bottom:1px solid var(--border);padding:20px 0;">
+        <summary style="font-size:16px;font-weight:700;cursor:pointer;list-style:none;display:flex;justify-content:space-between;align-items:center;">
+          Which AI providers are supported?
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0;"><polyline points="6 9 12 15 18 9"/></svg>
+        </summary>
+        <p style="margin-top:14px;font-size:14px;color:var(--text2);line-height:1.7;">GhostPilot supports OpenAI (GPT-4o), Anthropic (Claude), Groq (Llama 3), OpenRouter, and local Ollama models. You paste your own API key in Settings — it is stored in the OS keychain (macOS Keychain, Windows Credential Store, Linux Secret Service) and never uploaded anywhere.</p>
+      </details>
+
+      <details style="border-bottom:1px solid var(--border);padding:20px 0;">
+        <summary style="font-size:16px;font-weight:700;cursor:pointer;list-style:none;display:flex;justify-content:space-between;align-items:center;">
+          Which platforms does GhostPilot support?
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0;"><polyline points="6 9 12 15 18 9"/></svg>
+        </summary>
+        <p style="margin-top:14px;font-size:14px;color:var(--text2);line-height:1.7;"><strong style="color:var(--text)">Social platforms:</strong> LinkedIn, X (Twitter), Instagram. <strong style="color:var(--text)">Operating systems:</strong> macOS 13+ (Apple Silicon &amp; Intel), Windows 10/11 (x64), Linux x64. ARM64 Windows is not yet supported.</p>
+      </details>
+
+      <details style="border-bottom:1px solid var(--border);padding:20px 0;">
+        <summary style="font-size:16px;font-weight:700;cursor:pointer;list-style:none;display:flex;justify-content:space-between;align-items:center;">
+          Does GhostPilot send my data to the cloud?
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0;"><polyline points="6 9 12 15 18 9"/></svg>
+        </summary>
+        <p style="margin-top:14px;font-size:14px;color:var(--text2);line-height:1.7;">No. All posts, personas, goals, and analytics are stored in a local SQLite file. OAuth tokens and API keys live in the OS keychain. The only outbound requests are to the social platforms you connect and to the AI provider whose key you supply — GhostPilot itself has no server.</p>
+      </details>
+
+      <details style="padding:20px 0;">
+        <summary style="font-size:16px;font-weight:700;cursor:pointer;list-style:none;display:flex;justify-content:space-between;align-items:center;">
+          How does post scheduling work?
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0;"><polyline points="6 9 12 15 18 9"/></svg>
+        </summary>
+        <p style="margin-top:14px;font-size:14px;color:var(--text2);line-height:1.7;">GhostPilot runs a background worker thread that checks for due posts every minute using node-cron. When a scheduled time arrives, the worker dispatches the post to the platform API and records the result. Up to 3 retry attempts are made on transient failures before the post is marked as permanently failed. The app must be running for scheduled posts to publish.</p>
+      </details>
+
+    </div>
+  </div>
+</section>
+
 <!-- ── CTA ── -->
 <section class="cta-section">
   <div class="container">
@@ -632,8 +804,8 @@ footer {
     </div>
 
     <div style="display:flex;gap:12px;justify-content:center;flex-wrap:wrap;">
-      <a href="https://github.com/Yash121l/GhostPilot/releases/latest" class="btn-secondary" target="_blank" rel="noopener">
-        All releases &amp; checksums →
+      <a href="/releases/" class="btn-secondary">
+        All releases &amp; file details →
       </a>
       <a href="https://github.com/Yash121l/GhostPilot/blob/main/SETUP.md" class="btn-secondary" target="_blank" rel="noopener">
         Setup guide →
@@ -651,7 +823,7 @@ footer {
     </div>
     <div class="footer-links">
       <a href="https://github.com/yash121l/GhostPilot" target="_blank" rel="noopener">GitHub</a>
-      <a href="https://github.com/yash121l/GhostPilot/releases" target="_blank" rel="noopener">Releases</a>
+      <a href="/releases/">Releases</a>
       <a href="https://github.com/yash121l/GhostPilot/blob/main/SETUP.md" target="_blank" rel="noopener">Docs</a>
       <a href="https://github.com/yash121l/GhostPilot/issues" target="_blank" rel="noopener">Issues</a>
     </div>

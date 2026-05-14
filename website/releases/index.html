@@ -1,0 +1,692 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>GhostPilot Releases — Download for macOS, Windows & Linux</title>
+<meta name="description" content="Download GhostPilot 1.0.1 for macOS (Apple Silicon & Intel), Windows 10/11, and Linux. Free, open-source, local-first AI social publishing desktop app." />
+<meta name="keywords" content="GhostPilot download, AI social media app, macOS dmg, Windows installer, Linux AppImage, BYOK, local-first" />
+<link rel="canonical" href="https://ghostpilot.yashlunawat.com/releases/" />
+<meta property="og:title" content="GhostPilot Releases" />
+<meta property="og:description" content="Download GhostPilot for macOS, Windows, and Linux. Free & open source." />
+<meta property="og:url" content="https://ghostpilot.yashlunawat.com/releases/" />
+<meta property="og:image" content="https://ghostpilot.yashlunawat.com/og.png" />
+<meta name="twitter:card" content="summary_large_image" />
+<link rel="icon" href="../favicon.png" type="image/png" />
+<link rel="icon" href="../favicon.svg" type="image/svg+xml" />
+<style>
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+:root {
+  --bg: #0a0a0a;
+  --bg2: #111;
+  --bg3: #181818;
+  --border: rgba(255,255,255,0.07);
+  --border2: rgba(255,255,255,0.12);
+  --text: #f0f0f0;
+  --text2: #a0a0a0;
+  --text3: #606060;
+  --accent: #6366f1;
+  --accent2: #818cf8;
+  --accent-soft: rgba(99,102,241,0.12);
+  --success: #22c55e;
+  --warn: #f59e0b;
+  --radius: 14px;
+  --radius-sm: 8px;
+}
+
+html { scroll-behavior: smooth; }
+body {
+  background: var(--bg);
+  color: var(--text);
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", system-ui, sans-serif;
+  font-size: 16px;
+  line-height: 1.6;
+  -webkit-font-smoothing: antialiased;
+  overflow-x: hidden;
+}
+a { color: inherit; text-decoration: none; }
+.container { max-width: 1080px; margin: 0 auto; padding: 0 24px; }
+
+/* ── Nav ── */
+nav {
+  position: fixed; top: 0; left: 0; right: 0; z-index: 100;
+  border-bottom: 1px solid var(--border);
+  background: rgba(10,10,10,0.85);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+}
+.nav-inner {
+  display: flex; align-items: center; justify-content: space-between;
+  height: 56px; max-width: 1080px; margin: 0 auto; padding: 0 24px;
+}
+.nav-brand {
+  display: flex; align-items: center; gap: 10px;
+  font-size: 15px; font-weight: 700; letter-spacing: -0.01em;
+}
+.nav-links { display: flex; align-items: center; gap: 28px; }
+.nav-links a { font-size: 14px; color: var(--text2); transition: color 0.15s; }
+.nav-links a:hover, .nav-links a.active { color: var(--text); }
+.nav-cta {
+  display: inline-flex; align-items: center; gap: 7px;
+  background: var(--accent); color: #fff;
+  font-size: 13px; font-weight: 600;
+  padding: 8px 16px; border-radius: 8px;
+  transition: opacity 0.15s, transform 0.15s;
+}
+.nav-cta:hover { opacity: 0.88; transform: translateY(-1px); }
+
+/* ── Page header ── */
+.page-header {
+  padding: 120px 0 60px;
+  border-bottom: 1px solid var(--border);
+}
+.version-badge {
+  display: inline-flex; align-items: center; gap: 7px;
+  background: var(--accent-soft); border: 1px solid rgba(99,102,241,0.25);
+  color: var(--accent2); font-size: 12px; font-weight: 600;
+  padding: 5px 12px; border-radius: 100px; margin-bottom: 20px;
+  letter-spacing: 0.04em; text-transform: uppercase;
+}
+.page-header h1 {
+  font-size: clamp(30px, 5vw, 52px);
+  font-weight: 800; letter-spacing: -0.03em; line-height: 1.1;
+  margin-bottom: 16px;
+}
+.page-header p {
+  font-size: 17px; color: var(--text2); max-width: 540px; line-height: 1.6;
+}
+.release-meta {
+  display: flex; gap: 20px; flex-wrap: wrap; margin-top: 20px;
+}
+.meta-pill {
+  display: inline-flex; align-items: center; gap: 6px;
+  font-size: 13px; color: var(--text3);
+}
+.meta-dot { width: 6px; height: 6px; border-radius: 50%; background: var(--success); }
+
+/* ── Buttons ── */
+.btn-primary {
+  display: inline-flex; align-items: center; gap: 8px;
+  background: var(--accent); color: #fff;
+  font-size: 14px; font-weight: 600;
+  padding: 11px 22px; border-radius: 9px; border: none; cursor: pointer;
+  transition: opacity 0.15s, transform 0.15s;
+  white-space: nowrap;
+}
+.btn-primary:hover { opacity: 0.88; transform: translateY(-1px); }
+.btn-secondary {
+  display: inline-flex; align-items: center; gap: 8px;
+  background: transparent; color: var(--text2);
+  font-size: 13px; font-weight: 500;
+  padding: 9px 16px; border-radius: 8px;
+  border: 1px solid var(--border2);
+  cursor: pointer; transition: color 0.15s, border-color 0.15s;
+  white-space: nowrap;
+}
+.btn-secondary:hover { color: var(--text); border-color: rgba(255,255,255,0.25); }
+
+/* ── Platform section ── */
+.section { padding: 72px 0; }
+.section-label {
+  font-size: 11px; font-weight: 700; letter-spacing: 0.14em;
+  text-transform: uppercase; color: var(--accent2); margin-bottom: 14px;
+}
+.section-title {
+  font-size: clamp(22px, 3vw, 32px);
+  font-weight: 800; letter-spacing: -0.02em; line-height: 1.2;
+  margin-bottom: 36px;
+}
+
+.platform-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+  gap: 20px;
+}
+.platform-card {
+  background: var(--bg2); border: 1px solid var(--border2);
+  border-radius: var(--radius); padding: 28px;
+  display: flex; flex-direction: column; gap: 20px;
+}
+.platform-card:hover { border-color: rgba(99,102,241,0.3); }
+.platform-header { display: flex; align-items: center; gap: 14px; }
+.platform-icon { font-size: 32px; line-height: 1; }
+.platform-name { font-size: 18px; font-weight: 700; }
+.platform-req { font-size: 12px; color: var(--text3); margin-top: 2px; }
+.platform-files { display: flex; flex-direction: column; gap: 10px; }
+.file-row {
+  display: flex; align-items: center; justify-content: space-between;
+  gap: 12px; flex-wrap: wrap;
+}
+.file-info { display: flex; flex-direction: column; gap: 2px; }
+.file-name { font-size: 13px; font-weight: 600; color: var(--text); font-family: "SF Mono", "Fira Mono", monospace; }
+.file-desc { font-size: 12px; color: var(--text3); }
+
+/* ── File index table ── */
+.file-table-wrap {
+  background: var(--bg2); border: 1px solid var(--border);
+  border-radius: var(--radius); overflow: hidden; margin-top: 28px;
+}
+.file-table {
+  width: 100%; border-collapse: collapse;
+  font-size: 13px;
+}
+.file-table th {
+  text-align: left; padding: 12px 20px;
+  background: var(--bg3); color: var(--text3);
+  font-size: 11px; font-weight: 700; letter-spacing: 0.1em; text-transform: uppercase;
+  border-bottom: 1px solid var(--border);
+}
+.file-table td {
+  padding: 14px 20px;
+  border-bottom: 1px solid var(--border);
+  vertical-align: top;
+}
+.file-table tr:last-child td { border-bottom: none; }
+.file-table tr:hover td { background: var(--bg3); }
+.file-table .mono { font-family: "SF Mono", "Fira Mono", monospace; color: var(--text2); font-size: 12px; }
+.file-table .desc { color: var(--text2); }
+.file-table .tag {
+  display: inline-block; font-size: 10px; font-weight: 700;
+  letter-spacing: 0.08em; text-transform: uppercase;
+  padding: 2px 7px; border-radius: 4px; vertical-align: middle; margin-left: 6px;
+}
+.tag-install { background: rgba(99,102,241,0.15); color: var(--accent2); }
+.tag-update { background: rgba(245,158,11,0.12); color: var(--warn); }
+.tag-meta { background: rgba(96,96,96,0.2); color: var(--text3); }
+
+/* ── Explainer cards ── */
+.explainer-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+  gap: 16px; margin-top: 28px;
+}
+.explainer-card {
+  background: var(--bg2); border: 1px solid var(--border);
+  border-radius: var(--radius); padding: 22px;
+}
+.explainer-card h3 {
+  font-size: 14px; font-weight: 700; margin-bottom: 10px;
+  display: flex; align-items: center; gap: 8px;
+}
+.explainer-card p { font-size: 13px; color: var(--text2); line-height: 1.65; }
+.explainer-card code {
+  font-family: "SF Mono", "Fira Mono", monospace;
+  font-size: 12px; color: var(--accent2);
+  background: var(--accent-soft); padding: 1px 5px; border-radius: 4px;
+}
+
+/* ── Requirements ── */
+.req-table-wrap {
+  background: var(--bg2); border: 1px solid var(--border);
+  border-radius: var(--radius); overflow: hidden; margin-top: 28px;
+}
+.req-table { width: 100%; border-collapse: collapse; font-size: 14px; }
+.req-table th {
+  text-align: left; padding: 12px 20px;
+  background: var(--bg3); color: var(--text3);
+  font-size: 11px; font-weight: 700; letter-spacing: 0.1em; text-transform: uppercase;
+  border-bottom: 1px solid var(--border);
+}
+.req-table td { padding: 14px 20px; border-bottom: 1px solid var(--border); color: var(--text2); }
+.req-table tr:last-child td { border-bottom: none; }
+.req-table .platform-name-col { font-weight: 600; color: var(--text); }
+
+/* ── Changelog ── */
+.changelog {
+  background: var(--bg2); border: 1px solid var(--border);
+  border-radius: var(--radius); padding: 28px; margin-top: 28px;
+}
+.changelog h3 { font-size: 16px; font-weight: 700; margin-bottom: 16px; }
+.changelog-list { display: flex; flex-direction: column; gap: 10px; }
+.changelog-item {
+  display: flex; gap: 12px; font-size: 14px; color: var(--text2); line-height: 1.5;
+}
+.changelog-item::before {
+  content: '—'; color: var(--text3); flex-shrink: 0;
+}
+.changelog-item strong { color: var(--text); font-weight: 600; }
+
+/* ── Install notes ── */
+.install-note {
+  background: rgba(245,158,11,0.06); border: 1px solid rgba(245,158,11,0.2);
+  border-radius: 9px; padding: 14px 18px;
+  font-size: 13px; color: var(--text2); line-height: 1.6;
+  margin-top: 10px; display: flex; gap: 10px; align-items: flex-start;
+}
+.install-note .note-icon { flex-shrink: 0; color: var(--warn); font-size: 15px; margin-top: 1px; }
+
+/* ── Footer ── */
+footer {
+  border-top: 1px solid var(--border);
+  padding: 32px 0;
+}
+.footer-inner {
+  display: flex; align-items: center; justify-content: space-between;
+  flex-wrap: wrap; gap: 16px;
+  max-width: 1080px; margin: 0 auto; padding: 0 24px;
+}
+.footer-brand { font-size: 14px; font-weight: 700; display: flex; align-items: center; gap: 8px; }
+.footer-links { display: flex; gap: 24px; }
+.footer-links a { font-size: 13px; color: var(--text3); transition: color 0.15s; }
+.footer-links a:hover { color: var(--text2); }
+.footer-copy { font-size: 13px; color: var(--text3); }
+
+@media (max-width: 640px) {
+  .nav-links { display: none; }
+  .footer-inner { flex-direction: column; align-items: flex-start; }
+  .file-row { flex-direction: column; align-items: flex-start; }
+}
+</style>
+</head>
+<body>
+
+<!-- ── Nav ── -->
+<nav>
+  <div class="nav-inner">
+    <a href="/" class="nav-brand">
+      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M9 3H5a2 2 0 0 0-2 2v4m6-6h10a2 2 0 0 1 2 2v4M9 3v18m0 0h10a2 2 0 0 0 2-2v-4M9 21H5a2 2 0 0 1-2-2v-4m0 0h18"/>
+      </svg>
+      GhostPilot
+    </a>
+    <div class="nav-links">
+      <a href="/#features">Features</a>
+      <a href="/#how-it-works">How it works</a>
+      <a href="/releases/" class="active">Releases</a>
+      <a href="https://github.com/yash121l/GhostPilot" target="_blank" rel="noopener">GitHub</a>
+    </div>
+    <a href="#downloads" class="nav-cta">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+      Download
+    </a>
+  </div>
+</nav>
+
+<!-- ── Page header ── -->
+<header class="page-header">
+  <div class="container">
+    <div class="version-badge">
+      <span style="width:6px;height:6px;border-radius:50%;background:var(--success);display:inline-block;"></span>
+      Latest release
+    </div>
+    <h1>GhostPilot <span style="color:var(--accent2)">1.0.1</span></h1>
+    <p>Free, open-source desktop app for AI-powered social publishing. Available for macOS, Windows, and Linux.</p>
+    <div class="release-meta">
+      <div class="meta-pill"><div class="meta-dot"></div> May 2025</div>
+      <div class="meta-pill" style="color:var(--text3)">·</div>
+      <div class="meta-pill" style="color:var(--text3)">MIT License</div>
+      <div class="meta-pill" style="color:var(--text3)">·</div>
+      <div class="meta-pill" style="color:var(--text3)">14 assets</div>
+    </div>
+  </div>
+</header>
+
+<!-- ── Platform download cards ── -->
+<section class="section" id="downloads">
+  <div class="container">
+    <div class="section-label">Downloads</div>
+    <h2 class="section-title">Pick your platform</h2>
+
+    <div class="platform-grid">
+
+      <!-- macOS -->
+      <div class="platform-card">
+        <div class="platform-header">
+          <div class="platform-icon"></div>
+          <div>
+            <div class="platform-name">macOS</div>
+            <div class="platform-req">13 Ventura or later · arm64 &amp; x64</div>
+          </div>
+        </div>
+        <div class="platform-files">
+          <div class="file-row">
+            <div class="file-info">
+              <div class="file-name">GhostPilot-1.0.1-arm64.dmg</div>
+              <div class="file-desc">Apple Silicon — M1, M2, M3, M4</div>
+            </div>
+            <a href="https://github.com/Yash121l/GhostPilot/releases/latest/download/GhostPilot-1.0.1-arm64.dmg" class="btn-primary" download>
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+              .dmg
+            </a>
+          </div>
+          <div class="file-row">
+            <div class="file-info">
+              <div class="file-name">GhostPilot-1.0.1-x64.dmg</div>
+              <div class="file-desc">Intel Mac — Core i5/i7/i9</div>
+            </div>
+            <a href="https://github.com/Yash121l/GhostPilot/releases/latest/download/GhostPilot-1.0.1-x64.dmg" class="btn-secondary" download>
+              .dmg
+            </a>
+          </div>
+        </div>
+        <div class="install-note">
+          <div class="note-icon">⚠</div>
+          <div>If macOS says "unidentified developer", right-click the .dmg → Open. This is because the app is not yet notarized with an Apple Developer certificate.</div>
+        </div>
+      </div>
+
+      <!-- Windows -->
+      <div class="platform-card">
+        <div class="platform-header">
+          <div class="platform-icon">🪟</div>
+          <div>
+            <div class="platform-name">Windows</div>
+            <div class="platform-req">10 (build 19041) or later · x64</div>
+          </div>
+        </div>
+        <div class="platform-files">
+          <div class="file-row">
+            <div class="file-info">
+              <div class="file-name">GhostPilot-1.0.1-setup.exe</div>
+              <div class="file-desc">NSIS installer — installs to Program Files</div>
+            </div>
+            <a href="https://github.com/Yash121l/GhostPilot/releases/latest/download/GhostPilot-1.0.1-setup.exe" class="btn-primary" download>
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+              .exe
+            </a>
+          </div>
+          <div class="file-row">
+            <div class="file-info">
+              <div class="file-name">GhostPilot-1.0.1-portable.exe</div>
+              <div class="file-desc">Portable — run without installing</div>
+            </div>
+            <a href="https://github.com/Yash121l/GhostPilot/releases/latest/download/GhostPilot-1.0.1-portable.exe" class="btn-secondary" download>
+              .exe
+            </a>
+          </div>
+        </div>
+        <div class="install-note">
+          <div class="note-icon">⚠</div>
+          <div>Windows SmartScreen may warn "unrecognized app" — click "More info" → "Run anyway". The app is open source; you can audit the full source on GitHub before running.</div>
+        </div>
+      </div>
+
+      <!-- Linux -->
+      <div class="platform-card">
+        <div class="platform-header">
+          <div class="platform-icon">🐧</div>
+          <div>
+            <div class="platform-name">Linux</div>
+            <div class="platform-req">x64 · glibc 2.28+ · libsecret</div>
+          </div>
+        </div>
+        <div class="platform-files">
+          <div class="file-row">
+            <div class="file-info">
+              <div class="file-name">GhostPilot-1.0.1.AppImage</div>
+              <div class="file-desc">Universal — runs on any distro</div>
+            </div>
+            <a href="https://github.com/Yash121l/GhostPilot/releases/latest/download/GhostPilot-1.0.1.AppImage" class="btn-primary" download>
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+              AppImage
+            </a>
+          </div>
+          <div class="file-row">
+            <div class="file-info">
+              <div class="file-name">GhostPilot-1.0.1-amd64.deb</div>
+              <div class="file-desc">Debian / Ubuntu package</div>
+            </div>
+            <a href="https://github.com/Yash121l/GhostPilot/releases/latest/download/GhostPilot-1.0.1-amd64.deb" class="btn-secondary" download>
+              .deb
+            </a>
+          </div>
+        </div>
+        <div class="install-note">
+          <div class="note-icon">ℹ</div>
+          <div>AppImage: <code>chmod +x GhostPilot-1.0.1.AppImage && ./GhostPilot-1.0.1.AppImage</code>. Requires <code>libsecret</code> for keychain (<code>apt install libsecret-1-0</code> on Debian/Ubuntu).</div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+</section>
+
+<!-- ── All 14 assets explained ── -->
+<section class="section" style="background:var(--bg2);border-top:1px solid var(--border);border-bottom:1px solid var(--border);">
+  <div class="container">
+    <div class="section-label">Release assets</div>
+    <h2 class="section-title">What are all 14 files?</h2>
+
+    <div class="file-table-wrap">
+      <table class="file-table">
+        <thead>
+          <tr>
+            <th>File</th>
+            <th>Type</th>
+            <th>What it does</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td class="mono">GhostPilot-1.0.1-arm64.dmg</td>
+            <td><span class="tag tag-install">Install</span></td>
+            <td class="desc">macOS disk image for Apple Silicon (M1/M2/M3/M4). Drag app to /Applications to install.</td>
+          </tr>
+          <tr>
+            <td class="mono">GhostPilot-1.0.1-x64.dmg</td>
+            <td><span class="tag tag-install">Install</span></td>
+            <td class="desc">macOS disk image for Intel Macs. Same UX as arm64 — just a different native binary.</td>
+          </tr>
+          <tr>
+            <td class="mono">GhostPilot-1.0.1-setup.exe</td>
+            <td><span class="tag tag-install">Install</span></td>
+            <td class="desc">Windows NSIS installer. Adds Start Menu shortcut, desktop icon, and uninstaller to Programs &amp; Features.</td>
+          </tr>
+          <tr>
+            <td class="mono">GhostPilot-1.0.1-portable.exe</td>
+            <td><span class="tag tag-install">Install</span></td>
+            <td class="desc">Windows portable build. No installation required — just double-click and run. Stores user data next to the exe.</td>
+          </tr>
+          <tr>
+            <td class="mono">GhostPilot-1.0.1.AppImage</td>
+            <td><span class="tag tag-install">Install</span></td>
+            <td class="desc">Linux universal package. Self-contained — runs on any x64 distro with glibc 2.28+ without installing anything.</td>
+          </tr>
+          <tr>
+            <td class="mono">GhostPilot-1.0.1-amd64.deb</td>
+            <td><span class="tag tag-install">Install</span></td>
+            <td class="desc">Debian/Ubuntu package. Install with <code style="font-family:monospace;font-size:12px;color:var(--accent2)">dpkg -i</code> or double-click in a file manager. Registers in package manager for clean uninstall.</td>
+          </tr>
+          <tr>
+            <td class="mono">GhostPilot-1.0.1-arm64.dmg.blockmap</td>
+            <td><span class="tag tag-update">Update</span></td>
+            <td class="desc">Delta patch map for the macOS arm64 DMG. Used by the built-in auto-updater to download only the bytes that changed — not the full file.</td>
+          </tr>
+          <tr>
+            <td class="mono">GhostPilot-1.0.1-x64.dmg.blockmap</td>
+            <td><span class="tag tag-update">Update</span></td>
+            <td class="desc">Same as above, for macOS Intel. The auto-updater downloads this to compute a diff against your installed version.</td>
+          </tr>
+          <tr>
+            <td class="mono">GhostPilot-1.0.1-setup.exe.blockmap</td>
+            <td><span class="tag tag-update">Update</span></td>
+            <td class="desc">Delta patch map for the Windows installer. Enables partial downloads when auto-updating on Windows.</td>
+          </tr>
+          <tr>
+            <td class="mono">latest-mac.yml</td>
+            <td><span class="tag tag-meta">Manifest</span></td>
+            <td class="desc">electron-updater manifest for macOS. Lists the current version, release date, file names, sizes, and SHA-512 checksums. The app reads this to detect new versions.</td>
+          </tr>
+          <tr>
+            <td class="mono">latest.yml</td>
+            <td><span class="tag tag-meta">Manifest</span></td>
+            <td class="desc">electron-updater manifest for Windows. Same structure as latest-mac.yml — the app polls this URL to check for updates.</td>
+          </tr>
+          <tr>
+            <td class="mono">latest-linux.yml</td>
+            <td><span class="tag tag-meta">Manifest</span></td>
+            <td class="desc">electron-updater manifest for Linux. Used by AppImage builds for auto-update support.</td>
+          </tr>
+          <tr>
+            <td class="mono">Source code (.zip)</td>
+            <td><span class="tag tag-meta">Source</span></td>
+            <td class="desc">GitHub auto-generated archive of the full repository at the v1.0.1 tag. For auditing, building from source, or forking.</td>
+          </tr>
+          <tr>
+            <td class="mono">Source code (.tar.gz)</td>
+            <td><span class="tag tag-meta">Source</span></td>
+            <td class="desc">Same repository snapshot in gzip tar format. Preferred on Linux/macOS for building from source.</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+</section>
+
+<!-- ── What are .blockmap and .yml? ── -->
+<section class="section">
+  <div class="container">
+    <div class="section-label">File types explained</div>
+    <h2 class="section-title">Three types of release files</h2>
+
+    <div class="explainer-grid">
+      <div class="explainer-card">
+        <h3>📦 Installers <span style="font-size:11px;font-weight:400;color:var(--text3)">.dmg · .exe · .AppImage · .deb</span></h3>
+        <p>These are the files you actually download and run. Each is a native package for its platform. The <code>.dmg</code> is a macOS disk image, the <code>.exe</code> is a Windows installer, the <code>.AppImage</code> is a self-contained Linux executable, and the <code>.deb</code> is a Debian package.</p>
+      </div>
+      <div class="explainer-card">
+        <h3>🔄 Blockmaps <span style="font-size:11px;font-weight:400;color:var(--text3)">.blockmap</span></h3>
+        <p>A <code>.blockmap</code> file is a delta-update index — a map of the installer split into fixed-size blocks with checksums. When a new version comes out, the built-in auto-updater compares your installed version's blocks against the new release's blockmap and downloads <strong>only the changed blocks</strong>, not the entire file. This saves bandwidth for incremental updates.</p>
+      </div>
+      <div class="explainer-card">
+        <h3>📋 Manifests <span style="font-size:11px;font-weight:400;color:var(--text3)">latest.yml · latest-mac.yml · latest-linux.yml</span></h3>
+        <p>These YAML files are read by <code>electron-updater</code> inside the running app. They declare the current version, file names, download sizes, and SHA-512 hashes for integrity verification. The app periodically fetches these manifests from GitHub Releases to detect whether an update is available. You do not need to download them manually.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ── System requirements ── -->
+<section class="section" style="background:var(--bg2);border-top:1px solid var(--border);border-bottom:1px solid var(--border);">
+  <div class="container">
+    <div class="section-label">System requirements</div>
+    <h2 class="section-title">Minimum requirements</h2>
+
+    <div class="req-table-wrap">
+      <table class="req-table">
+        <thead>
+          <tr>
+            <th>Platform</th>
+            <th>OS Version</th>
+            <th>Architecture</th>
+            <th>Runtime</th>
+            <th>Notes</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td class="platform-name-col"> macOS</td>
+            <td>13 Ventura or later</td>
+            <td>arm64 (M1+) · x64 (Intel)</td>
+            <td>Electron 39 — bundled</td>
+            <td>Two separate DMGs — download the one matching your chip</td>
+          </tr>
+          <tr>
+            <td class="platform-name-col">🪟 Windows</td>
+            <td>10 build 19041+ · Windows 11</td>
+            <td>x64</td>
+            <td>Electron 39 — bundled</td>
+            <td>ARM64 Windows not yet supported</td>
+          </tr>
+          <tr>
+            <td class="platform-name-col">🐧 Linux</td>
+            <td>Any (glibc 2.28+)</td>
+            <td>x64 (amd64)</td>
+            <td>Electron 39 — bundled</td>
+            <td>Requires <code style="font-family:monospace;font-size:12px;color:var(--accent2)">libsecret</code> for OS keychain</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <p style="margin-top:16px;font-size:13px;color:var(--text3)">Node.js and Electron are bundled — you do not need to install them separately. The app works fully offline after setup.</p>
+  </div>
+</section>
+
+<!-- ── Changelog ── -->
+<section class="section">
+  <div class="container">
+    <div class="section-label">Changelog</div>
+    <h2 class="section-title">What's new in 1.0.1</h2>
+
+    <div class="changelog">
+      <h3>v1.0.1 — Bug fixes &amp; CI hardening</h3>
+      <div class="changelog-list">
+        <div class="changelog-item"><span>Fixed macOS code-signing step: empty <code style="font-family:monospace;font-size:12px">CSC_LINK</code> no longer crashes the build when Apple certificates are not configured</span></div>
+        <div class="changelog-item"><span>Fixed Windows NSIS installer icon — now uses <code style="font-family:monospace;font-size:12px">.ico</code> format as required by NSIS (was incorrectly set to PNG)</span></div>
+        <div class="changelog-item"><span>Switched macOS x64 CI runner from <code style="font-family:monospace;font-size:12px">macos-13</code> (Intel, scarce queue) to <code style="font-family:monospace;font-size:12px">macos-latest</code> arm64 with cross-compilation — eliminates stuck builds</span></div>
+        <div class="changelog-item"><span>Removed unused variables (<code style="font-family:monospace;font-size:12px">charLimit</code>, <code style="font-family:monospace;font-size:12px">RATE_LABEL</code>, <code style="font-family:monospace;font-size:12px">_API_V1</code>) to fix all TS6133 typecheck errors</span></div>
+        <div class="changelog-item"><span>Fixed <code style="font-family:monospace;font-size:12px">LogProcess</code> type — valid values are <code style="font-family:monospace;font-size:12px">main | renderer | worker:*</code></span></div>
+        <div class="changelog-item"><span>Corrected composer re-generate flow: reuses existing post rather than creating duplicates in the Calendar</span></div>
+        <div class="changelog-item"><span>Added GhostPilot ghost icon as the app icon across all platforms (DMG window, Windows taskbar, Linux AppImage, tray icon)</span></div>
+        <div class="changelog-item"><span>Added multi-platform release workflow with proper GitHub Release asset publishing</span></div>
+      </div>
+    </div>
+
+    <div class="changelog" style="margin-top:16px;">
+      <h3>v1.0.0 — Initial public release</h3>
+      <div class="changelog-list">
+        <div class="changelog-item"><span><strong>Composer:</strong> Rich-text editor with Tiptap, platform selector, and AI variant generation</span></div>
+        <div class="changelog-item"><span><strong>AI Gateway:</strong> OpenAI, Anthropic, Groq, OpenRouter, Ollama — routing by task type with daily spend cap</span></div>
+        <div class="changelog-item"><span><strong>Calendar:</strong> Visual schedule with drag-and-drop, per-platform colour coding</span></div>
+        <div class="changelog-item"><span><strong>Goals:</strong> OKR decomposition — set a north-star outcome, AI builds a weekly posting plan</span></div>
+        <div class="changelog-item"><span><strong>Trends:</strong> Hacker News + Reddit trend radar with relevance scoring and one-click draft prefill</span></div>
+        <div class="changelog-item"><span><strong>Personas:</strong> Multiple voice profiles with content pillars and style hints</span></div>
+        <div class="changelog-item"><span><strong>OAuth:</strong> LinkedIn, X (Twitter), Instagram — tokens stored in OS keychain via keytar</span></div>
+        <div class="changelog-item"><span><strong>Scheduler:</strong> Background worker thread publishes due posts every minute</span></div>
+        <div class="changelog-item"><span><strong>Analytics:</strong> Local post performance tracking and AI spend log</span></div>
+      </div>
+    </div>
+
+    <div style="margin-top:20px;text-align:center;">
+      <a href="https://github.com/Yash121l/GhostPilot/releases" class="btn-secondary" target="_blank" rel="noopener">
+        View all releases on GitHub →
+      </a>
+    </div>
+  </div>
+</section>
+
+<!-- ── Footer ── -->
+<footer>
+  <div class="footer-inner">
+    <div class="footer-brand">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M9 3H5a2 2 0 0 0-2 2v4m6-6h10a2 2 0 0 1 2 2v4M9 3v18m0 0h10a2 2 0 0 0 2-2v-4M9 21H5a2 2 0 0 1-2-2v-4m0 0h18"/></svg>
+      GhostPilot
+    </div>
+    <div class="footer-links">
+      <a href="https://github.com/yash121l/GhostPilot" target="_blank" rel="noopener">GitHub</a>
+      <a href="/releases/">Releases</a>
+      <a href="https://github.com/yash121l/GhostPilot/blob/main/SETUP.md" target="_blank" rel="noopener">Docs</a>
+      <a href="https://github.com/yash121l/GhostPilot/issues" target="_blank" rel="noopener">Issues</a>
+    </div>
+    <div class="footer-copy">Built by <a href="https://yashlunawat.com" style="color:var(--text2)">Yash Lunawat</a></div>
+  </div>
+</footer>
+
+<script>
+// OS detection → highlight the right download card
+(function () {
+  var ua = navigator.userAgentData ? navigator.userAgentData.platform : navigator.platform;
+  var isMac = /Mac/.test(ua);
+  var isWin = /Win/.test(ua);
+
+  if (!isMac && !isWin) return; // Linux — all cards already shown equally
+
+  var cards = document.querySelectorAll('.platform-card');
+  var platformNames = Array.from(cards).map(function (c) {
+    return c.querySelector('.platform-name') ? c.querySelector('.platform-name').textContent : '';
+  });
+
+  cards.forEach(function (card, i) {
+    var name = platformNames[i];
+    var match = (isMac && name === 'macOS') || (isWin && name === 'Windows');
+    if (match) {
+      card.style.borderColor = 'rgba(99,102,241,0.4)';
+      card.style.background = 'rgba(99,102,241,0.04)';
+    }
+  });
+})();
+</script>
+</body>
+</html>

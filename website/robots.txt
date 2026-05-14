@@ -1,0 +1,5 @@
+User-agent: *
+Allow: /
+Disallow: /oauth/
+
+Sitemap: https://ghostpilot.yashlunawat.com/sitemap.xml
