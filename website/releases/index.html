@@ -150,7 +150,7 @@ nav {
 }
 .platform-card:hover { border-color: rgba(99,102,241,0.3); }
 .platform-header { display: flex; align-items: center; gap: 14px; }
-.platform-icon { font-size: 32px; line-height: 1; }
+.platform-icon { line-height: 1; color: var(--text2); }
 .platform-name { font-size: 18px; font-weight: 700; }
 .platform-req { font-size: 12px; color: var(--text3); margin-top: 2px; }
 .platform-files { display: flex; flex-direction: column; gap: 10px; }
@@ -254,7 +254,7 @@ nav {
   font-size: 13px; color: var(--text2); line-height: 1.6;
   margin-top: 10px; display: flex; gap: 10px; align-items: flex-start;
 }
-.install-note .note-icon { flex-shrink: 0; color: var(--warn); font-size: 15px; margin-top: 1px; }
+.install-note .note-icon { flex-shrink: 0; color: var(--warn); margin-top: 1px; }
 
 /* ── Footer ── */
 footer {
@@ -333,7 +333,7 @@ footer {
       <!-- macOS -->
       <div class="platform-card">
         <div class="platform-header">
-          <div class="platform-icon"></div>
+          <div class="platform-icon"><svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="3" width="20" height="14" rx="2" ry="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/></svg></div>
           <div>
             <div class="platform-name">macOS</div>
             <div class="platform-req">13 Ventura or later · arm64 &amp; x64</div>
@@ -361,15 +361,15 @@ footer {
           </div>
         </div>
         <div class="install-note">
-          <div class="note-icon">⚠</div>
-          <div>If macOS says "unidentified developer", right-click the .dmg → Open. This is because the app is not yet notarized with an Apple Developer certificate.</div>
+          <div class="note-icon"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg></div>
+          <div>The app is not notarized yet. After installing, run once in Terminal: <code>sudo codesign --force --deep --sign - /Applications/GhostPilot.app</code> — then open normally. See <a href="#macos-setup" style="color:var(--accent2)">setup steps below</a>.</div>
         </div>
       </div>
 
       <!-- Windows -->
       <div class="platform-card">
         <div class="platform-header">
-          <div class="platform-icon">🪟</div>
+          <div class="platform-icon"><svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/></svg></div>
           <div>
             <div class="platform-name">Windows</div>
             <div class="platform-req">10 (build 19041) or later · x64</div>
@@ -397,7 +397,7 @@ footer {
           </div>
         </div>
         <div class="install-note">
-          <div class="note-icon">⚠</div>
+          <div class="note-icon"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg></div>
           <div>Windows SmartScreen may warn "unrecognized app" — click "More info" → "Run anyway". The app is open source; you can audit the full source on GitHub before running.</div>
         </div>
       </div>
@@ -405,7 +405,7 @@ footer {
       <!-- Linux -->
       <div class="platform-card">
         <div class="platform-header">
-          <div class="platform-icon">🐧</div>
+          <div class="platform-icon"><svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="4 17 10 11 4 5"/><line x1="12" y1="19" x2="20" y2="19"/></svg></div>
           <div>
             <div class="platform-name">Linux</div>
             <div class="platform-req">x64 · glibc 2.28+ · libsecret</div>
@@ -433,8 +433,83 @@ footer {
           </div>
         </div>
         <div class="install-note">
-          <div class="note-icon">ℹ</div>
+          <div class="note-icon"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg></div>
           <div>AppImage: <code>chmod +x GhostPilot-1.0.2.AppImage && ./GhostPilot-1.0.2.AppImage</code>. Requires <code>libsecret</code> for keychain (<code>apt install libsecret-1-0</code> on Debian/Ubuntu).</div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+</section>
+
+<!-- ── First-time setup ── -->
+<section class="section" id="setup" style="background:var(--bg2);border-top:1px solid var(--border);border-bottom:1px solid var(--border);">
+  <div class="container">
+    <div class="section-label">First-time setup</div>
+    <h2 class="section-title">Getting started on each platform</h2>
+
+    <div style="display:flex;flex-direction:column;gap:24px;max-width:760px;">
+
+      <!-- macOS -->
+      <div style="background:var(--bg);border:1px solid var(--border2);border-radius:var(--radius);padding:28px;" id="macos-setup">
+        <div style="display:flex;align-items:center;gap:12px;margin-bottom:20px;">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="color:var(--accent2)"><rect x="2" y="3" width="20" height="14" rx="2" ry="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/></svg>
+          <span style="font-size:16px;font-weight:700;">macOS</span>
+        </div>
+        <ol style="display:flex;flex-direction:column;gap:14px;padding-left:0;list-style:none;counter-reset:steps;">
+          <li style="display:flex;gap:14px;counter-increment:steps;">
+            <div style="width:26px;height:26px;border-radius:50%;background:var(--accent-soft);border:1px solid rgba(99,102,241,0.3);color:var(--accent2);font-size:12px;font-weight:700;display:flex;align-items:center;justify-content:center;flex-shrink:0;">1</div>
+            <div style="padding-top:3px;font-size:14px;color:var(--text2);line-height:1.6;">Open the <code style="font-family:monospace;font-size:12px;color:var(--accent2);background:var(--accent-soft);padding:1px 5px;border-radius:4px">.dmg</code> file, drag <strong style="color:var(--text)">GhostPilot</strong> to <strong style="color:var(--text)">/Applications</strong>.</div>
+          </li>
+          <li style="display:flex;gap:14px;counter-increment:steps;">
+            <div style="width:26px;height:26px;border-radius:50%;background:var(--accent-soft);border:1px solid rgba(99,102,241,0.3);color:var(--accent2);font-size:12px;font-weight:700;display:flex;align-items:center;justify-content:center;flex-shrink:0;">2</div>
+            <div style="padding-top:3px;font-size:14px;color:var(--text2);line-height:1.6;">Open <strong style="color:var(--text)">Terminal</strong> and run this one-time command to bypass Gatekeeper (the app is not yet notarized):
+              <div style="margin-top:10px;background:var(--bg3);border:1px solid var(--border2);border-radius:8px;padding:12px 16px;font-family:'SF Mono','Fira Mono',monospace;font-size:13px;color:#a5f3a5;overflow-x:auto;">sudo codesign --force --deep --sign - /Applications/GhostPilot.app</div>
+            </div>
+          </li>
+          <li style="display:flex;gap:14px;counter-increment:steps;">
+            <div style="width:26px;height:26px;border-radius:50%;background:var(--accent-soft);border:1px solid rgba(99,102,241,0.3);color:var(--accent2);font-size:12px;font-weight:700;display:flex;align-items:center;justify-content:center;flex-shrink:0;">3</div>
+            <div style="padding-top:3px;font-size:14px;color:var(--text2);line-height:1.6;">Double-click <strong style="color:var(--text)">GhostPilot.app</strong> in Applications — it opens normally from now on.</div>
+          </li>
+        </ol>
+        <p style="margin-top:16px;font-size:12px;color:var(--text3);">This is a one-time step. The <code style="font-family:monospace;font-size:11px;color:var(--text2)">codesign</code> command applies a local ad-hoc signature that satisfies macOS's requirement without needing an Apple Developer certificate.</p>
+      </div>
+
+      <!-- Windows -->
+      <div style="background:var(--bg);border:1px solid var(--border2);border-radius:var(--radius);padding:28px;">
+        <div style="display:flex;align-items:center;gap:12px;margin-bottom:20px;">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="color:var(--accent2)"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/></svg>
+          <span style="font-size:16px;font-weight:700;">Windows</span>
+        </div>
+        <ol style="display:flex;flex-direction:column;gap:14px;padding-left:0;list-style:none;">
+          <li style="display:flex;gap:14px;">
+            <div style="width:26px;height:26px;border-radius:50%;background:var(--accent-soft);border:1px solid rgba(99,102,241,0.3);color:var(--accent2);font-size:12px;font-weight:700;display:flex;align-items:center;justify-content:center;flex-shrink:0;">1</div>
+            <div style="padding-top:3px;font-size:14px;color:var(--text2);line-height:1.6;">Run <code style="font-family:monospace;font-size:12px;color:var(--accent2);background:var(--accent-soft);padding:1px 5px;border-radius:4px">GhostPilot-1.0.2-setup.exe</code>.</div>
+          </li>
+          <li style="display:flex;gap:14px;">
+            <div style="width:26px;height:26px;border-radius:50%;background:var(--accent-soft);border:1px solid rgba(99,102,241,0.3);color:var(--accent2);font-size:12px;font-weight:700;display:flex;align-items:center;justify-content:center;flex-shrink:0;">2</div>
+            <div style="padding-top:3px;font-size:14px;color:var(--text2);line-height:1.6;">If Windows SmartScreen shows <em>"unrecognized app"</em>: click <strong style="color:var(--text)">More info</strong> → <strong style="color:var(--text)">Run anyway</strong>. This is normal for open-source apps without a code signing certificate.</div>
+          </li>
+          <li style="display:flex;gap:14px;">
+            <div style="width:26px;height:26px;border-radius:50%;background:var(--accent-soft);border:1px solid rgba(99,102,241,0.3);color:var(--accent2);font-size:12px;font-weight:700;display:flex;align-items:center;justify-content:center;flex-shrink:0;">3</div>
+            <div style="padding-top:3px;font-size:14px;color:var(--text2);line-height:1.6;">GhostPilot installs to Program Files with a Start Menu shortcut and uninstaller.</div>
+          </li>
+        </ol>
+      </div>
+
+      <!-- Linux -->
+      <div style="background:var(--bg);border:1px solid var(--border2);border-radius:var(--radius);padding:28px;">
+        <div style="display:flex;align-items:center;gap:12px;margin-bottom:20px;">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="color:var(--accent2)"><polyline points="4 17 10 11 4 5"/><line x1="12" y1="19" x2="20" y2="19"/></svg>
+          <span style="font-size:16px;font-weight:700;">Linux</span>
+        </div>
+        <div style="font-size:14px;color:var(--text2);margin-bottom:16px;font-weight:600;">AppImage (universal)</div>
+        <div style="background:var(--bg3);border:1px solid var(--border2);border-radius:8px;padding:12px 16px;font-family:'SF Mono','Fira Mono',monospace;font-size:13px;color:#a5f3a5;margin-bottom:16px;overflow-x:auto;">chmod +x GhostPilot-1.0.2.AppImage<br>./GhostPilot-1.0.2.AppImage</div>
+        <div style="font-size:14px;color:var(--text2);margin-bottom:12px;font-weight:600;">Debian / Ubuntu (.deb)</div>
+        <div style="background:var(--bg3);border:1px solid var(--border2);border-radius:8px;padding:12px 16px;font-family:'SF Mono','Fira Mono',monospace;font-size:13px;color:#a5f3a5;margin-bottom:16px;overflow-x:auto;">sudo dpkg -i GhostPilot-1.0.2-amd64.deb</div>
+        <div style="background:rgba(245,158,11,0.06);border:1px solid rgba(245,158,11,0.2);border-radius:8px;padding:12px 16px;font-size:13px;color:var(--text2);display:flex;gap:10px;">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0;color:var(--warn);margin-top:1px"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg>
+          <span>Requires <code style="font-family:monospace;font-size:12px;color:var(--accent2)">libsecret</code> for OS keychain. Install it with: <code style="font-family:monospace;font-size:12px;color:var(--accent2)">sudo apt install libsecret-1-0</code> (Debian/Ubuntu) before first launch.</span>
         </div>
       </div>
 
@@ -542,15 +617,15 @@ footer {
 
     <div class="explainer-grid">
       <div class="explainer-card">
-        <h3>📦 Installers <span style="font-size:11px;font-weight:400;color:var(--text3)">.dmg · .exe · .AppImage · .deb</span></h3>
+        <h3><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:middle;margin-right:6px"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/><polyline points="3.27 6.96 12 12.01 20.73 6.96"/><line x1="12" y1="22.08" x2="12" y2="12"/></svg>Installers <span style="font-size:11px;font-weight:400;color:var(--text3)">.dmg · .exe · .AppImage · .deb</span></h3>
         <p>These are the files you actually download and run. Each is a native package for its platform. The <code>.dmg</code> is a macOS disk image, the <code>.exe</code> is a Windows installer, the <code>.AppImage</code> is a self-contained Linux executable, and the <code>.deb</code> is a Debian package.</p>
       </div>
       <div class="explainer-card">
-        <h3>🔄 Blockmaps <span style="font-size:11px;font-weight:400;color:var(--text3)">.blockmap</span></h3>
+        <h3><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:middle;margin-right:6px"><polyline points="23 4 23 10 17 10"/><polyline points="1 20 1 14 7 14"/><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/></svg>Blockmaps <span style="font-size:11px;font-weight:400;color:var(--text3)">.blockmap</span></h3>
         <p>A <code>.blockmap</code> file is a delta-update index — a map of the installer split into fixed-size blocks with checksums. When a new version comes out, the built-in auto-updater compares your installed version's blocks against the new release's blockmap and downloads <strong>only the changed blocks</strong>, not the entire file. This saves bandwidth for incremental updates.</p>
       </div>
       <div class="explainer-card">
-        <h3>📋 Manifests <span style="font-size:11px;font-weight:400;color:var(--text3)">latest.yml · latest-mac.yml · latest-linux.yml</span></h3>
+        <h3><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:middle;margin-right:6px"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>Manifests <span style="font-size:11px;font-weight:400;color:var(--text3)">latest.yml · latest-mac.yml · latest-linux.yml</span></h3>
         <p>These YAML files are read by <code>electron-updater</code> inside the running app. They declare the current version, file names, download sizes, and SHA-512 hashes for integrity verification. The app periodically fetches these manifests from GitHub Releases to detect whether an update is available. You do not need to download them manually.</p>
       </div>
     </div>
@@ -576,21 +651,21 @@ footer {
         </thead>
         <tbody>
           <tr>
-            <td class="platform-name-col"> macOS</td>
+            <td class="platform-name-col"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:middle;margin-right:6px"><rect x="2" y="3" width="20" height="14" rx="2" ry="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/></svg>macOS</td>
             <td>13 Ventura or later</td>
             <td>arm64 (M1+) · x64 (Intel)</td>
             <td>Electron 39 — bundled</td>
             <td>Two separate DMGs — download the one matching your chip</td>
           </tr>
           <tr>
-            <td class="platform-name-col">🪟 Windows</td>
+            <td class="platform-name-col"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:middle;margin-right:6px"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/></svg>Windows</td>
             <td>10 build 19041+ · Windows 11</td>
             <td>x64</td>
             <td>Electron 39 — bundled</td>
             <td>ARM64 Windows not yet supported</td>
           </tr>
           <tr>
-            <td class="platform-name-col">🐧 Linux</td>
+            <td class="platform-name-col"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:middle;margin-right:6px"><polyline points="4 17 10 11 4 5"/><line x1="12" y1="19" x2="20" y2="19"/></svg>Linux</td>
             <td>Any (glibc 2.28+)</td>
             <td>x64 (amd64)</td>
             <td>Electron 39 — bundled</td>
