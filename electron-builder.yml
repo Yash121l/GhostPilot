@@ -46,14 +46,12 @@ mac:
     NSMicrophoneUsageDescription: GhostPilot does not use the microphone.
     NSDocumentsFolderUsageDescription: GhostPilot may access Documents for context ingestion.
     NSDownloadsFolderUsageDescription: GhostPilot may save exports to Downloads.
-  # Notarization — set APPLE_ID, APPLE_APP_SPECIFIC_PASSWORD, APPLE_TEAM_ID in CI secrets
-  notarize:
-    teamId: $(APPLE_TEAM_ID)
+  # Set to true and add APPLE_ID + APPLE_APP_SPECIFIC_PASSWORD + APPLE_TEAM_ID secrets to enable notarization
+  notarize: false
 
 dmg:
   artifactName: ${productName}-${version}-${arch}.${ext}
   title: ${productName} ${version}
-  background: build/dmg-background.png
   icon: resources/icon.png
   iconSize: 80
   contents:

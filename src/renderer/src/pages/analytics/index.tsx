@@ -12,11 +12,6 @@ const PLATFORM_ICON: Record<string, React.ElementType> = {
   instagram: Camera
 }
 
-const PLATFORM_COLOR: Record<string, string> = {
-  linkedin: 'var(--linkedin)',
-  twitter: '#111',
-  instagram: 'var(--instagram)'
-}
 
 interface PlatformStat {
   id: string
