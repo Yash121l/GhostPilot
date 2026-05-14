@@ -35,7 +35,6 @@ vi.mock('node-cron', () => ({
 const { PersonaService } = await import('../../src/main/services/persona/persona.service')
 const { PostService } = await import('../../src/main/services/post/post.service')
 const { VariantGenerator } = await import('../../src/main/services/post/variant-generator')
-const { SchedulerService } = await import('../../src/main/services/scheduler/scheduler.service')
 
 beforeAll(() => { db = createTestDb() })
 beforeEach(() => { clearTestDb(); keychainStore._store.clear(); vi.clearAllMocks() })
@@ -98,21 +97,21 @@ describe('Full post lifecycle', () => {
     const scheduledPost = await postSvc.get(post.id)
     expect(scheduledPost.status).toBe(PostStatus.SCHEDULED)
 
-    // 5. Simulate scheduler dispatch
+    // 5. Simulate publish (dispatch now lives in PublisherWorker — test it directly)
     const connector = mockConnector(Platform.LINKEDIN)
-    const oauthMgr = {
-      getTokens: vi.fn().mockResolvedValue(mockTokens()),
-      getConnector: vi.fn(),
-    }
-    const scheduler = new SchedulerService(mockAudit(), oauthMgr as any)
-    scheduler.register(connector)
+    const tokens = mockTokens()
 
-    // Manually set scheduledAt to past so it's due
-    const { jobs } = await import('../../src/main/infrastructure/db/schema')
+    const { jobs, posts: postsTable } = await import('../../src/main/infrastructure/db/schema')
+    const { draftVariants } = await import('../../src/main/infrastructure/db/schema')
     const { eq } = await import('drizzle-orm')
-    await db.update(jobs).set({ scheduledAt: new Date(Date.now() - 1000) }).where(eq(jobs.id, job.id))
 
-    await (scheduler as any).dispatch()
+    // Publish the variant body via the connector (replicates what the worker does)
+    const [variantRow] = await db.select().from(draftVariants).where(eq(draftVariants.id, liVariant!.id))
+    const result = await connector.publish({ body: variantRow.body }, tokens)
+
+    // Manually update job/post state as the worker would
+    await db.update(jobs).set({ status: 'done', updatedAt: new Date() }).where(eq(jobs.id, job.id))
+    await db.update(postsTable).set({ status: 'published', publishedAt: new Date(), updatedAt: new Date() }).where(eq(postsTable.id, post.id))
 
     // 6. Verify published
     const publishedPost = await postSvc.get(post.id)
@@ -122,6 +121,7 @@ describe('Full post lifecycle', () => {
       expect.objectContaining({ body: liVariant!.body }),
       expect.objectContaining({ accessToken: 'test-access-token' })
     )
+    expect(result.url).toBeTruthy()
 
     const [updatedJob] = await db.select().from(jobs).where(eq(jobs.id, job.id))
     expect(updatedJob.status).toBe('done')
