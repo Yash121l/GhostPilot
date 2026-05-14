@@ -12,7 +12,7 @@ const logger = createLogger('SchedulerService')
 export class SchedulerService {
   private connectors = new Map<string, SocialConnector>()
 
-  // eslint-disable-next-line @typescript-eslint/no-useless-constructor
+  // eslint-disable-next-line @typescript-eslint/no-empty-function
   constructor(_audit: unknown, _oauthManager: unknown) {}
 
   register(connector: SocialConnector): void {
