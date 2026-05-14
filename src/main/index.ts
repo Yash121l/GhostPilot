@@ -13,6 +13,7 @@ import { setupUpdater } from './ipc/updater.handlers'
 import { initServices, getServices } from './services/index'
 import type { Platform } from '../shared/types/platform'
 import { APP_NAME, APP_URL_SCHEME } from '../shared/constants'
+import { AuditAction } from './infrastructure/db/schema'
 
 // ─── Load .env into process.env at runtime ────────────────────────────────────
 // electron-vite's `define` only substitutes at build time. In dev mode the
@@ -114,7 +115,7 @@ async function bootstrap(): Promise<void> {
           .map((img) => ({
             data: readFileSync(img.localPath),
             mimeType: img.mimeType,
-            originalUrl: img.originalUrl,
+            originalUrl: undefined,
           }))
 
         getServices().oauthManager.getTokens(platform).then(async (tokens) => {
@@ -139,15 +140,35 @@ async function bootstrap(): Promise<void> {
         return
       }
 
-      // Forward job status events to renderer
-      if ((msg.kind === 'job:published' || msg.kind === 'job:failed') && mainWindow) {
-        mainWindow.webContents.send(msg.kind, msg)
+      // Audit + notify on job outcomes
+      if (msg.kind === 'job:published' && msg.postId && msg.platform) {
+        getServices().audit.write({
+          actor: 'system',
+          action: AuditAction.POST_PUBLISHED,
+          entityType: 'posts',
+          entityId: msg.postId,
+          outcome: 'success',
+          details: { platform: msg.platform, url: msg.url ?? '' },
+        })
+        logger.info({ msg: 'Post published', postId: msg.postId, platform: msg.platform, url: msg.url ?? '' })
+        new Notification({ title: APP_NAME, body: `Post published on ${msg.platform}` }).show()
+        mainWindow?.webContents.send(msg.kind, msg)
+      }
 
-        if (msg.kind === 'job:published') {
-          new Notification({ title: APP_NAME, body: `Post published on ${msg.platform}` }).show()
-        } else if (msg.permanent) {
+      if (msg.kind === 'job:failed' && msg.postId && msg.platform) {
+        getServices().audit.write({
+          actor: 'system',
+          action: AuditAction.POST_PUBLISH_FAILED,
+          entityType: 'posts',
+          entityId: msg.postId,
+          outcome: 'failure',
+          errorCode: 'PUBLISH_ERROR',
+          details: { platform: msg.platform, error: msg.error ?? '', permanent: msg.permanent },
+        })
+        if (msg.permanent) {
           new Notification({ title: APP_NAME, body: `Post failed permanently on ${msg.platform}` }).show()
         }
+        mainWindow?.webContents.send(msg.kind, msg)
       }
     })
 

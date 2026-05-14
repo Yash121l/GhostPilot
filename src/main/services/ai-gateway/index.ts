@@ -291,17 +291,16 @@ export class AIGateway {
 
     const openai = new OpenAI({ apiKey: secret })
     const result = await openai.images.generate({
-      model: 'dall-e-3',
+      model: 'gpt-image-1',
       prompt,
       n: 1,
       size: '1024x1024',
-      response_format: 'b64_json',
+      quality: 'high',
     })
 
     const imageData = result.data?.[0]
     const b64 = imageData?.b64_json
-    const originalUrl = imageData?.url
-    if (!b64) throw new AppError({ code: ErrorCode.AI_CALL_FAILED, message: 'DALL-E returned no image data.' })
+    if (!b64) throw new AppError({ code: ErrorCode.AI_CALL_FAILED, message: 'Image generation returned no data.' })
 
     const mediaDir = join(app.getPath('userData'), 'media')
     mkdirSync(mediaDir, { recursive: true })
@@ -310,7 +309,7 @@ export class AIGateway {
     writeFileSync(localPath, Buffer.from(b64, 'base64'))
 
     logger.info({ msg: 'Image generated', localPath })
-    return { localPath, originalUrl: originalUrl ?? undefined, mimeType: 'image/png' }
+    return { localPath, mimeType: 'image/png', dataUrl: `data:image/png;base64,${b64}` }
   }
 
   get ledgerInstance(): UsageLedger {

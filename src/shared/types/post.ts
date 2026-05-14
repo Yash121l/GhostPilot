@@ -21,9 +21,9 @@ export enum PostStatus {
 export interface ImageAttachment {
   /** Absolute path on the user's machine — always present. */
   localPath: string
-  /** Original public URL (DALL-E CDN, etc.) — used by Instagram which requires HTTP URLs. */
-  originalUrl?: string
   mimeType: string
+  /** Base64 data URL for renderer display only — never stored in DB. */
+  dataUrl?: string
 }
 
 /** A single AI-generated variant of a post. */

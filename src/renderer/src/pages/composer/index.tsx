@@ -23,7 +23,7 @@ const PLATFORM_ICONS: Record<Platform, React.ElementType> = {
 
 const PLATFORM_COLORS: Record<Platform, string> = {
   [Platform.LINKEDIN]: '#0a66c2',
-  [Platform.TWITTER]: '#e7e7e7',
+  [Platform.TWITTER]: '#000000',
   [Platform.INSTAGRAM]: '#e1306c',
 }
 
@@ -38,8 +38,8 @@ export default function ComposerPage(): ReactElement {
   const [personas, setPersonas] = useState<Persona[]>([])
   const [personaId, setPersonaId] = useState<string>('')
   const [personaName, setPersonaName] = useState<string>('')
+  const [selectedPlatforms, setSelectedPlatforms] = useState<Platform[]>([])
   const [activePlatform, setActivePlatform] = useState<Platform>(Platform.LINKEDIN)
-  const [selectedPlatforms, setSelectedPlatforms] = useState<Platform[]>(PLATFORMS)
   const [savedPost, setSavedPost] = useState<Post | null>(null)
   const [createError, setCreateError] = useState<string | null>(null)
   const [scheduleStep, setScheduleStep] = useState<'idle' | 'open'>('idle')
@@ -52,6 +52,7 @@ export default function ComposerPage(): ReactElement {
   const [imageGenPrompt, setImageGenPrompt] = useState('')
   const [imageGenOpen, setImageGenOpen] = useState(false)
   const [imageGenLoading, setImageGenLoading] = useState(false)
+  const [previewImage, setPreviewImage] = useState<ImageAttachment | null>(null)
 
   const editorRef = useRef<Editor | null>(null)
   const { state: genState, generate, reset: resetGen } = useVariantGenerator()
@@ -128,7 +129,7 @@ export default function ComposerPage(): ReactElement {
   const handleGenerate = useCallback(async (): Promise<void> => {
     const body = bodyText.trim()
     if (!body) { setCreateError('Write something first.'); return }
-    if (!selectedPlatforms.length) { setCreateError('Select at least one platform.'); return }
+    if (!selectedPlatforms.length) { setCreateError('Pick at least one platform above to post to.'); return }
     setCreateError(null)
 
     let post = savedPost
@@ -236,9 +237,18 @@ export default function ComposerPage(): ReactElement {
   }
 
   const togglePlatform = (p: Platform): void => {
-    setSelectedPlatforms((prev) =>
-      prev.includes(p) ? prev.filter((x) => x !== p) : [...prev, p],
-    )
+    setSelectedPlatforms((prev) => {
+      if (prev.includes(p)) {
+        const next = prev.filter((x) => x !== p)
+        // If we just deselected the active tab, switch to first remaining
+        if (activePlatform === p && next.length > 0) setActivePlatform(next[0])
+        return next
+      }
+      const next = [...prev, p]
+      // Select the newly added platform in the right panel
+      setActivePlatform(p)
+      return next
+    })
   }
 
   const activeVariant = genState.variantMap[activePlatform]
@@ -307,14 +317,16 @@ export default function ComposerPage(): ReactElement {
                 <button
                   key={p}
                   onClick={() => togglePlatform(p)}
+                  title={on ? `Remove ${PLATFORM_LABELS[p]}` : `Add ${PLATFORM_LABELS[p]}`}
                   style={{
                     display: 'inline-flex', alignItems: 'center', gap: 5,
-                    padding: '4px 10px', borderRadius: 100,
+                    padding: '5px 12px', borderRadius: 100,
                     fontSize: 11, fontWeight: 600, cursor: 'pointer',
-                    background: on ? `${PLATFORM_COLORS[p]}18` : 'transparent',
-                    color: on ? PLATFORM_COLORS[p] : 'var(--text-3)',
-                    border: `1px solid ${on ? PLATFORM_COLORS[p] + '55' : 'var(--border)'}`,
+                    background: on ? PLATFORM_COLORS[p] : 'var(--bg-subtle)',
+                    color: on ? '#fff' : 'var(--text-3)',
+                    border: `1.5px solid ${on ? PLATFORM_COLORS[p] : 'var(--border)'}`,
                     transition: 'all 0.15s',
+                    opacity: on ? 1 : 0.7,
                   }}
                 >
                   <Icon size={11} />
@@ -332,24 +344,25 @@ export default function ComposerPage(): ReactElement {
           }}>
             {images.map((img) => (
               <div key={img.localPath} style={{
-                position: 'relative', width: 52, height: 52, borderRadius: 8, overflow: 'hidden',
-                border: '1px solid var(--border)', flexShrink: 0,
+                position: 'relative', width: 72, height: 72, borderRadius: 8, overflow: 'hidden',
+                border: '1px solid var(--border)', flexShrink: 0, cursor: 'zoom-in',
               }}>
                 <img
-                  src={`file://${img.localPath}`}
-                  style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+                  src={img.dataUrl ?? `file://${img.localPath}`}
+                  onClick={() => setPreviewImage(img)}
+                  style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }}
                   alt=""
                 />
                 <button
-                  onClick={() => handleRemoveImage(img.localPath)}
+                  onClick={(e) => { e.stopPropagation(); handleRemoveImage(img.localPath) }}
                   style={{
-                    position: 'absolute', top: 1, right: 1,
-                    background: 'rgba(0,0,0,0.6)', border: 'none', borderRadius: '50%',
-                    width: 16, height: 16, cursor: 'pointer', color: '#fff',
+                    position: 'absolute', top: 3, right: 3,
+                    background: 'rgba(0,0,0,0.65)', border: 'none', borderRadius: '50%',
+                    width: 18, height: 18, cursor: 'pointer', color: '#fff',
                     display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 0,
                   }}
                 >
-                  <X size={9} />
+                  <X size={10} />
                 </button>
               </div>
             ))}
@@ -520,7 +533,7 @@ export default function ComposerPage(): ReactElement {
             display: 'flex', borderBottom: '1px solid var(--border)',
             padding: '0 16px', overflowX: 'auto',
           }}>
-            {PLATFORMS.map((p) => {
+            {selectedPlatforms.map((p) => {
               const Icon = PLATFORM_ICONS[p]
               const isActive = activePlatform === p
               const hasVariant = Boolean(genState.variantMap[p])
@@ -710,7 +723,9 @@ export default function ComposerPage(): ReactElement {
                 </div>
                 {!generating && (
                   <div style={{ fontSize: 13, color: 'var(--text-4)', textAlign: 'center', maxWidth: 280 }}>
-                    Write your draft on the left, then hit Generate to see platform-specific variants.
+                    {selectedPlatforms.length === 0
+                      ? 'Select one or more platforms on the left, then hit Generate.'
+                      : 'Write your draft on the left, then hit Generate to see platform-specific variants.'}
                   </div>
                 )}
               </div>
@@ -718,6 +733,44 @@ export default function ComposerPage(): ReactElement {
           </div>
         </div>
       </div>
+
+      {/* ── Image lightbox ── */}
+      {previewImage && (
+        <div
+          onClick={() => setPreviewImage(null)}
+          style={{
+            position: 'fixed', inset: 0, zIndex: 1000,
+            background: 'rgba(0,0,0,0.82)',
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+            cursor: 'zoom-out',
+          }}
+        >
+          <img
+            src={previewImage.dataUrl ?? `file://${previewImage.localPath}`}
+            onClick={(e) => e.stopPropagation()}
+            style={{
+              maxWidth: '80vw', maxHeight: '80vh',
+              borderRadius: 12,
+              boxShadow: '0 24px 64px rgba(0,0,0,0.5)',
+              objectFit: 'contain',
+              cursor: 'default',
+            }}
+            alt=""
+          />
+          <button
+            onClick={() => setPreviewImage(null)}
+            style={{
+              position: 'fixed', top: 20, right: 24,
+              background: 'rgba(255,255,255,0.12)', border: 'none',
+              borderRadius: '50%', width: 36, height: 36,
+              color: '#fff', fontSize: 18, cursor: 'pointer',
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
+            }}
+          >
+            <X size={18} />
+          </button>
+        </div>
+      )}
     </div>
   )
 }

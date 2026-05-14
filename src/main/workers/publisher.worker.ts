@@ -206,7 +206,10 @@ async function processJob(job: JobRow): Promise<void> {
   } catch (e) {
     const error = String(e)
     const attempts = job.attempts + 1
-    const permanent = attempts >= MAX_ATTEMPTS
+    // These API errors will never resolve on retry — mark permanent immediately
+    const permanentPatterns = ['CreditsDepleted', 'Forbidden', '401', '403', 'invalid_token', 'token_expired']
+    const isPermanentError = permanentPatterns.some((p) => error.includes(p))
+    const permanent = attempts >= MAX_ATTEMPTS || isPermanentError
 
     markFailed(job.id, attempts, error, permanent)
 

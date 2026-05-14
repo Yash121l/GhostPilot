@@ -1,7 +1,7 @@
 import { nanoid } from 'nanoid'
 import { eq, desc } from 'drizzle-orm'
 import { getDb } from '../../infrastructure/db/connection'
-import { posts, draftVariants, jobs } from '../../infrastructure/db/schema'
+import { posts, draftVariants, jobs, personas } from '../../infrastructure/db/schema'
 import { AuditAction } from '../../infrastructure/db/schema'
 import type { AuditService } from '../../application/audit/audit.service'
 import type { Post, DraftVariant, Job, ImageAttachment } from '../../../shared/types/post'
@@ -20,13 +20,38 @@ export class PostService {
     const id = nanoid()
     const now = new Date()
 
+    // Resolve personaId — 'default' or unknown IDs must map to a real row (FK constraint)
+    let personaId = input.personaId
+    const personaExists = personaId !== 'default' &&
+      (await db.select({ id: personas.id }).from(personas).where(eq(personas.id, personaId))).length > 0
+
+    if (!personaExists) {
+      const existing = await db.select({ id: personas.id }).from(personas).limit(1)
+      if (existing.length > 0) {
+        personaId = existing[0].id
+      } else {
+        // No personas at all — seed a default one
+        const defaultId = nanoid()
+        await db.insert(personas).values({
+          id: defaultId,
+          name: 'Default',
+          bio: '',
+          pillars: '[]',
+          styleHints: '',
+          createdAt: now,
+          updatedAt: now,
+        })
+        personaId = defaultId
+      }
+    }
+
     await db.insert(posts).values({
       id,
-      personaId: input.personaId,
+      personaId,
       status: PostStatus.DRAFT,
       body: input.body,
       platforms: JSON.stringify(input.platforms),
-      imagePaths: JSON.stringify(input.images ?? []),
+      imagePaths: JSON.stringify((input.images ?? []).map(({ dataUrl: _, ...rest }) => rest)),
       attempts: 0,
       createdAt: now,
       updatedAt: now,
@@ -180,9 +205,11 @@ export class PostService {
 
   async setImages(postId: string, images: ImageAttachment[]): Promise<Post> {
     const db = getDb()
+    // Strip dataUrl — renderer-only field, must not be persisted
+    const persisted = images.map(({ dataUrl: _, ...rest }) => rest)
     await db
       .update(posts)
-      .set({ imagePaths: JSON.stringify(images), updatedAt: new Date() })
+      .set({ imagePaths: JSON.stringify(persisted), updatedAt: new Date() })
       .where(eq(posts.id, postId))
     return this.get(postId)
   }

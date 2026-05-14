@@ -73,6 +73,14 @@ function createCallbackServer(
     res.end()
   })
 
+  server.on('error', (err: NodeJS.ErrnoException) => {
+    if (err.code === 'EADDRINUSE') {
+      logger.warn({ msg: 'Fallback OAuth port already in use — deep link will handle callback', port })
+    } else {
+      logger.error({ msg: 'OAuth callback server error', err: err.message })
+    }
+  })
+
   server.listen(port, '127.0.0.1')
   return server
 }
@@ -126,8 +134,16 @@ export class OAuthManager {
     const state = nanoid(32)
     const codeVerifier = randomBytes(32).toString('base64url')
 
-    // Start localhost fallback server before opening the browser
-    this.callbackServer?.close()
+    // Wait for any previous server to fully release the port before binding again
+    await new Promise<void>((resolve) => {
+      if (this.callbackServer) {
+        this.callbackServer.close(() => resolve())
+        this.callbackServer = null
+      } else {
+        resolve()
+      }
+    })
+
     this.callbackServer = createCallbackServer(
       this.callbackPort,
       (code, receivedState) => {

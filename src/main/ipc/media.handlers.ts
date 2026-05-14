@@ -1,5 +1,5 @@
 import { ipcMain, dialog, app } from 'electron'
-import { copyFileSync, mkdirSync } from 'fs'
+import { copyFileSync, mkdirSync, readFileSync } from 'fs'
 import { join, extname } from 'path'
 import { nanoid } from 'nanoid'
 import { IPC_CHANNELS } from '../../shared/ipc-types'
@@ -51,7 +51,9 @@ export function registerMediaHandlers(): void {
         const localPath = join(mediaDir, destName)
         copyFileSync(srcPath, localPath)
 
-        attachments.push({ localPath, mimeType: mimeForExt(ext) })
+        const mime = mimeForExt(ext)
+        const dataUrl = `data:${mime};base64,${readFileSync(localPath).toString('base64')}`
+        attachments.push({ localPath, mimeType: mime, dataUrl })
         logger.info({ msg: 'Image attached', localPath })
       }
 
