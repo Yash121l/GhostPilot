@@ -1,6 +1,6 @@
 {
   "name": "ghostpilot",
-  "version": "1.0.2",
+  "version": "1.0.3",
   "description": "Local-first BYOK desktop app for AI-powered social publishing",
   "main": "./out/main/index.js",
   "author": "Yash Lunawat",
