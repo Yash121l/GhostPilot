@@ -96,23 +96,41 @@ jobs:
           security list-keychain -d user -s "$KEYCHAIN_PATH"
           rm /tmp/certificate.p12
 
+      # ── Export signing env vars (only when secrets are actually set) ──────────
+      # electron-builder treats CSC_LINK='' as a file path, resolving to the
+      # project directory and failing "not a file". Only export when non-empty.
+      - name: Configure macOS signing
+        if: runner.os == 'macOS'
+        shell: bash
+        run: |
+          CERT="${{ secrets.APPLE_CERTIFICATE }}"
+          if [ -n "$CERT" ]; then
+            echo "CSC_LINK=$CERT" >> $GITHUB_ENV
+            echo "CSC_KEY_PASSWORD=${{ secrets.APPLE_CERTIFICATE_PASSWORD }}" >> $GITHUB_ENV
+            echo "CSC_IDENTITY_AUTO_DISCOVERY=true" >> $GITHUB_ENV
+          else
+            echo "CSC_IDENTITY_AUTO_DISCOVERY=false" >> $GITHUB_ENV
+          fi
+
+      - name: Configure Windows signing
+        if: runner.os == 'Windows'
+        shell: bash
+        run: |
+          WIN_CERT="${{ secrets.WIN_CSC_LINK }}"
+          if [ -n "$WIN_CERT" ]; then
+            echo "WIN_CSC_LINK=$WIN_CERT" >> $GITHUB_ENV
+            echo "WIN_CSC_KEY_PASSWORD=${{ secrets.WIN_CSC_KEY_PASSWORD }}" >> $GITHUB_ENV
+          fi
+
       # ── Build & upload to GitHub Releases ──────────────────────────────────
       - name: Build & publish
         run: npx electron-vite build && npx electron-builder ${{ matrix.args }} --publish always
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          # macOS signing (only active when secrets are set)
-          CSC_LINK: ${{ secrets.APPLE_CERTIFICATE }}
-          CSC_KEY_PASSWORD: ${{ secrets.APPLE_CERTIFICATE_PASSWORD }}
           # macOS notarization (only active when secrets are set)
           APPLE_ID: ${{ secrets.APPLE_ID }}
           APPLE_APP_SPECIFIC_PASSWORD: ${{ secrets.APPLE_APP_SPECIFIC_PASSWORD }}
           APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
-          # Windows signing (optional — set WIN_CSC_LINK + WIN_CSC_KEY_PASSWORD)
-          WIN_CSC_LINK: ${{ secrets.WIN_CSC_LINK }}
-          WIN_CSC_KEY_PASSWORD: ${{ secrets.WIN_CSC_KEY_PASSWORD }}
-          # Skip signing gracefully if certs not configured
-          CSC_IDENTITY_AUTO_DISCOVERY: ${{ secrets.APPLE_CERTIFICATE != '' }}
 
   # ── 3. Create the GitHub Release with release notes ────────────────────────
   create-release:

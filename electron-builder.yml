@@ -82,8 +82,8 @@ nsis:
   createStartMenuShortcut: true
   oneClick: false
   allowToChangeInstallationDirectory: true
-  installerIcon: resources/icon.png
-  uninstallerIcon: resources/icon.png
+  installerIcon: build/icon.ico
+  uninstallerIcon: build/icon.ico
 
 portable:
   artifactName: ${productName}-${version}-portable.${ext}
