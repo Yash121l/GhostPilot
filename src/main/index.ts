@@ -158,6 +158,7 @@ function createMainWindow(): BrowserWindow {
     minHeight: 600,
     show: false,
     titleBarStyle: 'hiddenInset',
+    icon: join(__dirname, '../../resources/icon.png'),
     webPreferences: {
       preload: join(__dirname, '../preload/index.js'),
       contextIsolation: true,

@@ -36,7 +36,7 @@ mac:
         - arm64    # Apple Silicon (M1/M2/M3/M4)
         - x64      # Intel
   category: public.app-category.productivity
-  icon: resources/icon.png
+  icon: build/icon.icns
   # Entitlements for macOS sandbox / hardened runtime
   entitlementsInherit: build/entitlements.mac.plist
   hardenedRuntime: true
@@ -52,7 +52,7 @@ mac:
 dmg:
   artifactName: ${productName}-${version}-${arch}.${ext}
   title: ${productName} ${version}
-  icon: resources/icon.png
+  icon: build/icon.icns
   iconSize: 80
   contents:
     - x: 130
@@ -71,7 +71,7 @@ win:
     - target: portable
       arch:
         - x64
-  icon: resources/icon.png
+  icon: build/icon.ico
   executableName: GhostPilot
 
 nsis:
@@ -97,7 +97,7 @@ linux:
     - target: deb
       arch:
         - x64
-  icon: resources/icon.png
+  icon: build/icon.png
   category: Utility
   maintainer: Yash Lunawat <yash@yashlunawat.com>
   description: Local-first AI-powered social publishing desktop app
