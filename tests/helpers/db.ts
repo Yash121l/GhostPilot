@@ -51,6 +51,7 @@ export function createTestDb(): ReturnType<typeof drizzle> {
       status TEXT NOT NULL DEFAULT 'draft',
       body TEXT NOT NULL DEFAULT '',
       platforms TEXT NOT NULL DEFAULT '[]',
+      image_paths TEXT NOT NULL DEFAULT '[]',
       scheduled_at INTEGER,
       published_at INTEGER,
       attempts INTEGER NOT NULL DEFAULT 0,

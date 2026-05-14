@@ -7,6 +7,7 @@ import type {
   AnalyticsData,
   RateLimitState,
   PlatformEvent,
+  MediaBuffer,
 } from './interface'
 import { Platform } from '../../../shared/types/platform'
 import { createLogger } from '../../infrastructure/logger/logger'
@@ -147,9 +148,13 @@ export class LinkedInConnector implements SocialConnector {
       isReshareDisabledByAuthor: false,
     }
 
-    // Attach media if provided
-    if (post.mediaUrls?.length) {
-      const uploadedAssets = await this.uploadImages(post.mediaUrls, tokens.accessToken, authorUrn)
+    // Attach media if provided (prefer buffers for local files, fall back to URLs)
+    const mediaItems = post.mediaBuffers?.length ? post.mediaBuffers : undefined
+    const mediaUrlItems = !mediaItems && post.mediaUrls?.length ? post.mediaUrls : undefined
+    if (mediaItems?.length || mediaUrlItems?.length) {
+      const uploadedAssets = mediaItems
+        ? await this.uploadImageBuffers(mediaItems, tokens.accessToken, authorUrn)
+        : await this.uploadImages(mediaUrlItems!, tokens.accessToken, authorUrn)
       body['content'] = {
         media: {
           title: '',
@@ -311,6 +316,38 @@ export class LinkedInConnector implements SocialConnector {
     }
   }
 
+  private async uploadImageBuffers(
+    media: MediaBuffer[],
+    accessToken: string,
+    authorUrn: string,
+  ): Promise<string[]> {
+    const assetUrns: string[] = []
+    for (const item of media.slice(0, 20)) {
+      try {
+        const registerRes = await this.fetch(`${API_BASE}/rest/images?action=initializeUpload`, {
+          method: 'POST',
+          headers: {
+            Authorization: `Bearer ${accessToken}`,
+            'Content-Type': 'application/json',
+            'LinkedIn-Version': LI_VERSION,
+          },
+          body: JSON.stringify({ initializeUploadRequest: { owner: authorUrn } }),
+        })
+        if (!registerRes.ok) continue
+        const registerData = (await registerRes.json()) as { value: { uploadUrl: string; image: string } }
+        await fetch(registerData.value.uploadUrl, {
+          method: 'PUT',
+          headers: { Authorization: `Bearer ${accessToken}`, 'Content-Type': item.mimeType },
+          body: new Uint8Array(item.data),
+        })
+        assetUrns.push(registerData.value.image)
+      } catch (e) {
+        logger.warn({ msg: 'LinkedIn buffer upload failed', error: String(e) })
+      }
+    }
+    return assetUrns
+  }
+
   private async uploadImages(
     imageUrls: string[],
     accessToken: string,
@@ -320,7 +357,6 @@ export class LinkedInConnector implements SocialConnector {
 
     for (const imageUrl of imageUrls.slice(0, 20)) {
       try {
-        // Step 1: Register upload
         const registerRes = await this.fetch(`${API_BASE}/rest/images?action=initializeUpload`, {
           method: 'POST',
           headers: {
@@ -336,7 +372,6 @@ export class LinkedInConnector implements SocialConnector {
           value: { uploadUrl: string; image: string }
         }
 
-        // Step 2: Upload binary
         const imageRes = await fetch(imageUrl)
         const blob = await imageRes.arrayBuffer()
         await fetch(registerData.value.uploadUrl, {

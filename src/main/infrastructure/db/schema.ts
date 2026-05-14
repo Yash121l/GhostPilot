@@ -48,6 +48,7 @@ export const posts = sqliteTable('posts', {
   status: text('status').notNull().default('draft'),
   body: text('body').notNull().default(''),
   platforms: text('platforms').notNull().default('[]'), // JSON array
+  imagePaths: text('image_paths').notNull().default('[]'), // JSON array of ImageAttachment
   scheduledAt: integer('scheduled_at', { mode: 'timestamp' }),
   publishedAt: integer('published_at', { mode: 'timestamp' }),
   attempts: integer('attempts').notNull().default(0),

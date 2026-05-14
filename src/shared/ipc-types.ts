@@ -4,7 +4,7 @@
  */
 
 import type { Result, AppError } from './types/error'
-import type { Post, Job } from './types/post'
+import type { Post, Job, ImageAttachment } from './types/post'
 import type { Platform } from './types/platform'
 import type { Persona } from './types/persona'
 import type { Intent } from './types/intent'
@@ -83,6 +83,11 @@ export const IPC_CHANNELS = {
 
   // Audit
   AUDIT_QUERY: 'audit:query',
+
+  // Media
+  MEDIA_OPEN_DIALOG: 'media:openDialog',
+  POST_SET_IMAGES: 'post:setImages',
+  AI_IMAGE_GENERATE: 'ai:image:generate',
 } as const
 
 export type IPCChannel = (typeof IPC_CHANNELS)[keyof typeof IPC_CHANNELS]
@@ -93,6 +98,7 @@ export interface CreatePostInput {
   personaId: string
   body: string
   platforms: Platform[]
+  images?: ImageAttachment[]
 }
 
 export interface GenerateVariantsInput {
@@ -285,6 +291,19 @@ export interface IPCMap {
   [IPC_CHANNELS.AUDIT_QUERY]: {
     req: AuditQueryInput
     res: Result<AuditRow[], AppError>
+  }
+
+  [IPC_CHANNELS.MEDIA_OPEN_DIALOG]: {
+    req: Record<string, never>
+    res: Result<ImageAttachment[], AppError>
+  }
+  [IPC_CHANNELS.POST_SET_IMAGES]: {
+    req: { postId: string; images: ImageAttachment[] }
+    res: Result<Post, AppError>
+  }
+  [IPC_CHANNELS.AI_IMAGE_GENERATE]: {
+    req: { prompt: string }
+    res: Result<ImageAttachment, AppError>
   }
 
   // Phase 1 — Posts

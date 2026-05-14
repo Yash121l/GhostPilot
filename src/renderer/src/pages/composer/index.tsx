@@ -1,10 +1,10 @@
 import { useState, useCallback, useRef, useEffect, type ReactElement } from 'react'
 import {
   Sparkles, Briefcase, AtSign, Camera, CalendarDays,
-  Copy, Send, AlertCircle, CheckCircle, Trash2,
+  Copy, Send, AlertCircle, CheckCircle, Trash2, Paperclip, ImagePlus, X,
 } from 'lucide-react'
 import { ipc, IPC_CHANNELS } from '../../lib/ipc'
-import type { Post } from '@shared/types/post'
+import type { Post, ImageAttachment } from '@shared/types/post'
 import { Platform, PLATFORM_LABELS } from '@shared/types/platform'
 import { useVariantGenerator } from '../../hooks/useVariantGenerator'
 import { TiptapEditor } from '../../components/composer/TiptapEditor'
@@ -48,6 +48,10 @@ export default function ComposerPage(): ReactElement {
   const [posting, setPosting] = useState(false)
   const [copied, setCopied] = useState(false)
   const [successMsg, setSuccessMsg] = useState<string | null>(null)
+  const [images, setImages] = useState<ImageAttachment[]>([])
+  const [imageGenPrompt, setImageGenPrompt] = useState('')
+  const [imageGenOpen, setImageGenOpen] = useState(false)
+  const [imageGenLoading, setImageGenLoading] = useState(false)
 
   const editorRef = useRef<Editor | null>(null)
   const { state: genState, generate, reset: resetGen } = useVariantGenerator()
@@ -84,15 +88,49 @@ export default function ComposerPage(): ReactElement {
     setBodyText(text)
   }, [])
 
+  const handleAttachImage = useCallback(async (): Promise<void> => {
+    if (images.length >= 4) { setCreateError('Maximum 4 images per post.'); return }
+    const res = await ipc.invoke(IPC_CHANNELS.MEDIA_OPEN_DIALOG, {})
+    if (!res.ok) { setCreateError(res.error.message); return }
+    const newImages = [...images, ...res.value].slice(0, 4)
+    setImages(newImages)
+    if (savedPost) {
+      await ipc.invoke(IPC_CHANNELS.POST_SET_IMAGES, { postId: savedPost.id, images: newImages })
+    }
+  }, [images, savedPost])
+
+  const handleGenerateImage = useCallback(async (): Promise<void> => {
+    const prompt = imageGenPrompt.trim() || bodyText.trim()
+    if (!prompt) { setCreateError('Enter a prompt or write some text first.'); return }
+    if (images.length >= 4) { setCreateError('Maximum 4 images per post.'); return }
+    setImageGenLoading(true)
+    setCreateError(null)
+    const res = await ipc.invoke(IPC_CHANNELS.AI_IMAGE_GENERATE, { prompt })
+    setImageGenLoading(false)
+    if (!res.ok) { setCreateError(res.error.message); return }
+    const newImages = [...images, res.value].slice(0, 4)
+    setImages(newImages)
+    setImageGenOpen(false)
+    setImageGenPrompt('')
+    if (savedPost) {
+      await ipc.invoke(IPC_CHANNELS.POST_SET_IMAGES, { postId: savedPost.id, images: newImages })
+    }
+  }, [imageGenPrompt, bodyText, images, savedPost])
+
+  const handleRemoveImage = useCallback(async (localPath: string): Promise<void> => {
+    const newImages = images.filter((img) => img.localPath !== localPath)
+    setImages(newImages)
+    if (savedPost) {
+      await ipc.invoke(IPC_CHANNELS.POST_SET_IMAGES, { postId: savedPost.id, images: newImages })
+    }
+  }, [images, savedPost])
+
   const handleGenerate = useCallback(async (): Promise<void> => {
     const body = bodyText.trim()
     if (!body) { setCreateError('Write something first.'); return }
     if (!selectedPlatforms.length) { setCreateError('Select at least one platform.'); return }
     setCreateError(null)
 
-    // Always create one post per composer session.
-    // If we already have a savedPost, try to update its body.
-    // If the post no longer exists in DB (e.g. was cleared), create a new one.
     let post = savedPost
 
     if (post) {
@@ -101,7 +139,6 @@ export default function ComposerPage(): ReactElement {
         post = updateRes.value
         setSavedPost(post)
       } else {
-        // Post was deleted — create fresh
         post = null
         setSavedPost(null)
       }
@@ -112,23 +149,30 @@ export default function ComposerPage(): ReactElement {
         personaId: personaId || 'default',
         body,
         platforms: selectedPlatforms,
+        images,
       })
       if (!createRes.ok) { setCreateError(createRes.error.message); return }
       post = createRes.value
       setSavedPost(post)
+    } else if (images.length) {
+      // Sync images to existing post
+      await ipc.invoke(IPC_CHANNELS.POST_SET_IMAGES, { postId: post.id, images })
     }
 
     await generate(post.id, selectedPlatforms)
-  }, [bodyText, personaId, selectedPlatforms, savedPost, generate])
+  }, [bodyText, personaId, selectedPlatforms, savedPost, generate, images])
 
   const handleClear = useCallback((): void => {
     editorRef.current?.commands.clearContent()
     setBodyText('')
-    setSavedPost(null)  // forget the post ID — next Generate creates a fresh one
+    setSavedPost(null)
     setCreateError(null)
     setSuccessMsg(null)
     setScheduleStep('idle')
     setScheduleAt('')
+    setImages([])
+    setImageGenOpen(false)
+    setImageGenPrompt('')
     resetGen()
   }, [resetGen])
 
@@ -245,7 +289,7 @@ export default function ComposerPage(): ReactElement {
         {/* ── Left: editor ── */}
         <div style={{
           display: 'flex', flexDirection: 'column',
-          width: '50%', borderRight: '1px solid var(--border)',
+          width: '50%', minWidth: 0, borderRight: '1px solid var(--border)',
         }}>
           {/* Platform chips */}
           <div style={{
@@ -280,6 +324,102 @@ export default function ComposerPage(): ReactElement {
             })}
           </div>
 
+          {/* Image bar */}
+          <div style={{
+            borderBottom: '1px solid var(--border)',
+            padding: '8px 16px',
+            display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap',
+          }}>
+            {images.map((img) => (
+              <div key={img.localPath} style={{
+                position: 'relative', width: 52, height: 52, borderRadius: 8, overflow: 'hidden',
+                border: '1px solid var(--border)', flexShrink: 0,
+              }}>
+                <img
+                  src={`file://${img.localPath}`}
+                  style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+                  alt=""
+                />
+                <button
+                  onClick={() => handleRemoveImage(img.localPath)}
+                  style={{
+                    position: 'absolute', top: 1, right: 1,
+                    background: 'rgba(0,0,0,0.6)', border: 'none', borderRadius: '50%',
+                    width: 16, height: 16, cursor: 'pointer', color: '#fff',
+                    display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 0,
+                  }}
+                >
+                  <X size={9} />
+                </button>
+              </div>
+            ))}
+            {images.length < 4 && (
+              <>
+                <button
+                  onClick={handleAttachImage}
+                  title="Attach image"
+                  style={{
+                    display: 'inline-flex', alignItems: 'center', gap: 5,
+                    padding: '4px 10px', borderRadius: 8, fontSize: 11, fontWeight: 600,
+                    background: 'transparent', color: 'var(--text-3)',
+                    border: '1px dashed var(--border)', cursor: 'pointer',
+                  }}
+                >
+                  <Paperclip size={11} /> Attach
+                </button>
+                <button
+                  onClick={() => setImageGenOpen((v) => !v)}
+                  title="Generate image with AI"
+                  style={{
+                    display: 'inline-flex', alignItems: 'center', gap: 5,
+                    padding: '4px 10px', borderRadius: 8, fontSize: 11, fontWeight: 600,
+                    background: imageGenOpen ? 'var(--accent-soft)' : 'transparent',
+                    color: imageGenOpen ? 'var(--accent)' : 'var(--text-3)',
+                    border: `1px dashed ${imageGenOpen ? 'var(--accent)' : 'var(--border)'}`,
+                    cursor: 'pointer',
+                  }}
+                >
+                  <ImagePlus size={11} /> Generate
+                </button>
+              </>
+            )}
+          </div>
+
+          {/* AI image generation prompt */}
+          {imageGenOpen && (
+            <div style={{
+              padding: '8px 16px', borderBottom: '1px solid var(--border)',
+              display: 'flex', gap: 6, alignItems: 'center',
+            }}>
+              <input
+                placeholder="Describe the image… (blank = use post text)"
+                value={imageGenPrompt}
+                onChange={(e) => setImageGenPrompt(e.target.value)}
+                onKeyDown={(e) => { if (e.key === 'Enter') handleGenerateImage() }}
+                style={{
+                  flex: 1, background: 'var(--bg-subtle)', color: 'var(--text)',
+                  border: '1px solid var(--border)', borderRadius: 7,
+                  padding: '6px 10px', fontSize: 12, outline: 'none',
+                }}
+              />
+              <button
+                onClick={handleGenerateImage}
+                disabled={imageGenLoading}
+                style={{
+                  background: 'var(--accent)', color: '#fff', border: 'none',
+                  borderRadius: 7, padding: '6px 12px', fontSize: 12,
+                  fontWeight: 600, cursor: imageGenLoading ? 'not-allowed' : 'pointer',
+                  opacity: imageGenLoading ? 0.7 : 1, display: 'flex', alignItems: 'center', gap: 5,
+                }}
+              >
+                {imageGenLoading
+                  ? <span style={{ width: 12, height: 12, borderRadius: '50%', border: '2px solid #fff', borderTopColor: 'transparent', display: 'inline-block', animation: 'spin 0.8s linear infinite' }} />
+                  : <Sparkles size={11} />}
+                {imageGenLoading ? 'Generating…' : 'Create'}
+              </button>
+            </div>
+          )}
+
           {/* Editor */}
           <div style={{ flex: 1, overflow: 'hidden' }}>
             <TiptapEditor onChange={handleEditorChange} editorRef={handleEditorRef} />
@@ -310,7 +450,7 @@ export default function ComposerPage(): ReactElement {
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 12, color: 'var(--text-3)' }}>
                 <span>🏷</span>
-                <span>0 attachments</span>
+                <span>{images.length} image{images.length !== 1 ? 's' : ''}</span>
                 {personaName && (
                   <>
                     <span style={{ color: 'var(--border-strong)' }}>·</span>
@@ -374,11 +514,11 @@ export default function ComposerPage(): ReactElement {
         </div>
 
         {/* ── Right: variants ── */}
-        <div style={{ display: 'flex', flexDirection: 'column', width: '50%' }}>
+        <div style={{ display: 'flex', flexDirection: 'column', width: '50%', minWidth: 0 }}>
           {/* Platform tabs */}
           <div style={{
             display: 'flex', borderBottom: '1px solid var(--border)',
-            padding: '0 16px',
+            padding: '0 16px', overflowX: 'auto',
           }}>
             {PLATFORMS.map((p) => {
               const Icon = PLATFORM_ICONS[p]
@@ -394,7 +534,7 @@ export default function ComposerPage(): ReactElement {
                     color: isActive ? PLATFORM_COLORS[p] : 'var(--text-3)',
                     background: 'none', border: 'none', cursor: 'pointer',
                     borderBottom: isActive ? `2px solid ${PLATFORM_COLORS[p]}` : '2px solid transparent',
-                    marginBottom: -1,
+                    marginBottom: -1, flexShrink: 0,
                   }}
                 >
                   <Icon size={13} />
@@ -456,6 +596,7 @@ export default function ComposerPage(): ReactElement {
                     padding: '12px 16px',
                     borderTop: '1px solid var(--border)',
                     background: 'var(--bg-subtle)',
+                    flexWrap: 'wrap',
                   }}>
                     {successMsg ? (
                       <span style={{ fontSize: 12, color: 'var(--success)', display: 'flex', alignItems: 'center', gap: 5, flex: 1 }}>

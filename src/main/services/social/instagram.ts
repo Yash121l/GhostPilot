@@ -131,11 +131,12 @@ export class InstagramConnector implements SocialConnector {
       access_token: tokens.accessToken,
     }
 
-    if (post.mediaUrls?.[0]) {
-      containerParams['image_url'] = post.mediaUrls[0]
+    // Instagram requires a public HTTPS URL — use originalUrl from AI-gen or a direct mediaUrl
+    const igImageUrl = post.mediaBuffers?.[0]?.originalUrl ?? post.mediaUrls?.[0]
+    if (igImageUrl) {
+      containerParams['image_url'] = igImageUrl
       containerParams['media_type'] = 'IMAGE'
     } else {
-      // Caption-only (allowed for Business accounts with linked Facebook page)
       containerParams['media_type'] = 'IMAGE'
     }
 

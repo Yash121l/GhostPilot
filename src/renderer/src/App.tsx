@@ -77,6 +77,8 @@ export default function App(): ReactElement {
   const [connections, setConnections] = useState<AuthStatusOutput[]>([])
   const [aiConfigured, setAiConfigured] = useState(false)
   const [dbOk] = useState(true)
+  const [version, setVersion] = useState('...')
+  const [updateVersion, setUpdateVersion] = useState<string | null>(null)
 
   useEffect(() => {
     ipc.invoke(IPC_CHANNELS.AUTH_STATUS, {}).then((res) => {
@@ -88,6 +90,8 @@ export default function App(): ReactElement {
     ipc.invoke(IPC_CHANNELS.AI_OLLAMA_STATUS, {}).then((res) => {
       if (res.ok && res.value.available) setAiConfigured(true)
     })
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    ;(window as any).api?.getVersion().then((v: string) => setVersion(v))
   }, [])
 
   useEffect(() => {
@@ -118,6 +122,14 @@ export default function App(): ReactElement {
     }
     window.addEventListener('nav', handler)
     return () => window.removeEventListener('nav', handler)
+  }, [])
+
+  useEffect(() => {
+    const unsub = window.api?.on('updater:update-available', (info: unknown) => {
+      const { version: v } = info as { version: string }
+      setUpdateVersion(v)
+    })
+    return () => unsub?.()
   }, [])
 
   const connectedCount = connections.filter((c) => c.connected).length
@@ -190,6 +202,43 @@ export default function App(): ReactElement {
         <div className="animate-slide-up h-full">{PAGES[page]}</div>
       </main>
 
+      {/* ── Update notification ── */}
+      {updateVersion && (
+        <div style={{
+          position: 'fixed', bottom: 36, right: 16, zIndex: 9999,
+          background: 'var(--bg-card)', border: '1px solid var(--accent)',
+          borderRadius: 10, padding: '10px 14px',
+          display: 'flex', alignItems: 'center', gap: 10,
+          fontSize: 12, boxShadow: '0 4px 20px rgba(0,0,0,0.25)',
+        }}>
+          <span style={{ color: 'var(--text-2)' }}>
+            Update <strong>v{updateVersion}</strong> available
+          </span>
+          <button
+            onClick={() => {
+              // eslint-disable-next-line @typescript-eslint/no-explicit-any
+              ;(window as any).api.invoke('updater:open-releases', {})
+            }}
+            style={{
+              background: 'var(--accent)', color: '#fff', border: 'none',
+              borderRadius: 6, padding: '5px 12px', fontSize: 12,
+              fontWeight: 600, cursor: 'pointer',
+            }}
+          >
+            Download
+          </button>
+          <button
+            onClick={() => setUpdateVersion(null)}
+            style={{
+              background: 'none', border: 'none', color: 'var(--text-3)',
+              cursor: 'pointer', fontSize: 14, lineHeight: '1', padding: 0,
+            }}
+          >
+            ✕
+          </button>
+        </div>
+      )}
+
       {/* ── Status bar ── */}
       <footer className="statusbar select-none">
         <span className="ok">
@@ -213,7 +262,7 @@ export default function App(): ReactElement {
           style={{ fontSize: 11, color: 'var(--text-3)', cursor: 'pointer' }}
           onClick={() => setPage('settings')}
         >
-          ⌖ v1.0.0
+          ⌖ v{version}
         </span>
       </footer>
     </div>

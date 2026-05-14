@@ -4,7 +4,7 @@ import { getDb } from '../../infrastructure/db/connection'
 import { posts, draftVariants, jobs } from '../../infrastructure/db/schema'
 import { AuditAction } from '../../infrastructure/db/schema'
 import type { AuditService } from '../../application/audit/audit.service'
-import type { Post, DraftVariant, Job } from '../../../shared/types/post'
+import type { Post, DraftVariant, Job, ImageAttachment } from '../../../shared/types/post'
 import { PostStatus } from '../../../shared/types/post'
 import type { Platform } from '../../../shared/types/platform'
 import { AppError, ErrorCode } from '../../../shared/types/error'
@@ -15,7 +15,7 @@ const logger = createLogger('PostService')
 export class PostService {
   constructor(private readonly audit: AuditService) {}
 
-  async create(input: { personaId: string; body: string; platforms: Platform[] }): Promise<Post> {
+  async create(input: { personaId: string; body: string; platforms: Platform[]; images?: ImageAttachment[] }): Promise<Post> {
     const db = getDb()
     const id = nanoid()
     const now = new Date()
@@ -26,6 +26,7 @@ export class PostService {
       status: PostStatus.DRAFT,
       body: input.body,
       platforms: JSON.stringify(input.platforms),
+      imagePaths: JSON.stringify(input.images ?? []),
       attempts: 0,
       createdAt: now,
       updatedAt: now,
@@ -177,6 +178,15 @@ export class PostService {
     return { id: jobId, postId, variantId, platform, scheduledAt, attempts: 0, status: 'pending' }
   }
 
+  async setImages(postId: string, images: ImageAttachment[]): Promise<Post> {
+    const db = getDb()
+    await db
+      .update(posts)
+      .set({ imagePaths: JSON.stringify(images), updatedAt: new Date() })
+      .where(eq(posts.id, postId))
+    return this.get(postId)
+  }
+
   async delete(id: string): Promise<void> {
     const db = getDb()
     await db.delete(posts).where(eq(posts.id, id))
@@ -210,6 +220,7 @@ export class PostService {
         provider: v.provider,
         modelId: v.modelId,
       })),
+      images: JSON.parse(r.imagePaths ?? '[]') as ImageAttachment[],
       scheduledAt: r.scheduledAt ?? undefined,
       publishedAt: r.publishedAt ?? undefined,
       attempts: r.attempts,

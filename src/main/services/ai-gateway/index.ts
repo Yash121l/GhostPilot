@@ -1,5 +1,10 @@
 import { nanoid } from 'nanoid'
+import OpenAI from 'openai'
+import { writeFileSync, mkdirSync } from 'fs'
+import { join } from 'path'
+import { app } from 'electron'
 import type { AIGatewayRequest, AIGatewayResponse, ProviderKeyConfig, OllamaStatus } from '../../../shared/types/ai'
+import type { ImageAttachment } from '../../../shared/types/post'
 import { AIProvider, ModelHint } from '../../../shared/types/ai'
 import { AppError, ErrorCode } from '../../../shared/types/error'
 import type { LLMProvider } from './providers/interface'
@@ -271,6 +276,41 @@ export class AIGateway {
 
   async ollamaStatus(): Promise<OllamaStatus> {
     return detectOllama()
+  }
+
+  async generateImage(prompt: string): Promise<ImageAttachment> {
+    const db = getDb()
+    const rows = await db.select().from(aiProviderKeys).where(eq(aiProviderKeys.provider, 'openai'))
+    if (!rows.length) {
+      throw new AppError({ code: ErrorCode.AI_PROVIDER_NOT_CONFIGURED, message: 'OpenAI key required for image generation.' })
+    }
+    const secret = await this.keychain.get(rows[0].keychainKey)
+    if (!secret) {
+      throw new AppError({ code: ErrorCode.KEYCHAIN_READ_FAILED, message: 'OpenAI key not found in keychain.' })
+    }
+
+    const openai = new OpenAI({ apiKey: secret })
+    const result = await openai.images.generate({
+      model: 'dall-e-3',
+      prompt,
+      n: 1,
+      size: '1024x1024',
+      response_format: 'b64_json',
+    })
+
+    const imageData = result.data?.[0]
+    const b64 = imageData?.b64_json
+    const originalUrl = imageData?.url
+    if (!b64) throw new AppError({ code: ErrorCode.AI_CALL_FAILED, message: 'DALL-E returned no image data.' })
+
+    const mediaDir = join(app.getPath('userData'), 'media')
+    mkdirSync(mediaDir, { recursive: true })
+    const filename = `${nanoid()}.png`
+    const localPath = join(mediaDir, filename)
+    writeFileSync(localPath, Buffer.from(b64, 'base64'))
+
+    logger.info({ msg: 'Image generated', localPath })
+    return { localPath, originalUrl: originalUrl ?? undefined, mimeType: 'image/png' }
   }
 
   get ledgerInstance(): UsageLedger {

@@ -101,6 +101,11 @@ interface VariantRow {
   post_id: string
 }
 
+interface PostRow {
+  id: string
+  image_paths: string // JSON array of ImageAttachment
+}
+
 function getDueJobs(): JobRow[] {
   return db
     .prepare(`SELECT * FROM jobs WHERE status = 'pending' AND scheduled_at <= ? ORDER BY scheduled_at ASC LIMIT 20`)
@@ -109,6 +114,11 @@ function getDueJobs(): JobRow[] {
 
 function getVariant(variantId: string): VariantRow | undefined {
   return db.prepare('SELECT * FROM draft_variants WHERE id = ?').get(variantId) as VariantRow | undefined
+}
+
+function getPostImagePaths(postId: string): string {
+  const row = db.prepare('SELECT image_paths FROM posts WHERE id = ?').get(postId) as PostRow | undefined
+  return row?.image_paths ?? '[]'
 }
 
 function markRunning(jobId: string): void {
@@ -164,6 +174,7 @@ function requestPublish(job: JobRow, body: string): Promise<{ url: string; exter
       variantId: job.variant_id,
       platform: job.platform,
       body,
+      imagePaths: getPostImagePaths(job.post_id),
     })
   })
 }

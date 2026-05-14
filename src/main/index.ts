@@ -1,6 +1,7 @@
 import { app, BrowserWindow, Tray, nativeImage, dialog, shell, protocol, Notification } from 'electron'
 import { join } from 'path'
 import { readFileSync, existsSync } from 'fs'
+import type { ImageAttachment } from '../shared/types/post'
 import { resolve } from 'path'
 import { Worker } from 'worker_threads'
 import { electronApp, optimizer } from '@electron-toolkit/utils'
@@ -8,6 +9,7 @@ import { initDb, closeDb, getDbPath } from './infrastructure/db/connection'
 import { runMigrations } from './infrastructure/db/migration-runner'
 import { createLogger } from './infrastructure/logger/logger'
 import { registerAllHandlers } from './ipc'
+import { setupUpdater } from './ipc/updater.handlers'
 import { initServices, getServices } from './services/index'
 import type { Platform } from '../shared/types/platform'
 import { APP_NAME, APP_URL_SCHEME } from '../shared/constants'
@@ -102,6 +104,18 @@ async function bootstrap(): Promise<void> {
         const jobId = msg.jobId
         const platform = msg.platform as Platform
         const body = (msg as unknown as Record<string, string>)['body'] ?? ''
+        const imagePathsJson = (msg as unknown as Record<string, string>)['imagePaths'] ?? '[]'
+
+        // Build mediaBuffers from local image files
+        let images: ImageAttachment[] = []
+        try { images = JSON.parse(imagePathsJson) as ImageAttachment[] } catch { /* ignore */ }
+        const mediaBuffers = images
+          .filter((img) => { try { readFileSync(img.localPath); return true } catch { return false } })
+          .map((img) => ({
+            data: readFileSync(img.localPath),
+            mimeType: img.mimeType,
+            originalUrl: img.originalUrl,
+          }))
 
         getServices().oauthManager.getTokens(platform).then(async (tokens) => {
           if (!tokens) {
@@ -114,7 +128,7 @@ async function bootstrap(): Promise<void> {
             return
           }
           try {
-            const result = await connector.publish({ body }, tokens)
+            const result = await connector.publish({ body, mediaBuffers: mediaBuffers.length ? mediaBuffers : undefined }, tokens)
             publisherWorker?.postMessage({ kind: 'publish_result', jobId, url: result.url, externalId: result.externalId })
           } catch (e) {
             publisherWorker?.postMessage({ kind: 'publish_error', jobId, error: String(e) })
@@ -148,6 +162,7 @@ async function bootstrap(): Promise<void> {
 
   // 5. Main window
   mainWindow = createMainWindow()
+  setupUpdater(mainWindow)
 }
 
 function createMainWindow(): BrowserWindow {

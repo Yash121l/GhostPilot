@@ -18,9 +18,19 @@ export interface CarouselItem {
   caption?: string
 }
 
+export interface MediaBuffer {
+  data: Buffer
+  mimeType: string
+  /** Original public URL — used by Instagram which requires HTTP URLs. */
+  originalUrl?: string
+}
+
 export interface PreparedPost {
   body: string
+  /** Public HTTP(S) URLs — used when local files are not available (e.g. Instagram). */
   mediaUrls?: string[]
+  /** Raw file buffers — used for direct binary upload (LinkedIn, Twitter). */
+  mediaBuffers?: MediaBuffer[]
   /** Sequential parts for a thread (X/Twitter). When set, publish as thread. */
   threadParts?: string[]
   /** Items for an Instagram carousel (up to 10). */

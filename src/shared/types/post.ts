@@ -17,6 +17,15 @@ export enum PostStatus {
   ARCHIVED = 'archived',
 }
 
+/** A media attachment for a post (local file or AI-generated image). */
+export interface ImageAttachment {
+  /** Absolute path on the user's machine — always present. */
+  localPath: string
+  /** Original public URL (DALL-E CDN, etc.) — used by Instagram which requires HTTP URLs. */
+  originalUrl?: string
+  mimeType: string
+}
+
 /** A single AI-generated variant of a post. */
 export interface DraftVariant {
   id: string
@@ -42,6 +51,7 @@ export interface Post {
   body: string
   platforms: Platform[]
   variants: DraftVariant[]
+  images: ImageAttachment[]
   scheduledAt?: Date
   publishedAt?: Date
   createdAt: Date

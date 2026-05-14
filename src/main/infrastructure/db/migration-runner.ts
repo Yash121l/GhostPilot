@@ -227,6 +227,11 @@ CREATE INDEX IF NOT EXISTS idx_trend_clusters_score  ON trend_clusters(composite
 CREATE INDEX IF NOT EXISTS idx_social_platform       ON social_connections(platform);
     `.trim(),
   },
+
+  {
+    filename: '0004_post_images.sql',
+    sql: `ALTER TABLE \`posts\` ADD COLUMN \`image_paths\` text NOT NULL DEFAULT '[]';`.trim(),
+  },
 ]
 
 // ── Runner ─────────────────────────────────────────────────────────────────────

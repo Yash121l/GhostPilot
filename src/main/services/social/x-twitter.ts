@@ -8,6 +8,7 @@ import type {
   AnalyticsData,
   RateLimitState,
   PlatformEvent,
+  MediaBuffer,
 } from './interface'
 import { Platform } from '../../../shared/types/platform'
 import { createLogger } from '../../infrastructure/logger/logger'
@@ -149,9 +150,11 @@ export class XTwitterConnector implements SocialConnector {
       return this.publishThread(post.threadParts, post.mediaUrls ?? [], tokens)
     }
 
-    // Upload media if provided
+    // Upload media if provided (prefer buffers for local files, fall back to URLs)
     let mediaIds: string[] | undefined
-    if (post.mediaUrls?.length) {
+    if (post.mediaBuffers?.length) {
+      mediaIds = await this.uploadMediaBuffers(post.mediaBuffers, tokens)
+    } else if (post.mediaUrls?.length) {
       mediaIds = await this.uploadMedia(post.mediaUrls, tokens)
     }
 
@@ -295,6 +298,29 @@ export class XTwitterConnector implements SocialConnector {
   }
 
   // ─── Media upload (v1.1 — OAuth 1.0a required) ────────────────────────────
+
+  private async uploadMediaBuffers(media: MediaBuffer[], tokens: OAuthTokens): Promise<string[]> {
+    const mediaIds: string[] = []
+    for (const item of media.slice(0, 4)) {
+      try {
+        const b64 = item.data.toString('base64')
+        const authHeader = consumerKey()
+          ? this.oauth1Header('POST', `${UPLOAD_API}/media/upload.json`, tokens)
+          : `Bearer ${tokens.accessToken}`
+        const uploadRes = await fetch(`${UPLOAD_API}/media/upload.json`, {
+          method: 'POST',
+          headers: { Authorization: authHeader, 'Content-Type': 'application/x-www-form-urlencoded' },
+          body: new URLSearchParams({ media_data: b64 }).toString(),
+        })
+        if (!uploadRes.ok) { logger.warn({ msg: 'X buffer upload failed', status: uploadRes.status }); continue }
+        const data = (await uploadRes.json()) as { media_id_string: string }
+        mediaIds.push(data.media_id_string)
+      } catch (e) {
+        logger.warn({ msg: 'X buffer upload error', error: String(e) })
+      }
+    }
+    return mediaIds
+  }
 
   private async uploadMedia(imageUrls: string[], tokens: OAuthTokens): Promise<string[]> {
     // Media upload uses v1.1 API with OAuth 1.0a if consumer creds available,

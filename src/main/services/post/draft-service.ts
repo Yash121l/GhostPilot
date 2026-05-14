@@ -214,6 +214,7 @@ export class DraftService {
           modelId: v.modelId,
         }),
       ),
+      images: JSON.parse((r as { imagePaths?: string }).imagePaths ?? '[]'),
       scheduledAt: r.scheduledAt ?? undefined,
       publishedAt: r.publishedAt ?? undefined,
       attempts: r.attempts,
