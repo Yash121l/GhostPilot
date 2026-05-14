@@ -4,12 +4,13 @@
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
 <title>GhostPilot — AI-powered social publishing, local-first</title>
-<meta name="description" content="Write once. GhostPilot adapts your draft for LinkedIn, X, and Instagram using your own AI keys. Runs entirely on your Mac — no subscriptions, no cloud." />
+<meta name="description" content="Write once. GhostPilot adapts your draft for LinkedIn, X, and Instagram using your own AI keys. Runs on macOS, Windows, and Linux — no subscriptions, no cloud." />
 <meta property="og:title" content="GhostPilot" />
 <meta property="og:description" content="Local-first, BYOK desktop app for AI-powered social publishing." />
 <meta property="og:image" content="https://ghostpilot.yashlunawat.com/og.png" />
 <meta property="og:url" content="https://ghostpilot.yashlunawat.com" />
 <meta name="twitter:card" content="summary_large_image" />
+<link rel="icon" href="favicon.png" type="image/png" />
 <link rel="icon" href="favicon.svg" type="image/svg+xml" />
 <style>
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
@@ -368,20 +369,20 @@ footer {
 <!-- ── Hero ── -->
 <section class="hero">
   <div class="container">
-    <div class="hero-badge"><span></span> Free &amp; open source · macOS</div>
+    <div class="hero-badge"><span></span> Free &amp; open source · macOS · Windows · Linux</div>
     <h1>Write once.<br><em>Publish everywhere.</em></h1>
-    <p class="hero-sub">GhostPilot adapts your draft for LinkedIn, X, and Instagram using your own AI keys. Runs entirely on your Mac — no subscriptions, no cloud, no data leaving your machine.</p>
+    <p class="hero-sub">GhostPilot adapts your draft for LinkedIn, X, and Instagram using your own AI keys. Runs entirely on your machine — no subscriptions, no cloud, no data leaving your device.</p>
     <div class="hero-actions">
-      <a href="https://github.com/yash121l/GhostPilot/releases/latest" class="btn-primary" id="hero-download">
+      <a href="https://github.com/Yash121l/GhostPilot/releases/latest" class="btn-primary" id="hero-download">
         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
-        Download for macOS
+        <span id="hero-download-label">Download — Free</span>
       </a>
-      <a href="https://github.com/yash121l/GhostPilot" class="btn-secondary" target="_blank" rel="noopener">
+      <a href="https://github.com/Yash121l/GhostPilot" class="btn-secondary" target="_blank" rel="noopener">
         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 19c-5 1.5-5-2.5-7-3m14 6v-3.87a3.37 3.37 0 0 0-.94-2.61c3.14-.35 6.44-1.54 6.44-7A5.44 5.44 0 0 0 20 4.77 5.07 5.07 0 0 0 19.91 1S18.73.65 16 2.48a13.38 13.38 0 0 0-7 0C6.27.65 5.09 1 5.09 1A5.07 5.07 0 0 0 5 4.77a5.44 5.44 0 0 0-1.5 3.78c0 5.42 3.3 6.61 6.44 7A3.37 3.37 0 0 0 9 18.13V22"/></svg>
         View on GitHub
       </a>
     </div>
-    <p class="hero-note">macOS 13+ · Free forever · Your keys, your data</p>
+    <p class="hero-note">macOS 13+ · Windows 10+ · Linux · Free forever · Your keys, your data</p>
 
     <!-- App mockup -->
     <div class="screenshot-wrap">
@@ -587,17 +588,57 @@ footer {
 <section class="cta-section">
   <div class="container">
     <h2 class="cta-title">Ready to ship your content?</h2>
-    <p class="cta-sub">Download GhostPilot and start publishing in minutes.</p>
-    <div class="hero-actions">
-      <a href="https://github.com/yash121l/GhostPilot/releases/latest" class="btn-primary">
-        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
-        Download for macOS — Free
+    <p class="cta-sub">Download GhostPilot for your platform and start publishing in minutes.</p>
+
+    <div style="display:flex;gap:16px;justify-content:center;flex-wrap:wrap;margin:32px 0 24px;">
+      <!-- macOS -->
+      <div style="background:var(--bg2);border:1px solid var(--border);border-radius:12px;padding:20px 24px;min-width:200px;text-align:center;">
+        <div style="font-size:28px;margin-bottom:8px;"></div>
+        <div style="font-weight:600;color:var(--text1);margin-bottom:4px;">macOS</div>
+        <div style="font-size:12px;color:var(--text3);margin-bottom:14px;">13 Ventura or later</div>
+        <a href="https://github.com/Yash121l/GhostPilot/releases/latest/download/GhostPilot-1.0.1-arm64.dmg" class="btn-primary" style="font-size:13px;padding:8px 16px;display:inline-flex;gap:6px;margin-bottom:6px;" download>
+          Apple Silicon
+        </a><br>
+        <a href="https://github.com/Yash121l/GhostPilot/releases/latest/download/GhostPilot-1.0.1-x64.dmg" style="font-size:12px;color:var(--text3);" download>
+          Intel Mac
+        </a>
+      </div>
+
+      <!-- Windows -->
+      <div style="background:var(--bg2);border:1px solid var(--border);border-radius:12px;padding:20px 24px;min-width:200px;text-align:center;">
+        <div style="font-size:28px;margin-bottom:8px;">🪟</div>
+        <div style="font-weight:600;color:var(--text1);margin-bottom:4px;">Windows</div>
+        <div style="font-size:12px;color:var(--text3);margin-bottom:14px;">10 / 11 · x64</div>
+        <a href="https://github.com/Yash121l/GhostPilot/releases/latest/download/GhostPilot-1.0.1-setup.exe" class="btn-primary" style="font-size:13px;padding:8px 16px;display:inline-flex;gap:6px;margin-bottom:6px;" download>
+          Installer (.exe)
+        </a><br>
+        <a href="https://github.com/Yash121l/GhostPilot/releases/latest/download/GhostPilot-1.0.1-portable.exe" style="font-size:12px;color:var(--text3);" download>
+          Portable
+        </a>
+      </div>
+
+      <!-- Linux -->
+      <div style="background:var(--bg2);border:1px solid var(--border);border-radius:12px;padding:20px 24px;min-width:200px;text-align:center;">
+        <div style="font-size:28px;margin-bottom:8px;">🐧</div>
+        <div style="font-weight:600;color:var(--text1);margin-bottom:4px;">Linux</div>
+        <div style="font-size:12px;color:var(--text3);margin-bottom:14px;">x64 · glibc 2.28+</div>
+        <a href="https://github.com/Yash121l/GhostPilot/releases/latest/download/GhostPilot-1.0.1.AppImage" class="btn-primary" style="font-size:13px;padding:8px 16px;display:inline-flex;gap:6px;margin-bottom:6px;" download>
+          AppImage
+        </a><br>
+        <a href="https://github.com/Yash121l/GhostPilot/releases/latest/download/GhostPilot-1.0.1-amd64.deb" style="font-size:12px;color:var(--text3);" download>
+          .deb (Debian/Ubuntu)
+        </a>
+      </div>
+    </div>
+
+    <div style="display:flex;gap:12px;justify-content:center;flex-wrap:wrap;">
+      <a href="https://github.com/Yash121l/GhostPilot/releases/latest" class="btn-secondary" target="_blank" rel="noopener">
+        All releases &amp; checksums →
       </a>
-      <a href="https://github.com/yash121l/GhostPilot/blob/main/SETUP.md" class="btn-secondary" target="_blank" rel="noopener">
-        Read the setup guide →
+      <a href="https://github.com/Yash121l/GhostPilot/blob/main/SETUP.md" class="btn-secondary" target="_blank" rel="noopener">
+        Setup guide →
       </a>
     </div>
-    <p class="hero-note" style="margin-top: 20px;">macOS 13 Ventura or later · Apple Silicon &amp; Intel</p>
   </div>
 </section>
 
@@ -678,21 +719,38 @@ footer {
   });
 })();
 
-// ── Smooth download button OS detection ──────────────────────────────────────
+// ── Hero download button: OS detection → direct download link ─────────────────
 (function () {
-  var isWin = /Win/.test(navigator.platform);
-  var isLinux = /Linux/.test(navigator.platform);
-  var base = 'https://github.com/yash121l/GhostPilot/releases/latest';
+  var ua = navigator.userAgentData ? navigator.userAgentData.platform : navigator.platform;
+  var isMac = /Mac/.test(ua);
+  var isWin = /Win/.test(ua);
+  var isLinux = /Linux/.test(ua);
 
-  // Update button labels based on OS
-  document.querySelectorAll('#hero-download, #nav-download').forEach(function (el) {
-    if (isWin) {
-      el.querySelector('span') && (el.querySelector('span').textContent = 'Download for Windows');
-      if (el.id === 'hero-download') el.childNodes[el.childNodes.length - 1].textContent = ' Download for Windows';
-    } else if (isLinux) {
-      if (el.id === 'hero-download') el.childNodes[el.childNodes.length - 1].textContent = ' Download for Linux';
-    }
-  });
+  var base = 'https://github.com/Yash121l/GhostPilot/releases/latest/download/';
+  var label = 'Download — Free';
+  var href = 'https://github.com/Yash121l/GhostPilot/releases/latest';
+
+  // Detect Apple Silicon vs Intel on macOS
+  var isArm = isMac && (/arm/i.test(navigator.platform) || (navigator.userAgentData && navigator.userAgentData.architecture === 'arm'));
+
+  if (isMac) {
+    label = isArm ? 'Download for macOS (Apple Silicon)' : 'Download for macOS (Intel)';
+    href = base + (isArm ? 'GhostPilot-1.0.1-arm64.dmg' : 'GhostPilot-1.0.1-x64.dmg');
+  } else if (isWin) {
+    label = 'Download for Windows';
+    href = base + 'GhostPilot-1.0.1-setup.exe';
+  } else if (isLinux) {
+    label = 'Download for Linux (AppImage)';
+    href = base + 'GhostPilot-1.0.1.AppImage';
+  }
+
+  var heroBtn = document.getElementById('hero-download');
+  var heroLabel = document.getElementById('hero-download-label');
+  var navBtn = document.getElementById('nav-download');
+
+  if (heroBtn) { heroBtn.href = href; heroBtn.setAttribute('download', ''); }
+  if (heroLabel) heroLabel.textContent = label;
+  if (navBtn) navBtn.href = href;
 })();
 </script>
 </body>
