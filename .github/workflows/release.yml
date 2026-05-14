@@ -39,9 +39,9 @@ jobs:
             os: macos-latest
             args: --mac --arm64
 
-          # macOS Intel — .dmg (x64)
+          # macOS Intel — .dmg (x64) cross-compiled on arm64 runner (macos-13 has long queue times)
           - name: macOS x64
-            os: macos-13
+            os: macos-latest
             args: --mac --x64
 
           # Windows — NSIS installer + portable .exe
