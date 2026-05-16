@@ -14,7 +14,7 @@ const logger = createLogger('IntentService')
 export class IntentService {
   constructor(
     _audit: AuditService,
-    private readonly ai: AIGateway,
+    private readonly ai: AIGateway
   ) {}
 
   async list(personaId?: string): Promise<Intent[]> {
@@ -34,7 +34,9 @@ export class IntentService {
     return rows.map((r) => this.mapIntent(r, krMap.get(r.id) ?? []))
   }
 
-  async create(input: Omit<Intent, 'id' | 'createdAt' | 'updatedAt' | 'keyResults'>): Promise<Intent> {
+  async create(
+    input: Omit<Intent, 'id' | 'createdAt' | 'updatedAt' | 'keyResults'>
+  ): Promise<Intent> {
     const db = getDb()
     const id = nanoid()
     const now = new Date()
@@ -46,7 +48,7 @@ export class IntentService {
       description: input.description,
       horizon: input.horizon,
       createdAt: now,
-      updatedAt: now,
+      updatedAt: now
     })
 
     // Ask AI to decompose this goal into key results
@@ -59,7 +61,7 @@ export class IntentService {
         target: kr.target ?? 0,
         current: 0,
         unit: kr.unit ?? '',
-        weeklyQuota: JSON.stringify(kr.weeklyQuota ?? { postsPerWeek: 3, breakdown: {} }),
+        weeklyQuota: JSON.stringify(kr.weeklyQuota ?? { postsPerWeek: 3, breakdown: {} })
       })
     }
 
@@ -67,7 +69,10 @@ export class IntentService {
     return this.getById(id)
   }
 
-  async update(id: string, input: Partial<Omit<Intent, 'id' | 'createdAt' | 'updatedAt'>>): Promise<Intent> {
+  async update(
+    id: string,
+    input: Partial<Omit<Intent, 'id' | 'createdAt' | 'updatedAt'>>
+  ): Promise<Intent> {
     const db = getDb()
     await db
       .update(intents)
@@ -75,7 +80,7 @@ export class IntentService {
         ...(input.title !== undefined && { title: input.title }),
         ...(input.description !== undefined && { description: input.description }),
         ...(input.horizon !== undefined && { horizon: input.horizon }),
-        updatedAt: new Date(),
+        updatedAt: new Date()
       })
       .where(eq(intents.id, id))
     return this.getById(id)
@@ -89,7 +94,8 @@ export class IntentService {
   private async getById(id: string): Promise<Intent> {
     const db = getDb()
     const rows = await db.select().from(intents).where(eq(intents.id, id))
-    if (!rows.length) throw new AppError({ code: ErrorCode.NOT_FOUND, message: `Intent ${id} not found` })
+    if (!rows.length)
+      throw new AppError({ code: ErrorCode.NOT_FOUND, message: `Intent ${id} not found` })
     const krs = await db.select().from(keyResults).where(eq(keyResults.intentId, id))
     return this.mapIntent(rows[0], krs)
   }
@@ -98,7 +104,7 @@ export class IntentService {
     intentId: string,
     title: string,
     description: string,
-    horizon: string,
+    horizon: string
   ): Promise<Partial<KeyResult>[]> {
     try {
       const prompt = `Break this content goal into 2-3 measurable key results with weekly content quotas.
@@ -125,7 +131,7 @@ Return ONLY the JSON array.`
         hint: ModelHint.ECONOMY,
         prompt,
         maxTokens: 800,
-        traceId: `intent:${intentId}`,
+        traceId: `intent:${intentId}`
       })
 
       const jsonMatch = res.text.match(/\[[\s\S]*\]/)
@@ -138,15 +144,15 @@ Return ONLY the JSON array.`
           title: 'Consistent publishing',
           target: 52,
           unit: 'posts',
-          weeklyQuota: { postsPerWeek: 3, breakdown: { linkedin: 2, twitter: 1 } },
-        },
+          weeklyQuota: { postsPerWeek: 3, breakdown: { linkedin: 2, twitter: 1 } }
+        }
       ]
     }
   }
 
   private mapIntent(
     r: typeof intents.$inferSelect,
-    krs: (typeof keyResults.$inferSelect)[],
+    krs: (typeof keyResults.$inferSelect)[]
   ): Intent {
     return {
       id: r.id,
@@ -161,10 +167,10 @@ Return ONLY the JSON array.`
         target: kr.target,
         current: kr.current,
         unit: kr.unit,
-        weeklyQuota: JSON.parse(kr.weeklyQuota),
+        weeklyQuota: JSON.parse(kr.weeklyQuota)
       })),
       createdAt: r.createdAt,
-      updatedAt: r.updatedAt,
+      updatedAt: r.updatedAt
     }
   }
 }

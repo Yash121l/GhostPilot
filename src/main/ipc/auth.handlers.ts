@@ -15,18 +15,25 @@ export function registerAuthHandlers(): void {
       return ok(undefined)
     } catch (e) {
       logger.error({ msg: 'auth:connect failed', platform, error: String(e) })
-      return err(e instanceof AppError ? e : new AppError({ code: ErrorCode.OAUTH_FAILED, message: String(e) }))
+      return err(
+        e instanceof AppError
+          ? e
+          : new AppError({ code: ErrorCode.OAUTH_FAILED, message: String(e) })
+      )
     }
   })
 
-  ipcMain.handle(IPC_CHANNELS.AUTH_DISCONNECT, async (_event, { platform }: { platform: Platform }) => {
-    try {
-      await getServices().oauthManager.disconnect(platform)
-      return ok(undefined)
-    } catch (e) {
-      return err(new AppError({ code: ErrorCode.UNKNOWN, message: String(e) }))
+  ipcMain.handle(
+    IPC_CHANNELS.AUTH_DISCONNECT,
+    async (_event, { platform }: { platform: Platform }) => {
+      try {
+        await getServices().oauthManager.disconnect(platform)
+        return ok(undefined)
+      } catch (e) {
+        return err(new AppError({ code: ErrorCode.UNKNOWN, message: String(e) }))
+      }
     }
-  })
+  )
 
   ipcMain.handle(IPC_CHANNELS.AUTH_STATUS, async () => {
     try {

@@ -17,7 +17,9 @@ let db: ReturnType<typeof createTestDb>
 
 vi.mock('../../../src/main/infrastructure/db/connection', () => ({
   getDb: () => db,
-  getRawDb: () => { throw new Error('getRawDb not available in tests') },
+  getRawDb: () => {
+    throw new Error('getRawDb not available in tests')
+  }
 }))
 
 // Import after mocks are set up
@@ -25,7 +27,9 @@ const { PostService } = await import('../../../src/main/services/post/post.servi
 
 // ─── Setup ────────────────────────────────────────────────────────────────────
 
-beforeAll(() => { db = createTestDb() })
+beforeAll(() => {
+  db = createTestDb()
+})
 beforeEach(() => clearTestDb())
 afterAll(() => closeTestDb())
 
@@ -41,8 +45,13 @@ async function seedPersona() {
   const id = nanoid()
   const now = new Date()
   await db.insert(personas).values({
-    id, name: 'Test Persona', bio: '', pillars: '[]', styleHints: '',
-    createdAt: now, updatedAt: now,
+    id,
+    name: 'Test Persona',
+    bio: '',
+    pillars: '[]',
+    styleHints: '',
+    createdAt: now,
+    updatedAt: now
   })
   return id
 }
@@ -53,7 +62,11 @@ describe('PostService.create()', () => {
   it('creates a post with DRAFT status', async () => {
     const personaId = await seedPersona()
     const svc = makeService()
-    const post = await svc.create({ personaId, body: 'Hello world', platforms: [Platform.LINKEDIN] })
+    const post = await svc.create({
+      personaId,
+      body: 'Hello world',
+      platforms: [Platform.LINKEDIN]
+    })
 
     expect(post.id).toBeTruthy()
     expect(post.status).toBe(PostStatus.DRAFT)
@@ -98,7 +111,7 @@ describe('PostService.get()', () => {
   it('throws POST_NOT_FOUND for unknown ID', async () => {
     const svc = makeService()
     await expect(svc.get('nonexistent-id')).rejects.toMatchObject({
-      code: ErrorCode.POST_NOT_FOUND,
+      code: ErrorCode.POST_NOT_FOUND
     })
   })
 })
@@ -121,9 +134,18 @@ describe('PostService.list()', () => {
     const { posts } = await import('../../../src/main/infrastructure/db/schema')
     const { eq } = await import('drizzle-orm')
     const base = Math.floor(Date.now() / 1000)
-    await db.update(posts).set({ createdAt: new Date((base - 2) * 1000) }).where(eq(posts.id, first.id))
-    await db.update(posts).set({ createdAt: new Date((base - 1) * 1000) }).where(eq(posts.id, second.id))
-    await db.update(posts).set({ createdAt: new Date(base * 1000) }).where(eq(posts.id, third.id))
+    await db
+      .update(posts)
+      .set({ createdAt: new Date((base - 2) * 1000) })
+      .where(eq(posts.id, first.id))
+    await db
+      .update(posts)
+      .set({ createdAt: new Date((base - 1) * 1000) })
+      .where(eq(posts.id, second.id))
+    await db
+      .update(posts)
+      .set({ createdAt: new Date(base * 1000) })
+      .where(eq(posts.id, third.id))
 
     const listed = await svc.list()
     expect(listed).toHaveLength(3)
@@ -159,14 +181,26 @@ describe('PostService.setVariants()', () => {
   it('sets variants and transitions to PENDING_APPROVAL', async () => {
     const personaId = await seedPersona()
     const svc = makeService()
-    const post = await svc.create({ personaId, body: 'Variant test', platforms: [Platform.LINKEDIN] })
+    const post = await svc.create({
+      personaId,
+      body: 'Variant test',
+      platforms: [Platform.LINKEDIN]
+    })
 
     const { nanoid } = await import('nanoid')
-    const variants = [{
-      id: nanoid(), postId: post.id, platform: Platform.LINKEDIN,
-      body: 'LinkedIn variant', charCount: 16, styleDriftScore: 0,
-      createdAt: new Date(), provider: 'openai', modelId: 'gpt-4o-mini',
-    }]
+    const variants = [
+      {
+        id: nanoid(),
+        postId: post.id,
+        platform: Platform.LINKEDIN,
+        body: 'LinkedIn variant',
+        charCount: 16,
+        styleDriftScore: 0,
+        createdAt: new Date(),
+        provider: 'openai',
+        modelId: 'gpt-4o-mini'
+      }
+    ]
 
     const updated = await svc.setVariants(post.id, variants)
     expect(updated.status).toBe(PostStatus.PENDING_APPROVAL)
@@ -178,20 +212,40 @@ describe('PostService.setVariants()', () => {
   it('replaces existing variants on re-generate', async () => {
     const personaId = await seedPersona()
     const svc = makeService()
-    const post = await svc.create({ personaId, body: 'Replace test', platforms: [Platform.LINKEDIN] })
+    const post = await svc.create({
+      personaId,
+      body: 'Replace test',
+      platforms: [Platform.LINKEDIN]
+    })
     const { nanoid } = await import('nanoid')
 
-    await svc.setVariants(post.id, [{
-      id: nanoid(), postId: post.id, platform: Platform.LINKEDIN,
-      body: 'Old variant', charCount: 11, styleDriftScore: 0,
-      createdAt: new Date(), provider: 'openai', modelId: 'gpt-4o-mini',
-    }])
+    await svc.setVariants(post.id, [
+      {
+        id: nanoid(),
+        postId: post.id,
+        platform: Platform.LINKEDIN,
+        body: 'Old variant',
+        charCount: 11,
+        styleDriftScore: 0,
+        createdAt: new Date(),
+        provider: 'openai',
+        modelId: 'gpt-4o-mini'
+      }
+    ])
 
-    const updated = await svc.setVariants(post.id, [{
-      id: nanoid(), postId: post.id, platform: Platform.LINKEDIN,
-      body: 'New variant', charCount: 11, styleDriftScore: 0,
-      createdAt: new Date(), provider: 'anthropic', modelId: 'claude-haiku',
-    }])
+    const updated = await svc.setVariants(post.id, [
+      {
+        id: nanoid(),
+        postId: post.id,
+        platform: Platform.LINKEDIN,
+        body: 'New variant',
+        charCount: 11,
+        styleDriftScore: 0,
+        createdAt: new Date(),
+        provider: 'anthropic',
+        modelId: 'claude-haiku'
+      }
+    ])
 
     expect(updated.variants).toHaveLength(1)
     expect(updated.variants[0].body).toBe('New variant')
@@ -203,14 +257,26 @@ describe('PostService.approve()', () => {
   it('approves a PENDING_APPROVAL post', async () => {
     const personaId = await seedPersona()
     const svc = makeService()
-    const post = await svc.create({ personaId, body: 'Approve test', platforms: [Platform.LINKEDIN] })
+    const post = await svc.create({
+      personaId,
+      body: 'Approve test',
+      platforms: [Platform.LINKEDIN]
+    })
     const { nanoid } = await import('nanoid')
     const variantId = nanoid()
-    await svc.setVariants(post.id, [{
-      id: variantId, postId: post.id, platform: Platform.LINKEDIN,
-      body: 'Variant', charCount: 7, styleDriftScore: 0,
-      createdAt: new Date(), provider: 'openai', modelId: 'gpt-4o-mini',
-    }])
+    await svc.setVariants(post.id, [
+      {
+        id: variantId,
+        postId: post.id,
+        platform: Platform.LINKEDIN,
+        body: 'Variant',
+        charCount: 7,
+        styleDriftScore: 0,
+        createdAt: new Date(),
+        provider: 'openai',
+        modelId: 'gpt-4o-mini'
+      }
+    ])
 
     const approved = await svc.approve(post.id, variantId)
     expect(approved.status).toBe(PostStatus.APPROVED)
@@ -219,14 +285,26 @@ describe('PostService.approve()', () => {
   it('approves a DRAFT post', async () => {
     const personaId = await seedPersona()
     const svc = makeService()
-    const post = await svc.create({ personaId, body: 'Draft approve', platforms: [Platform.LINKEDIN] })
+    const post = await svc.create({
+      personaId,
+      body: 'Draft approve',
+      platforms: [Platform.LINKEDIN]
+    })
     const { nanoid } = await import('nanoid')
     const variantId = nanoid()
-    await svc.setVariants(post.id, [{
-      id: variantId, postId: post.id, platform: Platform.LINKEDIN,
-      body: 'V', charCount: 1, styleDriftScore: 0,
-      createdAt: new Date(), provider: 'openai', modelId: 'gpt-4o-mini',
-    }])
+    await svc.setVariants(post.id, [
+      {
+        id: variantId,
+        postId: post.id,
+        platform: Platform.LINKEDIN,
+        body: 'V',
+        charCount: 1,
+        styleDriftScore: 0,
+        createdAt: new Date(),
+        provider: 'openai',
+        modelId: 'gpt-4o-mini'
+      }
+    ])
     // Reset to DRAFT manually
     const { posts } = await import('../../../src/main/infrastructure/db/schema')
     const { eq } = await import('drizzle-orm')
@@ -239,7 +317,7 @@ describe('PostService.approve()', () => {
   it('throws POST_NOT_FOUND for unknown post', async () => {
     const svc = makeService()
     await expect(svc.approve('bad-id', 'variant-id')).rejects.toMatchObject({
-      code: ErrorCode.POST_NOT_FOUND,
+      code: ErrorCode.POST_NOT_FOUND
     })
   })
 
@@ -249,15 +327,23 @@ describe('PostService.approve()', () => {
     const post = await svc.create({ personaId, body: 'Scheduled', platforms: [Platform.LINKEDIN] })
     const { nanoid } = await import('nanoid')
     const variantId = nanoid()
-    await svc.setVariants(post.id, [{
-      id: variantId, postId: post.id, platform: Platform.LINKEDIN,
-      body: 'V', charCount: 1, styleDriftScore: 0,
-      createdAt: new Date(), provider: 'openai', modelId: 'gpt-4o-mini',
-    }])
+    await svc.setVariants(post.id, [
+      {
+        id: variantId,
+        postId: post.id,
+        platform: Platform.LINKEDIN,
+        body: 'V',
+        charCount: 1,
+        styleDriftScore: 0,
+        createdAt: new Date(),
+        provider: 'openai',
+        modelId: 'gpt-4o-mini'
+      }
+    ])
     await svc.schedule(post.id, variantId, Platform.LINKEDIN, new Date(Date.now() + 60000))
 
     await expect(svc.approve(post.id, variantId)).rejects.toMatchObject({
-      code: ErrorCode.POST_INVALID_TRANSITION,
+      code: ErrorCode.POST_INVALID_TRANSITION
     })
   })
 })
@@ -266,14 +352,26 @@ describe('PostService.schedule()', () => {
   it('creates a job and transitions post to SCHEDULED', async () => {
     const personaId = await seedPersona()
     const svc = makeService()
-    const post = await svc.create({ personaId, body: 'Schedule test', platforms: [Platform.LINKEDIN] })
+    const post = await svc.create({
+      personaId,
+      body: 'Schedule test',
+      platforms: [Platform.LINKEDIN]
+    })
     const { nanoid } = await import('nanoid')
     const variantId = nanoid()
-    await svc.setVariants(post.id, [{
-      id: variantId, postId: post.id, platform: Platform.LINKEDIN,
-      body: 'Variant', charCount: 7, styleDriftScore: 0,
-      createdAt: new Date(), provider: 'openai', modelId: 'gpt-4o-mini',
-    }])
+    await svc.setVariants(post.id, [
+      {
+        id: variantId,
+        postId: post.id,
+        platform: Platform.LINKEDIN,
+        body: 'Variant',
+        charCount: 7,
+        styleDriftScore: 0,
+        createdAt: new Date(),
+        provider: 'openai',
+        modelId: 'gpt-4o-mini'
+      }
+    ])
 
     const scheduledAt = new Date(Date.now() + 3600 * 1000)
     const job = await svc.schedule(post.id, variantId, Platform.LINKEDIN, scheduledAt)
@@ -305,7 +403,11 @@ describe('PostService.delete()', () => {
     const personaId = await seedPersona()
     const audit = mockAudit()
     const svc = new PostService(audit)
-    const post = await svc.create({ personaId, body: 'Audit delete', platforms: [Platform.LINKEDIN] })
+    const post = await svc.create({
+      personaId,
+      body: 'Audit delete',
+      platforms: [Platform.LINKEDIN]
+    })
 
     await svc.delete(post.id)
 

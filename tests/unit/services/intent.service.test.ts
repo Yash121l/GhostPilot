@@ -8,13 +8,17 @@ let db: ReturnType<typeof createTestDb>
 
 vi.mock('../../../src/main/infrastructure/db/connection', () => ({
   getDb: () => db,
-  getRawDb: () => { throw new Error('not available') },
+  getRawDb: () => {
+    throw new Error('not available')
+  }
 }))
 
 const { IntentService } = await import('../../../src/main/services/intent/intent.service')
 const { PersonaService } = await import('../../../src/main/services/persona/persona.service')
 
-beforeAll(() => { db = createTestDb() })
+beforeAll(() => {
+  db = createTestDb()
+})
 beforeEach(() => clearTestDb())
 afterAll(() => closeTestDb())
 
@@ -26,7 +30,7 @@ async function seedPersona() {
 const baseInput = {
   title: 'Reach 5K LinkedIn followers by Q4',
   description: 'Grow my LinkedIn presence through consistent posting',
-  horizon: '6 months',
+  horizon: '6 months'
 }
 
 describe('IntentService.create()', () => {
@@ -35,12 +39,23 @@ describe('IntentService.create()', () => {
     const ai = mockAIGateway({
       complete: vi.fn().mockResolvedValue({
         text: JSON.stringify([
-          { title: 'Grow followers', target: 5000, unit: 'followers', weeklyQuota: { postsPerWeek: 4, breakdown: { linkedin: 4 } } },
-          { title: 'Maintain engagement', target: 6, unit: '%', weeklyQuota: { postsPerWeek: 4, breakdown: { linkedin: 4 } } },
+          {
+            title: 'Grow followers',
+            target: 5000,
+            unit: 'followers',
+            weeklyQuota: { postsPerWeek: 4, breakdown: { linkedin: 4 } }
+          },
+          {
+            title: 'Maintain engagement',
+            target: 6,
+            unit: '%',
+            weeklyQuota: { postsPerWeek: 4, breakdown: { linkedin: 4 } }
+          }
         ]),
-        provider: 'openai', modelId: 'gpt-4o-mini',
-        usage: { promptTokens: 100, completionTokens: 80, estimatedCostUsd: 0.001 },
-      }),
+        provider: 'openai',
+        modelId: 'gpt-4o-mini',
+        usage: { promptTokens: 100, completionTokens: 80, estimatedCostUsd: 0.001 }
+      })
     })
     const svc = new IntentService(mockAudit(), ai)
     const intent = await svc.create({ personaId: persona.id, ...baseInput })
@@ -56,7 +71,7 @@ describe('IntentService.create()', () => {
   it('falls back to default key result when AI fails', async () => {
     const persona = await seedPersona()
     const ai = mockAIGateway({
-      complete: vi.fn().mockRejectedValue(new Error('AI unavailable')),
+      complete: vi.fn().mockRejectedValue(new Error('AI unavailable'))
     })
     const svc = new IntentService(mockAudit(), ai)
     const intent = await svc.create({ personaId: persona.id, ...baseInput })
@@ -72,9 +87,10 @@ describe('IntentService.create()', () => {
     const ai = mockAIGateway({
       complete: vi.fn().mockResolvedValue({
         text: 'Here are your key results: blah blah not JSON',
-        provider: 'openai', modelId: 'gpt-4o-mini',
-        usage: { promptTokens: 50, completionTokens: 30, estimatedCostUsd: 0 },
-      }),
+        provider: 'openai',
+        modelId: 'gpt-4o-mini',
+        usage: { promptTokens: 50, completionTokens: 30, estimatedCostUsd: 0 }
+      })
     })
     const svc = new IntentService(mockAudit(), ai)
     const intent = await svc.create({ personaId: persona.id, ...baseInput })
@@ -96,13 +112,20 @@ describe('IntentService.list()', () => {
     const persona = await seedPersona()
     const ai = mockAIGateway({
       complete: vi.fn().mockResolvedValue({
-        text: '[]', provider: 'openai', modelId: 'gpt-4o-mini',
-        usage: { promptTokens: 10, completionTokens: 5, estimatedCostUsd: 0 },
-      }),
+        text: '[]',
+        provider: 'openai',
+        modelId: 'gpt-4o-mini',
+        usage: { promptTokens: 10, completionTokens: 5, estimatedCostUsd: 0 }
+      })
     })
     const svc = new IntentService(mockAudit(), ai)
     await svc.create({ personaId: persona.id, ...baseInput })
-    await svc.create({ personaId: persona.id, title: 'Second goal', description: '', horizon: '3 months' })
+    await svc.create({
+      personaId: persona.id,
+      title: 'Second goal',
+      description: '',
+      horizon: '3 months'
+    })
 
     const list = await svc.list()
     expect(list).toHaveLength(2)
@@ -113,9 +136,11 @@ describe('IntentService.list()', () => {
     const p2 = await seedPersona()
     const ai = mockAIGateway({
       complete: vi.fn().mockResolvedValue({
-        text: '[]', provider: 'openai', modelId: 'gpt-4o-mini',
-        usage: { promptTokens: 10, completionTokens: 5, estimatedCostUsd: 0 },
-      }),
+        text: '[]',
+        provider: 'openai',
+        modelId: 'gpt-4o-mini',
+        usage: { promptTokens: 10, completionTokens: 5, estimatedCostUsd: 0 }
+      })
     })
     const svc = new IntentService(mockAudit(), ai)
     await svc.create({ personaId: p1.id, ...baseInput })
@@ -132,9 +157,11 @@ describe('IntentService.update()', () => {
     const persona = await seedPersona()
     const ai = mockAIGateway({
       complete: vi.fn().mockResolvedValue({
-        text: '[]', provider: 'openai', modelId: 'gpt-4o-mini',
-        usage: { promptTokens: 10, completionTokens: 5, estimatedCostUsd: 0 },
-      }),
+        text: '[]',
+        provider: 'openai',
+        modelId: 'gpt-4o-mini',
+        usage: { promptTokens: 10, completionTokens: 5, estimatedCostUsd: 0 }
+      })
     })
     const svc = new IntentService(mockAudit(), ai)
     const intent = await svc.create({ personaId: persona.id, ...baseInput })
@@ -151,9 +178,11 @@ describe('IntentService.delete()', () => {
     const persona = await seedPersona()
     const ai = mockAIGateway({
       complete: vi.fn().mockResolvedValue({
-        text: '[]', provider: 'openai', modelId: 'gpt-4o-mini',
-        usage: { promptTokens: 10, completionTokens: 5, estimatedCostUsd: 0 },
-      }),
+        text: '[]',
+        provider: 'openai',
+        modelId: 'gpt-4o-mini',
+        usage: { promptTokens: 10, completionTokens: 5, estimatedCostUsd: 0 }
+      })
     })
     const svc = new IntentService(mockAudit(), ai)
     const intent = await svc.create({ personaId: persona.id, ...baseInput })

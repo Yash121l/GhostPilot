@@ -9,7 +9,7 @@ import {
   SCHEMA_VERSION,
   OAUTH_CALLBACK_PATH,
   TOKEN_REFRESH_BUFFER_MS,
-  OAUTH_STATE_TTL_MS,
+  OAUTH_STATE_TTL_MS
 } from './constants'
 import { IPC_CHANNELS } from './ipc-types'
 

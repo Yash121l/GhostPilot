@@ -9,11 +9,7 @@ export default defineConfig({
     coverage: {
       provider: 'v8',
       reporter: ['text', 'lcov', 'html'],
-      include: [
-        'src/main/domain/**',
-        'src/shared/**',
-        'src/main/services/**',
-      ],
+      include: ['src/main/domain/**', 'src/shared/**', 'src/main/services/**'],
       exclude: [
         'src/shared/**/*.test.ts',
         'tests/**',
@@ -21,19 +17,19 @@ export default defineConfig({
         'src/main/services/social/instagram.ts',
         'src/main/services/social/x-twitter.ts',
         // Trends fetch real HTTP — integration-only
-        'src/main/services/trends/**',
+        'src/main/services/trends/**'
       ],
       thresholds: {
         lines: 50,
         functions: 45,
-        branches: 30,
-      },
-    },
+        branches: 30
+      }
+    }
   },
   resolve: {
     alias: {
       '@shared': resolve(__dirname, 'src/shared'),
-      '@main': resolve(__dirname, 'src/main'),
-    },
-  },
+      '@main': resolve(__dirname, 'src/main')
+    }
+  }
 })

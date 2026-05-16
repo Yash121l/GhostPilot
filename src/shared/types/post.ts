@@ -14,7 +14,7 @@ export enum PostStatus {
   PUBLISHING = 'publishing',
   PUBLISHED = 'published',
   FAILED = 'failed',
-  ARCHIVED = 'archived',
+  ARCHIVED = 'archived'
 }
 
 /** A media attachment for a post (local file or AI-generated image). */

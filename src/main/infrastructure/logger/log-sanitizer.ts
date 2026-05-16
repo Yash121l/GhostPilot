@@ -18,7 +18,7 @@ const REDACT_KEYS = new Set([
   'authorization',
   'Authorization',
   'bearer',
-  'Bearer',
+  'Bearer'
 ])
 
 const REDACTED = '[REDACTED]'

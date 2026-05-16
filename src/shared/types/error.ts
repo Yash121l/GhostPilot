@@ -32,7 +32,7 @@ export enum ErrorCode {
   // Generic
   NOT_FOUND = 'NOT_FOUND',
   VALIDATION_FAILED = 'VALIDATION_FAILED',
-  UNKNOWN = 'UNKNOWN',
+  UNKNOWN = 'UNKNOWN'
 }
 
 /**
@@ -67,9 +67,7 @@ export class AppError extends Error {
  * Discriminated-union Result type — never throw across IPC.
  * Use `isOk` / `isErr` helpers to narrow the type.
  */
-export type Result<T, E = AppError> =
-  | { ok: true; value: T }
-  | { ok: false; error: E }
+export type Result<T, E = AppError> = { ok: true; value: T } | { ok: false; error: E }
 
 /** Construct a success Result. */
 export const ok = <T>(value: T): Result<T, never> => ({ ok: true, value })
@@ -77,5 +75,5 @@ export const ok = <T>(value: T): Result<T, never> => ({ ok: true, value })
 /** Construct a failure Result. */
 export const err = <E = AppError>(error: E): Result<never, E> => ({
   ok: false,
-  error,
+  error
 })

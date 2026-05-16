@@ -8,6 +8,7 @@ import { ipc, IPC_CHANNELS } from '../../lib/ipc'
 import { AITask, ModelHint } from '@shared/types/ai'
 import { nanoid } from 'nanoid'
 import { useState } from 'react'
+import { ComposerToolbarRow } from './ComposerToolbarRow'
 
 export interface TiptapEditorProps {
   placeholder?: string
@@ -17,38 +18,47 @@ export interface TiptapEditorProps {
 
 type AIAction = 'rewrite' | 'shorten' | 'hook' | 'cta'
 
-const AI_ACTIONS: { id: AIAction; label: string; icon: React.ElementType; prompt: (text: string) => string }[] = [
+const AI_ACTIONS: {
+  id: AIAction
+  label: string
+  icon: React.ElementType
+  prompt: (text: string) => string
+}[] = [
   {
     id: 'rewrite',
     label: 'Rewrite',
     icon: Wand2,
     prompt: (t) =>
-      `Rewrite the following text to be clearer and more engaging. Keep the same core message and length. Return only the rewritten text:\n\n${t}`,
+      `Rewrite the following text to be clearer and more engaging. Keep the same core message and length. Return only the rewritten text:\n\n${t}`
   },
   {
     id: 'shorten',
     label: 'Shorten',
     icon: ArrowDownToLine,
     prompt: (t) =>
-      `Shorten the following text by 30–40% while preserving all key ideas. Return only the shortened text:\n\n${t}`,
+      `Shorten the following text by 30–40% while preserving all key ideas. Return only the shortened text:\n\n${t}`
   },
   {
     id: 'hook',
     label: 'Add Hook',
     icon: Anchor,
     prompt: (t) =>
-      `Add a compelling opening hook sentence to the beginning of this text. The hook should create curiosity or state a bold claim. Return the complete text with the hook prepended:\n\n${t}`,
+      `Add a compelling opening hook sentence to the beginning of this text. The hook should create curiosity or state a bold claim. Return the complete text with the hook prepended:\n\n${t}`
   },
   {
     id: 'cta',
     label: 'Add CTA',
     icon: MousePointerClick,
     prompt: (t) =>
-      `Add a natural call-to-action at the end of this text. The CTA should feel like a genuine invitation, not a sales pitch. Return the complete text with the CTA appended:\n\n${t}`,
-  },
+      `Add a natural call-to-action at the end of this text. The CTA should feel like a genuine invitation, not a sales pitch. Return the complete text with the CTA appended:\n\n${t}`
+  }
 ]
 
-export function TiptapEditor({ placeholder, onChange, editorRef }: TiptapEditorProps): ReactElement {
+export function TiptapEditor({
+  placeholder,
+  onChange,
+  editorRef
+}: TiptapEditorProps): ReactElement {
   const [actionLoading, setActionLoading] = useState<AIAction | null>(null)
   const toolbarRef = useRef<HTMLDivElement>(null)
 
@@ -59,8 +69,8 @@ export function TiptapEditor({ placeholder, onChange, editorRef }: TiptapEditorP
       Placeholder.configure({
         placeholder:
           placeholder ??
-          'Write your post — a rough idea, full draft, or anything in between. AI will adapt it for each platform…',
-      }),
+          'Write your post — a rough idea, full draft, or anything in between. AI will adapt it for each platform…'
+      })
     ],
     content: '',
     onUpdate: ({ editor: e }) => {
@@ -68,15 +78,15 @@ export function TiptapEditor({ placeholder, onChange, editorRef }: TiptapEditorP
     },
     editorProps: {
       attributes: {
-        class: 'min-h-[180px] focus:outline-none leading-relaxed text-sm tiptap user-select-text',
-      },
+        class: 'min-h-[180px] focus:outline-none leading-relaxed text-sm tiptap user-select-text'
+      }
     },
     onCreate: ({ editor: e }) => {
       editorRef?.(e)
     },
     onDestroy: () => {
       editorRef?.(null)
-    },
+    }
   })
 
   const handleAIAction = useCallback(
@@ -85,9 +95,7 @@ export function TiptapEditor({ placeholder, onChange, editorRef }: TiptapEditorP
 
       // Get selected text, or full content if nothing selected
       const { from, to, empty } = editor.state.selection
-      const selected = empty
-        ? editor.getText()
-        : editor.state.doc.textBetween(from, to, ' ')
+      const selected = empty ? editor.getText() : editor.state.doc.textBetween(from, to, ' ')
 
       if (!selected.trim()) return
 
@@ -99,7 +107,7 @@ export function TiptapEditor({ placeholder, onChange, editorRef }: TiptapEditorP
           hint: ModelHint.ECONOMY,
           prompt: actionDef.prompt(selected),
           maxTokens: 600,
-          traceId: nanoid(),
+          traceId: nanoid()
         })
 
         if (!res.ok) return
@@ -116,40 +124,33 @@ export function TiptapEditor({ placeholder, onChange, editorRef }: TiptapEditorP
         setActionLoading(null)
       }
     },
-    [editor],
+    [editor]
   )
 
   return (
     <div className="relative flex flex-col h-full">
       {/* AI Action Toolbar */}
-      <div
-        ref={toolbarRef}
-        className="flex items-center gap-1 px-4 py-2"
-        style={{ borderBottom: '1px solid var(--color-border)' }}
-      >
-        <span className="text-[10px] font-semibold text-[var(--color-text-muted)] uppercase tracking-wider mr-2">AI</span>
-        {AI_ACTIONS.map((action) => {
-          const Icon = action.icon
-          const loading = actionLoading === action.id
-          return (
-            <button
-              key={action.id}
-              onClick={() => handleAIAction(action.id)}
-              disabled={loading || actionLoading !== null}
-              className="btn btn-ghost btn-sm flex items-center gap-1.5"
-              style={{ fontSize: 11, padding: '3px 8px' }}
-              title={action.label}
-            >
-              {loading ? (
-                <Loader2 size={10} className="animate-spin" />
-              ) : (
-                <Icon size={10} />
-              )}
-              {action.label}
-            </button>
-          )
-        })}
-      </div>
+      <ComposerToolbarRow label="AI">
+        <div ref={toolbarRef} className="composer-ai-actions">
+          {AI_ACTIONS.map((action) => {
+            const Icon = action.icon
+            const loading = actionLoading === action.id
+            return (
+              <button
+                key={action.id}
+                onClick={() => handleAIAction(action.id)}
+                disabled={loading || actionLoading !== null}
+                className="btn btn-ghost btn-sm flex items-center gap-1.5"
+                style={{ fontSize: 11, padding: '3px 8px' }}
+                title={action.label}
+              >
+                {loading ? <Loader2 size={10} className="animate-spin" /> : <Icon size={10} />}
+                {action.label}
+              </button>
+            )
+          })}
+        </div>
+      </ComposerToolbarRow>
 
       {/* Editor area */}
       <div className="flex-1 overflow-y-auto py-5" style={{ paddingLeft: 28, paddingRight: 28 }}>
@@ -162,7 +163,9 @@ export function TiptapEditor({ placeholder, onChange, editorRef }: TiptapEditorP
           className="flex items-center justify-end px-5 py-2 text-[10px] text-[var(--color-text-muted)]"
           style={{ borderTop: '1px solid var(--color-border)' }}
         >
-          <span className="font-mono">{editor.storage.characterCount?.characters?.() ?? 0} chars</span>
+          <span className="font-mono">
+            {editor.storage.characterCount?.characters?.() ?? 0} chars
+          </span>
         </div>
       )}
     </div>

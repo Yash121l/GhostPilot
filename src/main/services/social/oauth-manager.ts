@@ -12,7 +12,11 @@ import type { SocialConnector, OAuthTokens } from './interface'
 import type { Platform } from '../../../shared/types/platform'
 import { AppError, ErrorCode } from '../../../shared/types/error'
 import { createLogger } from '../../infrastructure/logger/logger'
-import { OAUTH_STATE_TTL_MS, OAUTH_REDIRECT_URI, OAUTH_FALLBACK_PORT } from '../../../shared/constants'
+import {
+  OAUTH_STATE_TTL_MS,
+  OAUTH_REDIRECT_URI,
+  OAUTH_FALLBACK_PORT
+} from '../../../shared/constants'
 import type { AuthStatusOutput } from '../../../shared/ipc-types'
 
 const logger = createLogger('OAuthManager')
@@ -38,7 +42,7 @@ interface OAuthState {
  */
 function createCallbackServer(
   port: number,
-  onCallback: (code: string, state: string) => void,
+  onCallback: (code: string, state: string) => void
 ): Server {
   const server = createServer((req, res) => {
     // Allow CORS from the website
@@ -54,7 +58,9 @@ function createCallbackServer(
 
     if (req.method === 'POST' && req.url === '/oauth/callback') {
       let body = ''
-      req.on('data', (chunk) => { body += chunk })
+      req.on('data', (chunk) => {
+        body += chunk
+      })
       req.on('end', () => {
         try {
           const { code, state } = JSON.parse(body) as { code: string; state: string }
@@ -75,7 +81,10 @@ function createCallbackServer(
 
   server.on('error', (err: NodeJS.ErrnoException) => {
     if (err.code === 'EADDRINUSE') {
-      logger.warn({ msg: 'Fallback OAuth port already in use — deep link will handle callback', port })
+      logger.warn({
+        msg: 'Fallback OAuth port already in use — deep link will handle callback',
+        port
+      })
     } else {
       logger.error({ msg: 'OAuth callback server error', err: err.message })
     }
@@ -108,7 +117,7 @@ export class OAuthManager {
     if (!connector) {
       throw new AppError({
         code: ErrorCode.OAUTH_FAILED,
-        message: `No connector registered for platform: ${platform}`,
+        message: `No connector registered for platform: ${platform}`
       })
     }
     const state = nanoid(32)
@@ -127,7 +136,7 @@ export class OAuthManager {
     if (!connector) {
       throw new AppError({
         code: ErrorCode.OAUTH_FAILED,
-        message: `No connector registered for platform: ${platform}`,
+        message: `No connector registered for platform: ${platform}`
       })
     }
 
@@ -144,15 +153,12 @@ export class OAuthManager {
       }
     })
 
-    this.callbackServer = createCallbackServer(
-      this.callbackPort,
-      (code, receivedState) => {
-        const pending = this.pendingStates.get(receivedState)
-        if (pending?.resolve) {
-          pending.resolve({ code, state: receivedState })
-        }
-      },
-    )
+    this.callbackServer = createCallbackServer(this.callbackPort, (code, receivedState) => {
+      const pending = this.pendingStates.get(receivedState)
+      if (pending?.resolve) {
+        pending.resolve({ code, state: receivedState })
+      }
+    })
 
     const pending: OAuthState = { state, codeVerifier, platform, createdAt: Date.now() }
 
@@ -172,17 +178,23 @@ export class OAuthManager {
       action: AuditAction.OAUTH_INITIATED,
       entityType: 'social_connections',
       outcome: 'success',
-      details: { platform },
+      details: { platform }
     })
 
     await shell.openExternal(authURL)
 
     // Wait for callback (via deep link OR localhost fallback)
     const timeout = new Promise<never>((_, reject) =>
-      setTimeout(() => reject(new AppError({
-        code: ErrorCode.OAUTH_FAILED,
-        message: 'OAuth timed out — complete the flow in the browser within 10 minutes',
-      })), OAUTH_BROWSER_TIMEOUT_MS),
+      setTimeout(
+        () =>
+          reject(
+            new AppError({
+              code: ErrorCode.OAUTH_FAILED,
+              message: 'OAuth timed out — complete the flow in the browser within 10 minutes'
+            })
+          ),
+        OAUTH_BROWSER_TIMEOUT_MS
+      )
     )
 
     const { code } = await Promise.race([callbackPromise, timeout])
@@ -206,16 +218,22 @@ export class OAuthManager {
     if (error) {
       throw new AppError({
         code: ErrorCode.OAUTH_FAILED,
-        message: `OAuth error: ${error}${errorDescription ? ` — ${errorDescription}` : ''}`,
+        message: `OAuth error: ${error}${errorDescription ? ` — ${errorDescription}` : ''}`
       })
     }
     if (!code || !state) {
-      throw new AppError({ code: ErrorCode.OAUTH_FAILED, message: 'Missing code or state in OAuth callback' })
+      throw new AppError({
+        code: ErrorCode.OAUTH_FAILED,
+        message: 'Missing code or state in OAuth callback'
+      })
     }
 
     const pending = this.pendingStates.get(state)
     if (!pending) {
-      throw new AppError({ code: ErrorCode.OAUTH_STATE_MISMATCH, message: 'Unknown or expired OAuth state' })
+      throw new AppError({
+        code: ErrorCode.OAUTH_STATE_MISMATCH,
+        message: 'Unknown or expired OAuth state'
+      })
     }
 
     // If initiateConnect() is waiting via the promise, resolve it
@@ -232,7 +250,7 @@ export class OAuthManager {
     code: string,
     state: string,
     codeVerifier: string,
-    platform: Platform,
+    platform: Platform
   ): Promise<void> {
     if (Date.now() - (this.pendingStates.get(state)?.createdAt ?? 0) > OAUTH_STATE_TTL_MS) {
       this.pendingStates.delete(state)
@@ -262,7 +280,7 @@ export class OAuthManager {
       expiresAt: result.tokens.expiresAt,
       scopes: JSON.stringify(result.tokens.scopes),
       createdAt: now,
-      updatedAt: now,
+      updatedAt: now
     })
 
     this.audit.write({
@@ -271,7 +289,7 @@ export class OAuthManager {
       entityType: 'social_connections',
       entityId: connectionId,
       outcome: 'success',
-      details: { platform, displayName: result.displayName },
+      details: { platform, displayName: result.displayName }
     })
 
     logger.info({ msg: 'OAuth complete', platform, displayName: result.displayName })
@@ -279,7 +297,10 @@ export class OAuthManager {
 
   async disconnect(platform: Platform): Promise<void> {
     const db = getDb()
-    const rows = await db.select().from(socialConnections).where(eq(socialConnections.platform, platform))
+    const rows = await db
+      .select()
+      .from(socialConnections)
+      .where(eq(socialConnections.platform, platform))
 
     for (const row of rows) {
       await this.keychain.delete(row.keychainKey)
@@ -292,7 +313,7 @@ export class OAuthManager {
       action: AuditAction.CONNECTION_DELETED,
       entityType: 'social_connections',
       outcome: 'success',
-      details: { platform },
+      details: { platform }
     })
   }
 
@@ -309,14 +330,17 @@ export class OAuthManager {
         platform,
         connected: Boolean(row),
         displayName: row?.displayName,
-        expiresAt: row?.expiresAt?.getTime(),
+        expiresAt: row?.expiresAt?.getTime()
       }
     })
   }
 
   async getTokens(platform: Platform): Promise<OAuthTokens | null> {
     const db = getDb()
-    const rows = await db.select().from(socialConnections).where(eq(socialConnections.platform, platform))
+    const rows = await db
+      .select()
+      .from(socialConnections)
+      .where(eq(socialConnections.platform, platform))
     if (!rows.length) return null
 
     const raw = await this.keychain.get(rows[0].keychainKey)

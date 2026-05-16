@@ -23,17 +23,18 @@ export const test = base.extend<ElectronFixtures>({
   // Launch Electron once per test, close after
   electronApp: async ({}, use) => {
     const appPath = resolve(__dirname, '../../../out/main/index.js')
+    const { ELECTRON_RUN_AS_NODE: _electronRunAsNode, ...env } = process.env
 
     const app = await electron.launch({
       args: [appPath],
       env: {
-        ...process.env,
+        ...env,
         // Use a temp directory for the test DB so tests don't pollute real data
         GHOSTPILOT_TEST_MODE: '1',
-        NODE_ENV: 'test',
+        NODE_ENV: 'test'
       },
       // Suppress Electron's default stderr noise in test output
-      timeout: 15_000,
+      timeout: 15_000
     })
 
     await use(app)
@@ -49,7 +50,7 @@ export const test = base.extend<ElectronFixtures>({
     await win.waitForSelector('.app-shell', { timeout: 10_000 })
 
     await use(win)
-  },
+  }
 })
 
 export { expect } from '@playwright/test'

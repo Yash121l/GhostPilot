@@ -3,11 +3,26 @@
   <head>
     <meta charset="UTF-8" />
     <title>GhostPilot</title>
+    <meta name="theme-color" content="#f7f6f2" />
+    <script>
+      ;(() => {
+        const mode = localStorage.getItem('ghostpilot:theme') || 'system'
+        const dark =
+          mode === 'dark' ||
+          (mode === 'system' && matchMedia('(prefers-color-scheme: dark)').matches)
+        document.documentElement.classList.toggle('dark', dark)
+        document.documentElement.dataset.theme = dark ? 'dark' : 'light'
+        document.documentElement.style.colorScheme = dark ? 'dark' : 'light'
+      })()
+    </script>
     <link rel="icon" type="image/png" href="/resources/icon.png" />
     <!-- Inter (UI) + JetBrains Mono (code) — Google Fonts -->
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" />
+    <link
+      rel="stylesheet"
+      href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap"
+    />
   </head>
 
   <body>

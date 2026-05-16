@@ -19,7 +19,7 @@ export class UsageLedger {
     const db = getRawDb()
     db.prepare(
       `INSERT INTO llm_usage (id, ts, provider, model_id, task, prompt_tokens, completion_tokens, estimated_cost_usd, post_id, persona_id)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
     ).run(
       nanoid(),
       Date.now(),
@@ -30,7 +30,7 @@ export class UsageLedger {
       params.completionTokens,
       params.estimatedCostUsd,
       params.postId ?? null,
-      params.personaId ?? null,
+      params.personaId ?? null
     )
   }
 
@@ -41,7 +41,7 @@ export class UsageLedger {
         `SELECT id, ts, provider, model_id as modelId, task, prompt_tokens as promptTokens,
                 completion_tokens as completionTokens, estimated_cost_usd as estimatedCostUsd,
                 post_id as postId, persona_id as personaId
-         FROM llm_usage ORDER BY ts DESC LIMIT ?`,
+         FROM llm_usage ORDER BY ts DESC LIMIT ?`
       )
       .all(limit) as LLMUsage[]
   }
@@ -59,7 +59,7 @@ export class UsageLedger {
          FROM llm_usage
          WHERE ts >= ?
          GROUP BY date, provider
-         ORDER BY date DESC`,
+         ORDER BY date DESC`
       )
       .all(since) as { date: string; provider: string; cost: number; tokens: number }[]
 

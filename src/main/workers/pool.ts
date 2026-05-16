@@ -50,7 +50,12 @@ export function spawnWorker(name: WorkerName): void {
       const e = workers.get(name)
       if (!e) return
       e.restarts++
-      logger.warn({ msg: `Worker crashed, restarting`, workerName: name, restarts: e.restarts, exitCode: code })
+      logger.warn({
+        msg: `Worker crashed, restarting`,
+        workerName: name,
+        restarts: e.restarts,
+        exitCode: code
+      })
       setTimeout(() => spawnWorker(name), WORKER_RESTART_DELAY_MS)
     }
   })

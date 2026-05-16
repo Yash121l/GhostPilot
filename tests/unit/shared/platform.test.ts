@@ -1,5 +1,10 @@
 import { describe, it, expect } from 'vitest'
-import { Platform, PLATFORMS, PLATFORM_LABELS, PLATFORM_CHAR_LIMITS } from '../../../src/shared/types/platform'
+import {
+  Platform,
+  PLATFORMS,
+  PLATFORM_LABELS,
+  PLATFORM_CHAR_LIMITS
+} from '../../../src/shared/types/platform'
 
 describe('Platform enum', () => {
   it('has correct string values', () => {

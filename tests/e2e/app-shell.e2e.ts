@@ -18,7 +18,7 @@ test.describe('App launch', () => {
   })
 
   test('status bar shows version', async ({ page }) => {
-    await expect(page.locator('.statusbar')).toContainText('v1.0.0')
+    await expect(page.locator('.statusbar')).toContainText('v1.0.5')
   })
 
   test('sidebar brand shows GHOSTPILOT', async ({ page }) => {
@@ -28,7 +28,7 @@ test.describe('App launch', () => {
 
 test.describe('Sidebar navigation', () => {
   test('all nav items are visible', async ({ page }) => {
-    const labels = ['Composer', 'Calendar', 'Connect', 'Goals', 'Trends', 'Personas', 'Analytics', 'Settings']
+    const labels = ['Composer', 'Calendar', 'Goals', 'Trends', 'Personas', 'Analytics', 'Settings']
     for (const label of labels) {
       await expect(page.locator(`.nav-item:has-text("${label}")`)).toBeVisible()
     }
@@ -46,16 +46,12 @@ test.describe('Sidebar navigation', () => {
     await expect(page.locator('text=/\\w+ 20\\d\\d/')).toBeVisible()
   })
 
-  test('clicking Connect navigates to Connect page', async ({ page }) => {
-    const shell = new AppShell(page)
-    await shell.goTo('Connect')
-    await expect(page.locator('h1:has-text("Connect")')).toBeVisible()
-  })
-
   test('clicking Personas navigates to Personas page', async ({ page }) => {
     const shell = new AppShell(page)
     await shell.goTo('Personas')
-    await expect(page.locator('text=Personas')).toBeVisible()
+    await expect(
+      page.locator('main').getByRole('heading', { name: 'Personas', exact: true })
+    ).toBeVisible()
   })
 
   test('clicking Goals navigates to Goals page', async ({ page }) => {
@@ -97,8 +93,10 @@ test.describe('Connections sidebar', () => {
     await expect(page.locator('.connections')).toContainText('Instagram')
   })
 
-  test('clicking a connection item navigates to Connect page', async ({ page }) => {
+  test('clicking a connection item opens Settings connections', async ({ page }) => {
     await page.click('.connection-item:has-text("LinkedIn")')
-    await expect(page.locator('h1:has-text("Connect")')).toBeVisible()
+    await expect(page.locator('h1:has-text("Settings")')).toBeVisible()
+    await expect(page.locator('.settings-tabs button.active')).toContainText('Connections')
+    await expect(page.locator('text=Connected accounts')).toBeVisible()
   })
 })

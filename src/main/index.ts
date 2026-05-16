@@ -324,7 +324,7 @@ function createMainWindow(): BrowserWindow {
 
   // When window is closed, keep app alive in tray
   win.on('close', (e) => {
-    if (process.platform === 'darwin') {
+    if (process.platform === 'darwin' && !isQuitting) {
       e.preventDefault()
       win.hide()
     }

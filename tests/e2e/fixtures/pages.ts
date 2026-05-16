@@ -10,7 +10,9 @@ export class AppShell {
   constructor(private page: Page) {}
 
   /** Navigate to a sidebar page by label */
-  async goTo(label: 'Composer' | 'Calendar' | 'Connect' | 'Goals' | 'Trends' | 'Personas' | 'Analytics' | 'Settings') {
+  async goTo(
+    label: 'Composer' | 'Calendar' | 'Goals' | 'Trends' | 'Personas' | 'Analytics' | 'Settings'
+  ) {
     await this.page.click(`.nav-item:has-text("${label}")`)
     await this.page.waitForTimeout(200) // allow page transition
   }
@@ -58,7 +60,7 @@ export class ComposerPage {
   /** Click Generate Variants (bottom button) */
   async clickGenerate() {
     // Use the bottom Generate Variants button (not the header one)
-    await this.page.locator('button:has-text("Generate Variants")').last().click()
+    await this.page.locator('button:has-text("Generate variants")').last().click()
   }
 
   /** Get the current draft text */
@@ -74,7 +76,7 @@ export class ComposerPage {
 
   /** Get the active platform tab label */
   async getActivePlatformTab() {
-    return this.page.locator('[style*="border-bottom: 2px solid"]').first().textContent()
+    return this.page.locator('.composer-variant-tab.active').first().textContent()
   }
 
   /** Click a platform tab on the right panel */
@@ -84,12 +86,12 @@ export class ComposerPage {
 
   /** Get the variant body text for the active platform */
   async getVariantBody() {
-    return this.page.locator('[style*="pre-wrap"]').textContent()
+    return this.page.locator('.composer-variant-body').textContent()
   }
 
   /** Check if a variant card is visible */
   async hasVariant() {
-    return this.page.locator('text=VARIANT ·').isVisible()
+    return this.page.locator('.composer-variant-card').isVisible()
   }
 
   /** Click the Publish now button */
@@ -121,7 +123,7 @@ export class ComposerPage {
 
   /** Get the error message if shown */
   async getError() {
-    const el = this.page.locator('[style*="color-error"]').first()
+    const el = this.page.locator('.composer-error').first()
     if (await el.isVisible()) return el.textContent()
     return null
   }
@@ -146,9 +148,9 @@ export class PersonasPage {
 
   /** Click the + button to create a new persona */
   async clickNew() {
-    await this.page.click('button[title], button:has-text("+")').catch(() =>
-      this.page.click('.btn.ghost.icon')
-    )
+    await this.page
+      .click('button[title], button:has-text("+")')
+      .catch(() => this.page.click('.btn.ghost.icon'))
   }
 
   /** Fill in the persona creation form */
@@ -180,32 +182,32 @@ export class PersonasPage {
   }
 }
 
-// ─── Connect Page ─────────────────────────────────────────────────────────────
+// ─── Settings Connections Section ─────────────────────────────────────────────
 
 export class ConnectPage {
   constructor(private page: Page) {}
 
   /** Get the connection status for a platform */
   async getStatus(platform: 'LinkedIn' | 'X (Twitter)' | 'Instagram') {
-    const card = this.page.locator(`.card:has-text("${platform}")`)
+    const card = this.page.locator(`.settings-card:has-text("${platform}")`)
     return card.textContent()
   }
 
   /** Check if a platform shows as connected */
   async isConnected(platform: 'LinkedIn' | 'X (Twitter)' | 'Instagram') {
-    const card = this.page.locator(`.card:has-text("${platform}")`)
+    const card = this.page.locator(`.settings-card:has-text("${platform}")`)
     return card.locator('text=Connected').isVisible()
   }
 
   /** Click Connect for a platform */
   async clickConnect(platform: 'LinkedIn' | 'X (Twitter)' | 'Instagram') {
-    const card = this.page.locator(`.card:has-text("${platform}")`)
+    const card = this.page.locator(`.settings-card:has-text("${platform}")`)
     await card.locator('button:has-text("Connect")').click()
   }
 
   /** Click Disconnect for a platform */
   async clickDisconnect(platform: 'LinkedIn' | 'X (Twitter)' | 'Instagram') {
-    const card = this.page.locator(`.card:has-text("${platform}")`)
+    const card = this.page.locator(`.settings-card:has-text("${platform}")`)
     await card.locator('button:has-text("Disconnect")').click()
   }
 }

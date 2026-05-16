@@ -27,5 +27,5 @@ export const ipc = {
   on(channel: string, callback: (...args: unknown[]) => void): () => void {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     return (window as any).api.on(channel, callback)
-  },
+  }
 }

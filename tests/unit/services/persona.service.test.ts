@@ -9,12 +9,16 @@ let db: ReturnType<typeof createTestDb>
 
 vi.mock('../../../src/main/infrastructure/db/connection', () => ({
   getDb: () => db,
-  getRawDb: () => { throw new Error('not available') },
+  getRawDb: () => {
+    throw new Error('not available')
+  }
 }))
 
 const { PersonaService } = await import('../../../src/main/services/persona/persona.service')
 
-beforeAll(() => { db = createTestDb() })
+beforeAll(() => {
+  db = createTestDb()
+})
 beforeEach(() => clearTestDb())
 afterAll(() => closeTestDb())
 
@@ -26,7 +30,7 @@ const baseInput = {
   name: 'Yash — Indie Founder',
   bio: 'Solo dev shipping AI tools.',
   pillars: ['AI', 'indie hacking', 'dev workflow'],
-  styleHints: 'Casual, short sentences, no jargon.',
+  styleHints: 'Casual, short sentences, no jargon.'
 }
 
 describe('PersonaService.create()', () => {
@@ -73,7 +77,7 @@ describe('PersonaService.get()', () => {
   it('throws PERSONA_NOT_FOUND for unknown ID', async () => {
     const svc = makeService()
     await expect(svc.get('nonexistent')).rejects.toMatchObject({
-      code: ErrorCode.PERSONA_NOT_FOUND,
+      code: ErrorCode.PERSONA_NOT_FOUND
     })
   })
 })

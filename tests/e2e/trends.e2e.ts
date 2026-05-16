@@ -65,7 +65,7 @@ test.describe('Trends page', () => {
     await page.click('button:has-text("Configure")')
     await page.fill('input[placeholder*="ai, startups"]', 'ghostpilot')
     await page.click('button:has-text("Add")')
-    await expect(page.locator('text=ghostpilot')).toBeVisible()
+    await expect(page.locator('span').filter({ hasText: /^ghostpilot$/ })).toBeVisible()
   })
 
   test('can remove a keyword', async ({ page }) => {

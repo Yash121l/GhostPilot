@@ -28,11 +28,16 @@ export class PersonaService {
     if (!rows.length) {
       throw new AppError({ code: ErrorCode.PERSONA_NOT_FOUND, message: `Persona ${id} not found` })
     }
-    const fpRows = await db.select().from(styleFingerprints).where(eq(styleFingerprints.personaId, id))
+    const fpRows = await db
+      .select()
+      .from(styleFingerprints)
+      .where(eq(styleFingerprints.personaId, id))
     return this.mapRow(rows[0], fpRows[0])
   }
 
-  async create(input: Omit<Persona, 'id' | 'createdAt' | 'updatedAt' | 'latestFingerprint'>): Promise<Persona> {
+  async create(
+    input: Omit<Persona, 'id' | 'createdAt' | 'updatedAt' | 'latestFingerprint'>
+  ): Promise<Persona> {
     const db = getDb()
     const id = nanoid()
     const now = new Date()
@@ -44,7 +49,7 @@ export class PersonaService {
       pillars: JSON.stringify(input.pillars),
       styleHints: input.styleHints,
       createdAt: now,
-      updatedAt: now,
+      updatedAt: now
     })
 
     this.audit.write({
@@ -53,14 +58,17 @@ export class PersonaService {
       entityType: 'personas',
       entityId: id,
       outcome: 'success',
-      details: { name: input.name },
+      details: { name: input.name }
     })
 
     logger.info({ msg: 'Persona created', id, name: input.name })
     return this.get(id)
   }
 
-  async update(id: string, input: Partial<Omit<Persona, 'id' | 'createdAt' | 'updatedAt'>>): Promise<Persona> {
+  async update(
+    id: string,
+    input: Partial<Omit<Persona, 'id' | 'createdAt' | 'updatedAt'>>
+  ): Promise<Persona> {
     const db = getDb()
     const now = new Date()
 
@@ -71,7 +79,7 @@ export class PersonaService {
         ...(input.bio !== undefined && { bio: input.bio }),
         ...(input.pillars !== undefined && { pillars: JSON.stringify(input.pillars) }),
         ...(input.styleHints !== undefined && { styleHints: input.styleHints }),
-        updatedAt: now,
+        updatedAt: now
       })
       .where(eq(personas.id, id))
 
@@ -80,7 +88,7 @@ export class PersonaService {
       action: AuditAction.PERSONA_UPDATED,
       entityType: 'personas',
       entityId: id,
-      outcome: 'success',
+      outcome: 'success'
     })
 
     return this.get(id)
@@ -95,13 +103,13 @@ export class PersonaService {
       entityType: 'personas',
       entityId: id,
       outcome: 'success',
-      details: { deleted: true },
+      details: { deleted: true }
     })
   }
 
   private mapRow(
     r: typeof personas.$inferSelect,
-    fp?: typeof styleFingerprints.$inferSelect,
+    fp?: typeof styleFingerprints.$inferSelect
   ): Persona {
     let latestFingerprint: StyleFingerprint | undefined
     if (fp) {
@@ -112,7 +120,7 @@ export class PersonaService {
         descriptors: JSON.parse(fp.descriptors) as string[],
         avgSentenceLength: fp.avgSentenceLength,
         tone: fp.tone,
-        computedAt: fp.computedAt,
+        computedAt: fp.computedAt
       }
     }
 
@@ -124,7 +132,7 @@ export class PersonaService {
       styleHints: r.styleHints,
       latestFingerprint,
       createdAt: r.createdAt,
-      updatedAt: r.updatedAt,
+      updatedAt: r.updatedAt
     }
   }
 }

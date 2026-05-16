@@ -32,10 +32,10 @@ export class OllamaProvider implements LLMProvider {
         stream: false,
         options: {
           num_predict: opts.maxTokens ?? 2048,
-          temperature: opts.temperature ?? 0.7,
-        },
+          temperature: opts.temperature ?? 0.7
+        }
       }),
-      signal: AbortSignal.timeout(60_000),
+      signal: AbortSignal.timeout(60_000)
     })
 
     if (!res.ok) {
@@ -52,7 +52,7 @@ export class OllamaProvider implements LLMProvider {
       text: data.message.content,
       modelId: this.defaultModelId,
       promptTokens: data.prompt_eval_count ?? 0,
-      completionTokens: data.eval_count ?? 0,
+      completionTokens: data.eval_count ?? 0
     }
   }
 }
@@ -61,7 +61,7 @@ export class OllamaProvider implements LLMProvider {
 export async function detectOllama(): Promise<{ available: boolean; models: string[] }> {
   try {
     const res = await fetch(`${OLLAMA_BASE}/api/tags`, {
-      signal: AbortSignal.timeout(2000),
+      signal: AbortSignal.timeout(2000)
     })
     if (!res.ok) return { available: false, models: [] }
     const data = (await res.json()) as { models: { name: string }[] }

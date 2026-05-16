@@ -1,10 +1,20 @@
 import { useState, useEffect, useCallback, type ReactElement, type KeyboardEvent } from 'react'
 import {
-  TrendingUp, RefreshCw, Loader2, ExternalLink, PenTool, X,
-  Zap, SlidersHorizontal, Plus, ChevronUp, ChevronDown,
+  TrendingUp,
+  RefreshCw,
+  Loader2,
+  ExternalLink,
+  PenTool,
+  X,
+  Zap,
+  SlidersHorizontal,
+  Plus,
+  ChevronUp,
+  ChevronDown
 } from 'lucide-react'
 import { ipc, IPC_CHANNELS } from '../../lib/ipc'
 import type { TrendCluster, TrendConfig } from '@shared/types/trend'
+import type { HashtagInsight, PlatformPostInsight } from '@shared/ipc-types'
 import { DEFAULT_TREND_CONFIG } from '@shared/types/trend'
 import { useComposerStore } from '../../store/composer'
 
@@ -14,18 +24,28 @@ const TREND_CONFIG_KEY = 'trend:config'
 
 function heatMeta(cluster: TrendCluster): { label: string; color: string } {
   const top = Math.max(cluster.relevanceScore, cluster.velocityScore, cluster.noveltyScore)
-  if (top >= 0.75) return { label: 'Hot',    color: 'var(--color-error)' }
-  if (top >= 0.5)  return { label: 'Rising', color: 'var(--color-warning)' }
-  return              { label: 'Warm',    color: 'var(--color-brand-secondary)' }
+  if (top >= 0.75) return { label: 'Hot', color: 'var(--color-error)' }
+  if (top >= 0.5) return { label: 'Rising', color: 'var(--color-warning)' }
+  return { label: 'Warm', color: 'var(--color-brand-secondary)' }
 }
 
 // ─── Score bar ────────────────────────────────────────────────────────────────
 
-function ScoreBar({ label, value, color }: { label: string; value: number; color: string }): ReactElement {
+function ScoreBar({
+  label,
+  value,
+  color
+}: {
+  label: string
+  value: number
+  color: string
+}): ReactElement {
   const pct = Math.round(value * 100)
   return (
     <div className="flex items-center gap-3">
-      <span className="text-[10px] font-medium text-[var(--color-text-muted)] w-16 shrink-0">{label}</span>
+      <span className="text-[10px] font-medium text-[var(--color-text-muted)] w-16 shrink-0">
+        {label}
+      </span>
       <div className="flex-1 progress-track">
         <div className="progress-fill" style={{ width: `${pct}%`, background: color }} />
       </div>
@@ -38,7 +58,11 @@ function ScoreBar({ label, value, color }: { label: string; value: number; color
 
 // ─── Trend card ───────────────────────────────────────────────────────────────
 
-function TrendCard({ cluster, onDraft, onDismiss }: {
+function TrendCard({
+  cluster,
+  onDraft,
+  onDismiss
+}: {
   cluster: TrendCluster
   onDraft: () => void
   onDismiss: () => void
@@ -83,9 +107,17 @@ function TrendCard({ cluster, onDraft, onDismiss }: {
 
       {/* Scores — horizontal label + bar + number layout */}
       <div className="space-y-2 mb-4">
-        <ScoreBar label="Relevance" value={cluster.relevanceScore} color="var(--color-brand-primary)" />
-        <ScoreBar label="Velocity"  value={cluster.velocityScore}  color="var(--color-brand-secondary)" />
-        <ScoreBar label="Novelty"   value={cluster.noveltyScore}   color="var(--color-brand-accent)" />
+        <ScoreBar
+          label="Relevance"
+          value={cluster.relevanceScore}
+          color="var(--color-brand-primary)"
+        />
+        <ScoreBar
+          label="Velocity"
+          value={cluster.velocityScore}
+          color="var(--color-brand-secondary)"
+        />
+        <ScoreBar label="Novelty" value={cluster.noveltyScore} color="var(--color-brand-accent)" />
       </div>
 
       {/* Evidence links */}
@@ -131,14 +163,18 @@ function TrendCard({ cluster, onDraft, onDismiss }: {
 
 function TrendConfigPanel({ onSave }: { onSave: () => Promise<void> }): ReactElement {
   const [config, setConfig] = useState<TrendConfig>(DEFAULT_TREND_CONFIG)
-  const [input, setInput]   = useState('')
+  const [input, setInput] = useState('')
   const [saving, setSaving] = useState(false)
-  const [saved, setSaved]   = useState(false)
+  const [saved, setSaved] = useState(false)
 
   useEffect(() => {
     ipc.invoke(IPC_CHANNELS.SETTINGS_GET, { key: TREND_CONFIG_KEY }).then((res) => {
       if (res.ok && res.value) {
-        try { setConfig({ ...DEFAULT_TREND_CONFIG, ...(res.value as TrendConfig) }) } catch { /* ignore */ }
+        try {
+          setConfig({ ...DEFAULT_TREND_CONFIG, ...(res.value as TrendConfig) })
+        } catch {
+          /* ignore */
+        }
       }
     })
   }, [])
@@ -158,9 +194,7 @@ function TrendConfigPanel({ onSave }: { onSave: () => Promise<void> }): ReactEle
   const toggleSource = (src: 'hackernews' | 'reddit'): void => {
     setConfig((c) => ({
       ...c,
-      sources: c.sources.includes(src)
-        ? c.sources.filter((s) => s !== src)
-        : [...c.sources, src],
+      sources: c.sources.includes(src) ? c.sources.filter((s) => s !== src) : [...c.sources, src]
     }))
   }
 
@@ -174,7 +208,10 @@ function TrendConfigPanel({ onSave }: { onSave: () => Promise<void> }): ReactEle
   }
 
   const handleKey = (e: KeyboardEvent<HTMLInputElement>): void => {
-    if (e.key === 'Enter' || e.key === ',') { e.preventDefault(); addKeyword() }
+    if (e.key === 'Enter' || e.key === ',') {
+      e.preventDefault()
+      addKeyword()
+    }
   }
 
   const pct = Math.round(config.minScore * 100)
@@ -182,14 +219,22 @@ function TrendConfigPanel({ onSave }: { onSave: () => Promise<void> }): ReactEle
   return (
     <div
       className="rounded-2xl"
-      style={{ background: 'var(--color-surface)', border: '1px solid var(--color-border)', padding: '20px 24px' }}
+      style={{
+        background: 'var(--color-surface)',
+        border: '1px solid var(--color-border)',
+        padding: '20px 24px'
+      }}
     >
       <p className="section-label flex items-center gap-2">
         <SlidersHorizontal size={11} />
         Trend Configuration
         <span
           className="ml-1 text-[10px] px-2 py-0.5 rounded-full font-normal normal-case tracking-normal"
-          style={{ background: 'rgba(99,102,241,0.1)', color: 'var(--color-primary)', letterSpacing: 0 }}
+          style={{
+            background: 'rgba(99,102,241,0.1)',
+            color: 'var(--color-primary)',
+            letterSpacing: 0
+          }}
         >
           Affects next Refresh
         </span>
@@ -253,7 +298,7 @@ function TrendConfigPanel({ onSave }: { onSave: () => Promise<void> }): ReactEle
                     background: on ? 'rgba(99,102,241,0.08)' : 'var(--color-surface-alt)',
                     borderColor: on ? 'var(--color-primary)' : 'var(--color-border)',
                     color: on ? 'var(--color-primary)' : 'var(--color-text-secondary)',
-                    fontWeight: on ? 600 : 400,
+                    fontWeight: on ? 600 : 400
                   }}
                 >
                   <span
@@ -275,7 +320,9 @@ function TrendConfigPanel({ onSave }: { onSave: () => Promise<void> }): ReactEle
         {/* Min score */}
         <div>
           <div className="flex items-center justify-between mb-2">
-            <label className="form-label" style={{ marginBottom: 0 }}>Minimum composite score</label>
+            <label className="form-label" style={{ marginBottom: 0 }}>
+              Minimum composite score
+            </label>
             <span
               className="text-xs font-mono font-semibold"
               style={{ color: 'var(--color-primary)' }}
@@ -293,7 +340,10 @@ function TrendConfigPanel({ onSave }: { onSave: () => Promise<void> }): ReactEle
             className="w-full"
             style={{ accentColor: 'var(--color-primary)' }}
           />
-          <div className="flex justify-between text-[10px] mt-1" style={{ color: 'var(--color-text-muted)' }}>
+          <div
+            className="flex justify-between text-[10px] mt-1"
+            style={{ color: 'var(--color-text-muted)' }}
+          >
             <span>Show all</span>
             <span>High quality only</span>
           </div>
@@ -309,10 +359,7 @@ function TrendConfigPanel({ onSave }: { onSave: () => Promise<void> }): ReactEle
             {saving && <Loader2 size={12} className="animate-spin" />}
             {saving ? 'Saving…' : saved ? '✓ Saved' : 'Save & Refresh'}
           </button>
-          <button
-            onClick={() => setConfig(DEFAULT_TREND_CONFIG)}
-            className="btn btn-ghost btn-sm"
-          >
+          <button onClick={() => setConfig(DEFAULT_TREND_CONFIG)} className="btn btn-ghost btn-sm">
             Reset defaults
           </button>
         </div>
@@ -324,8 +371,11 @@ function TrendConfigPanel({ onSave }: { onSave: () => Promise<void> }): ReactEle
 // ─── Page ─────────────────────────────────────────────────────────────────────
 
 export default function TrendsPage(): ReactElement {
-  const [trends, setTrends]         = useState<TrendCluster[]>([])
-  const [loading, setLoading]       = useState(true)
+  const [trends, setTrends] = useState<TrendCluster[]>([])
+  const [tab, setTab] = useState<'external' | 'accounts' | 'hashtags'>('external')
+  const [accountPosts, setAccountPosts] = useState<PlatformPostInsight[]>([])
+  const [hashtags, setHashtags] = useState<HashtagInsight[]>([])
+  const [loading, setLoading] = useState(true)
   const [refreshing, setRefreshing] = useState(false)
   const [showConfig, setShowConfig] = useState(false)
   const setPrefill = useComposerStore((s) => s.setPrefill)
@@ -334,6 +384,12 @@ export default function TrendsPage(): ReactElement {
     setLoading(true)
     const res = await ipc.invoke(IPC_CHANNELS.TREND_LIST, { limit: 20 })
     if (res.ok) setTrends(res.value)
+    const [postsRes, hashtagsRes] = await Promise.all([
+      ipc.invoke(IPC_CHANNELS.PLATFORM_ANALYTICS_TOP_POSTS, { window: '24h' }),
+      ipc.invoke(IPC_CHANNELS.PLATFORM_ANALYTICS_HASHTAGS, {})
+    ])
+    if (postsRes.ok) setAccountPosts(postsRes.value)
+    if (hashtagsRes.ok) setHashtags(hashtagsRes.value)
     setLoading(false)
   }, [])
 
@@ -344,13 +400,13 @@ export default function TrendsPage(): ReactElement {
     setRefreshing(false)
   }, [load])
 
-  useEffect(() => { load() }, [load])
+  useEffect(() => {
+    load()
+  }, [load])
 
   const handleDraft = (cluster: TrendCluster): void => {
     // Pre-fill the composer with the trend title + summary as a starting point
-    const prefillText = cluster.summary
-      ? `${cluster.title}\n\n${cluster.summary}`
-      : cluster.title
+    const prefillText = cluster.summary ? `${cluster.title}\n\n${cluster.summary}` : cluster.title
     setPrefill(prefillText)
     window.dispatchEvent(new CustomEvent('nav', { detail: 'composer' }))
   }
@@ -372,11 +428,7 @@ export default function TrendsPage(): ReactElement {
             Configure
             {showConfig ? <ChevronUp size={11} /> : <ChevronDown size={11} />}
           </button>
-          <button
-            onClick={refresh}
-            disabled={refreshing}
-            className="btn btn-secondary btn-sm"
-          >
+          <button onClick={refresh} disabled={refreshing} className="btn btn-secondary btn-sm">
             <RefreshCw size={12} className={refreshing ? 'animate-spin' : ''} />
             {refreshing ? 'Fetching…' : 'Refresh'}
           </button>
@@ -389,8 +441,23 @@ export default function TrendsPage(): ReactElement {
         </div>
       ) : (
         <div className="page-body">
+          <div className="settings-tabs persona-tabs" style={{ marginBottom: 16 }}>
+            {[
+              ['external', 'External trends'],
+              ['accounts', 'Your accounts'],
+              ['hashtags', 'Hashtags']
+            ].map(([id, label]) => (
+              <button
+                key={id}
+                className={tab === id ? 'active' : ''}
+                onClick={() => setTab(id as typeof tab)}
+              >
+                {label}
+              </button>
+            ))}
+          </div>
           {/* Config panel (collapsed by default) */}
-          {showConfig && (
+          {showConfig && tab === 'external' && (
             <div className="mb-6">
               <TrendConfigPanel onSave={refresh} />
             </div>
@@ -398,21 +465,67 @@ export default function TrendsPage(): ReactElement {
 
           {/* Refreshing indicator */}
           {refreshing && (
-            <div className="flex items-center gap-2 mb-4 text-xs" style={{ color: 'var(--color-text-muted)' }}>
+            <div
+              className="flex items-center gap-2 mb-4 text-xs"
+              style={{ color: 'var(--color-text-muted)' }}
+            >
               <Loader2 size={12} className="animate-spin text-[var(--color-brand-primary)]" />
               Fetching fresh signals…
             </div>
           )}
 
           {/* Empty state */}
-          {trends.length === 0 ? (
+          {tab === 'accounts' ? (
+            <div className="workspace-card settings-muted-card">
+              <div className="section-label">Top account posts · last 24h</div>
+              {accountPosts.length === 0 ? (
+                <p>
+                  No published posts available yet. Connect accounts and publish through GhostPilot
+                  to build this view.
+                </p>
+              ) : (
+                <div className="settings-list">
+                  {accountPosts.map((post) => (
+                    <button
+                      key={post.externalId}
+                      className="settings-key-row workspace-card"
+                      onClick={() => {
+                        setPrefill(post.bodyPreview)
+                        window.dispatchEvent(new CustomEvent('nav', { detail: 'composer' }))
+                      }}
+                    >
+                      <div className="settings-row-main">
+                        <strong>{post.bodyPreview}</strong>
+                        <p>{post.publishedAt ?? 'Published time unavailable'}</p>
+                      </div>
+                    </button>
+                  ))}
+                </div>
+              )}
+            </div>
+          ) : tab === 'hashtags' ? (
+            <div className="workspace-card settings-muted-card">
+              <div className="section-label">Hashtag readiness</div>
+              <div className="settings-list">
+                {hashtags.map((item) => (
+                  <div key={item.platform} className="settings-key-row">
+                    <div className="settings-row-main">
+                      <strong>{item.platform}</strong>
+                      <p>{item.unavailableReason}</p>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          ) : trends.length === 0 ? (
             <div className="empty-state">
               <div className="empty-icon-wrap">
                 <TrendingUp size={24} />
               </div>
               <p className="empty-title">No trends yet</p>
               <p className="empty-text">
-                Pull from Hacker News and Reddit to discover what&apos;s trending. Add keywords in Configure to personalise relevance scores.
+                Pull from Hacker News and Reddit to discover what&apos;s trending. Add keywords in
+                Configure to personalise relevance scores.
               </p>
               <button onClick={refresh} disabled={refreshing} className="btn btn-primary">
                 <Zap size={14} />

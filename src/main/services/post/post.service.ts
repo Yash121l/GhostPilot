@@ -15,15 +15,22 @@ const logger = createLogger('PostService')
 export class PostService {
   constructor(private readonly audit: AuditService) {}
 
-  async create(input: { personaId: string; body: string; platforms: Platform[]; images?: ImageAttachment[] }): Promise<Post> {
+  async create(input: {
+    personaId: string
+    body: string
+    platforms: Platform[]
+    images?: ImageAttachment[]
+  }): Promise<Post> {
     const db = getDb()
     const id = nanoid()
     const now = new Date()
 
     // Resolve personaId — 'default' or unknown IDs must map to a real row (FK constraint)
     let personaId = input.personaId
-    const personaExists = personaId !== 'default' &&
-      (await db.select({ id: personas.id }).from(personas).where(eq(personas.id, personaId))).length > 0
+    const personaExists =
+      personaId !== 'default' &&
+      (await db.select({ id: personas.id }).from(personas).where(eq(personas.id, personaId)))
+        .length > 0
 
     if (!personaExists) {
       const existing = await db.select({ id: personas.id }).from(personas).limit(1)
@@ -39,7 +46,7 @@ export class PostService {
           pillars: '[]',
           styleHints: '',
           createdAt: now,
-          updatedAt: now,
+          updatedAt: now
         })
         personaId = defaultId
       }
@@ -54,7 +61,7 @@ export class PostService {
       imagePaths: JSON.stringify((input.images ?? []).map(({ dataUrl: _, ...rest }) => rest)),
       attempts: 0,
       createdAt: now,
-      updatedAt: now,
+      updatedAt: now
     })
 
     this.audit.write({
@@ -62,7 +69,7 @@ export class PostService {
       action: AuditAction.POST_CREATED,
       entityType: 'posts',
       entityId: id,
-      outcome: 'success',
+      outcome: 'success'
     })
 
     logger.info({ msg: 'Post created', id })
@@ -120,11 +127,14 @@ export class PostService {
         styleDriftScore: v.styleDriftScore,
         provider: v.provider,
         modelId: v.modelId,
-        createdAt: now,
+        createdAt: now
       })
     }
 
-    await db.update(posts).set({ status: PostStatus.PENDING_APPROVAL, updatedAt: now }).where(eq(posts.id, postId))
+    await db
+      .update(posts)
+      .set({ status: PostStatus.PENDING_APPROVAL, updatedAt: now })
+      .where(eq(posts.id, postId))
 
     this.audit.write({
       actor: 'system',
@@ -132,7 +142,7 @@ export class PostService {
       entityType: 'posts',
       entityId: postId,
       outcome: 'success',
-      details: { variantCount: variants.length },
+      details: { variantCount: variants.length }
     })
 
     return this.get(postId)
@@ -141,13 +151,14 @@ export class PostService {
   async approve(postId: string, variantId: string): Promise<Post> {
     const db = getDb()
     const rows = await db.select().from(posts).where(eq(posts.id, postId))
-    if (!rows.length) throw new AppError({ code: ErrorCode.POST_NOT_FOUND, message: `Post ${postId} not found` })
+    if (!rows.length)
+      throw new AppError({ code: ErrorCode.POST_NOT_FOUND, message: `Post ${postId} not found` })
 
     const allowed: string[] = [PostStatus.PENDING_APPROVAL, PostStatus.DRAFT]
     if (!allowed.includes(rows[0].status)) {
       throw new AppError({
         code: ErrorCode.POST_INVALID_TRANSITION,
-        message: `Cannot approve post in status ${rows[0].status}`,
+        message: `Cannot approve post in status ${rows[0].status}`
       })
     }
 
@@ -162,13 +173,18 @@ export class PostService {
       entityType: 'posts',
       entityId: postId,
       outcome: 'success',
-      details: { variantId },
+      details: { variantId }
     })
 
     return this.get(postId)
   }
 
-  async schedule(postId: string, variantId: string, platform: Platform, scheduledAt: Date): Promise<Job> {
+  async schedule(
+    postId: string,
+    variantId: string,
+    platform: Platform,
+    scheduledAt: Date
+  ): Promise<Job> {
     const db = getDb()
     const jobId = nanoid()
     const now = new Date()
@@ -182,7 +198,7 @@ export class PostService {
       status: 'pending',
       attempts: 0,
       createdAt: now,
-      updatedAt: now,
+      updatedAt: now
     })
 
     await db
@@ -196,7 +212,7 @@ export class PostService {
       entityType: 'posts',
       entityId: postId,
       outcome: 'success',
-      details: { jobId, platform, scheduledAt: scheduledAt.toISOString() },
+      details: { jobId, platform, scheduledAt: scheduledAt.toISOString() }
     })
 
     logger.info({ msg: 'Post scheduled', postId, jobId, platform, scheduledAt })
@@ -222,13 +238,13 @@ export class PostService {
       action: AuditAction.POST_DELETED,
       entityType: 'posts',
       entityId: id,
-      outcome: 'success',
+      outcome: 'success'
     })
   }
 
   private mapPost(
     r: typeof posts.$inferSelect,
-    variants: (typeof draftVariants.$inferSelect)[],
+    variants: (typeof draftVariants.$inferSelect)[]
   ): Post {
     return {
       id: r.id,
@@ -245,14 +261,14 @@ export class PostService {
         styleDriftScore: v.styleDriftScore,
         createdAt: v.createdAt,
         provider: v.provider,
-        modelId: v.modelId,
+        modelId: v.modelId
       })),
       images: JSON.parse(r.imagePaths ?? '[]') as ImageAttachment[],
       scheduledAt: r.scheduledAt ?? undefined,
       publishedAt: r.publishedAt ?? undefined,
       attempts: r.attempts,
       createdAt: r.createdAt,
-      updatedAt: r.updatedAt,
+      updatedAt: r.updatedAt
     }
   }
 }

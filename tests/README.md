@@ -75,14 +75,15 @@ npm run test:e2e:headed
 
 Some e2e tests are skipped by default because they require external services:
 
-| Flag | What it enables |
-|------|----------------|
-| `GHOSTPILOT_AI_CONFIGURED=1` | Tests that call the AI (Generate Variants, Goals decompose) |
-| `GHOSTPILOT_LINKEDIN_CONNECTED=1` | Tests that require LinkedIn to be connected |
-| `GHOSTPILOT_HAS_POSTS=1` | Tests that require existing posts in the DB |
-| `GHOSTPILOT_HAS_TRENDS=1` | Tests that require fetched trend cards |
+| Flag                              | What it enables                                             |
+| --------------------------------- | ----------------------------------------------------------- |
+| `GHOSTPILOT_AI_CONFIGURED=1`      | Tests that call the AI (Generate Variants, Goals decompose) |
+| `GHOSTPILOT_LINKEDIN_CONNECTED=1` | Tests that require LinkedIn to be connected                 |
+| `GHOSTPILOT_HAS_POSTS=1`          | Tests that require existing posts in the DB                 |
+| `GHOSTPILOT_HAS_TRENDS=1`         | Tests that require fetched trend cards                      |
 
 Example:
+
 ```bash
 GHOSTPILOT_AI_CONFIGURED=1 npm run test:e2e
 ```
@@ -90,12 +91,14 @@ GHOSTPILOT_AI_CONFIGURED=1 npm run test:e2e
 ## Test Design Principles
 
 **Unit tests:**
+
 - Use in-memory SQLite — no Electron, no file system, no real keychain
 - `vi.mock('electron', ...)` prevents Electron imports from crashing in Node
 - Each test file calls `clearTestDb()` in `beforeEach` for full isolation
 - Mocks are minimal and explicit
 
 **E2E tests:**
+
 - Use Page Object Models (`tests/e2e/fixtures/pages.ts`) — no raw selectors in tests
 - Tests that require external services (AI, OAuth) are skipped by default
 - Each test launches a fresh Electron instance and closes it after
@@ -106,6 +109,7 @@ GHOSTPILOT_AI_CONFIGURED=1 npm run test:e2e
 Run `npm run test:coverage` and open `coverage/index.html` for the full report.
 
 Target thresholds (configured in `vitest.config.ts`):
+
 - Lines: 80%
 - Functions: 80%
 - Branches: 60%

@@ -5,11 +5,7 @@
  */
 
 /** All known worker thread names. */
-export type WorkerName =
-  | 'publisher'
-  | 'context-ingestion'
-  | 'trend-watcher'
-  | 'fingerprint'
+export type WorkerName = 'publisher' | 'context-ingestion' | 'trend-watcher' | 'fingerprint'
 
 /** A message sent from WorkerPool → Worker Thread. */
 export interface WorkerRequest {
@@ -19,10 +15,7 @@ export interface WorkerRequest {
 }
 
 /** A message sent from Worker Thread → WorkerPool. */
-export type WorkerResponse =
-  | WorkerSuccessResponse
-  | WorkerErrorResponse
-  | WorkerLogMessage
+export type WorkerResponse = WorkerSuccessResponse | WorkerErrorResponse | WorkerLogMessage
 
 export interface WorkerSuccessResponse {
   kind: 'result'

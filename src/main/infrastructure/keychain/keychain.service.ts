@@ -71,7 +71,7 @@ export class KeychainService {
           code: ErrorCode.KEYCHAIN_WRITE_FAILED,
           message: `Failed to store secret for key "${key}"`,
           context: { key },
-          cause: fe as Error,
+          cause: fe as Error
         })
       }
     }
@@ -97,7 +97,7 @@ export class KeychainService {
         code: ErrorCode.KEYCHAIN_READ_FAILED,
         message: `Failed to read secret for key "${key}"`,
         context: { key },
-        cause: fe as Error,
+        cause: fe as Error
       })
     }
   }

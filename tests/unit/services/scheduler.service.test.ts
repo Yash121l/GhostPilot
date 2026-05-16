@@ -20,7 +20,10 @@ describe('SchedulerService stub', () => {
 
   it('start() is idempotent', () => {
     const svc = new SchedulerService(mockAudit(), {} as any)
-    expect(() => { svc.start(); svc.start() }).not.toThrow()
+    expect(() => {
+      svc.start()
+      svc.start()
+    }).not.toThrow()
     svc.stop()
   })
 

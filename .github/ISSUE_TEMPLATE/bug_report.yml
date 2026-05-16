@@ -11,7 +11,7 @@ body:
     id: version
     attributes:
       label: GhostPilot version
-      placeholder: "e.g. 1.0.4"
+      placeholder: 'e.g. 1.0.4'
     validations:
       required: true
 
@@ -56,7 +56,7 @@ body:
     id: logs
     attributes:
       label: Relevant logs
-      description: "macOS: `~/Library/Logs/ghostpilot/main.log`"
+      description: 'macOS: `~/Library/Logs/ghostpilot/main.log`'
       render: text
 
   - type: checkboxes

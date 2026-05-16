@@ -10,14 +10,18 @@ let db: ReturnType<typeof createTestDb>
 
 vi.mock('../../../src/main/infrastructure/db/connection', () => ({
   getDb: () => db,
-  getRawDb: () => { throw new Error('not available') },
+  getRawDb: () => {
+    throw new Error('not available')
+  }
 }))
 
 const { PostService } = await import('../../../src/main/services/post/post.service')
 const { PersonaService } = await import('../../../src/main/services/persona/persona.service')
 const { VariantGenerator } = await import('../../../src/main/services/post/variant-generator')
 
-beforeAll(() => { db = createTestDb() })
+beforeAll(() => {
+  db = createTestDb()
+})
 beforeEach(() => clearTestDb())
 afterAll(() => closeTestDb())
 
@@ -27,7 +31,7 @@ async function seedPersona(name = 'Test Persona') {
     name,
     bio: 'A test persona for unit tests.',
     pillars: ['AI', 'testing'],
-    styleHints: 'Clear and concise.',
+    styleHints: 'Clear and concise.'
   })
 }
 
@@ -57,18 +61,47 @@ describe('VariantGenerator.generate()', () => {
     const persona = await seedPersona()
     const post = await seedPost(persona.id)
     const ai = mockAIGateway()
-    const gen = new VariantGenerator(ai, new PersonaService(mockAudit()), new PostService(mockAudit()))
+    const gen = new VariantGenerator(
+      ai,
+      new PersonaService(mockAudit()),
+      new PostService(mockAudit())
+    )
 
-    await gen.generate(post.id, [Platform.LINKEDIN, Platform.TWITTER, Platform.INSTAGRAM], 'trace-2')
+    await gen.generate(
+      post.id,
+      [Platform.LINKEDIN, Platform.TWITTER, Platform.INSTAGRAM],
+      'trace-2'
+    )
 
     expect(ai.complete).toHaveBeenCalledTimes(3)
+  })
+
+  it('passes preferredProviderId through to the AI gateway', async () => {
+    const persona = await seedPersona()
+    const post = await seedPost(persona.id)
+    const ai = mockAIGateway()
+    const gen = new VariantGenerator(
+      ai,
+      new PersonaService(mockAudit()),
+      new PostService(mockAudit())
+    )
+
+    await gen.generate(post.id, [Platform.LINKEDIN], 'trace-provider', 'key:openai-key')
+
+    expect(ai.complete).toHaveBeenCalledWith(
+      expect.objectContaining({ preferredProviderId: 'key:openai-key' })
+    )
   })
 
   it('includes persona context in the prompt', async () => {
     const persona = await seedPersona('Yash — Founder')
     const post = await seedPost(persona.id, 'My draft')
     const ai = mockAIGateway()
-    const gen = new VariantGenerator(ai, new PersonaService(mockAudit()), new PostService(mockAudit()))
+    const gen = new VariantGenerator(
+      ai,
+      new PersonaService(mockAudit()),
+      new PostService(mockAudit())
+    )
 
     await gen.generate(post.id, [Platform.LINKEDIN], 'trace-3')
 
@@ -85,14 +118,23 @@ describe('VariantGenerator.generate()', () => {
     const raw = getRawTestDb()
     raw.pragma('foreign_keys = OFF')
     await db.insert(posts).values({
-      id: postId, personaId: 'nonexistent-persona',
-      status: 'draft', body: 'Orphan post', platforms: '["linkedin"]',
-      attempts: 0, createdAt: now, updatedAt: now,
+      id: postId,
+      personaId: 'nonexistent-persona',
+      status: 'draft',
+      body: 'Orphan post',
+      platforms: '["linkedin"]',
+      attempts: 0,
+      createdAt: now,
+      updatedAt: now
     })
     raw.pragma('foreign_keys = ON')
 
     const ai = mockAIGateway()
-    const gen = new VariantGenerator(ai, new PersonaService(mockAudit()), new PostService(mockAudit()))
+    const gen = new VariantGenerator(
+      ai,
+      new PersonaService(mockAudit()),
+      new PostService(mockAudit())
+    )
 
     // Should not throw — falls back to generic tone
     const result = await gen.generate(postId, [Platform.LINKEDIN], 'trace-4')
@@ -107,11 +149,19 @@ describe('VariantGenerator.generate()', () => {
     const post = await seedPost(persona.id)
     // AI returns text longer than Twitter's 280 char limit
     const longText = 'x'.repeat(500)
-    const ai = mockAIGateway({ complete: vi.fn().mockResolvedValue({
-      text: longText, provider: 'openai', modelId: 'gpt-4o-mini',
-      usage: { promptTokens: 10, completionTokens: 100, estimatedCostUsd: 0 },
-    }) })
-    const gen = new VariantGenerator(ai, new PersonaService(mockAudit()), new PostService(mockAudit()))
+    const ai = mockAIGateway({
+      complete: vi.fn().mockResolvedValue({
+        text: longText,
+        provider: 'openai',
+        modelId: 'gpt-4o-mini',
+        usage: { promptTokens: 10, completionTokens: 100, estimatedCostUsd: 0 }
+      })
+    })
+    const gen = new VariantGenerator(
+      ai,
+      new PersonaService(mockAudit()),
+      new PostService(mockAudit())
+    )
 
     const result = await gen.generate(post.id, [Platform.TWITTER], 'trace-5')
     const twitterVariant = result.variants.find((v) => v.platform === Platform.TWITTER)
@@ -121,19 +171,34 @@ describe('VariantGenerator.generate()', () => {
     expect(twitterVariant!.charCount).toBeLessThanOrEqual(280)
   })
 
-  it('pushes error placeholder variant when AI fails for a platform', async () => {
+  it('throws a concise error when every platform fails instead of saving an error variant', async () => {
     const persona = await seedPersona()
     const post = await seedPost(persona.id)
+    const privateDraft = 'SOURCE DRAFT: private strategy'
     const ai = mockAIGateway({
-      complete: vi.fn().mockRejectedValue(new Error('AI provider down')),
+      complete: vi
+        .fn()
+        .mockRejectedValue(
+          new Error(
+            `Command failed: /opt/homebrew/bin/codex exec --skip-git-repo-check ${privateDraft}`
+          )
+        )
     })
-    const gen = new VariantGenerator(ai, new PersonaService(mockAudit()), new PostService(mockAudit()))
+    const gen = new VariantGenerator(
+      ai,
+      new PersonaService(mockAudit()),
+      new PostService(mockAudit())
+    )
 
-    const result = await gen.generate(post.id, [Platform.LINKEDIN], 'trace-6')
-
-    expect(result.variants).toHaveLength(1)
-    expect(result.variants[0].body).toContain('[Generation failed:')
-    expect(result.variants[0].provider).toBe('error')
+    await expect(gen.generate(post.id, [Platform.LINKEDIN], 'trace-6')).rejects.toThrow(
+      'Codex CLI failed. Check sign-in or choose an API provider in Settings.'
+    )
+    try {
+      await gen.generate(post.id, [Platform.LINKEDIN], 'trace-6b')
+    } catch (error) {
+      expect(error).toBeInstanceOf(Error)
+      expect((error as Error).message).not.toContain(privateDraft)
+    }
   })
 
   it('continues generating other platforms when one fails', async () => {
@@ -145,18 +210,23 @@ describe('VariantGenerator.generate()', () => {
         callCount++
         if (callCount === 1) throw new Error('First platform failed')
         return Promise.resolve({
-          text: 'Success', provider: 'openai', modelId: 'gpt-4o-mini',
-          usage: { promptTokens: 10, completionTokens: 20, estimatedCostUsd: 0 },
+          text: 'Success',
+          provider: 'openai',
+          modelId: 'gpt-4o-mini',
+          usage: { promptTokens: 10, completionTokens: 20, estimatedCostUsd: 0 }
         })
-      }),
+      })
     })
-    const gen = new VariantGenerator(ai, new PersonaService(mockAudit()), new PostService(mockAudit()))
+    const gen = new VariantGenerator(
+      ai,
+      new PersonaService(mockAudit()),
+      new PostService(mockAudit())
+    )
 
     const result = await gen.generate(post.id, [Platform.LINKEDIN, Platform.TWITTER], 'trace-7')
 
-    expect(result.variants).toHaveLength(2)
-    expect(result.variants[0].provider).toBe('error')   // LinkedIn failed
-    expect(result.variants[1].body).toBe('Success')     // Twitter succeeded
+    expect(result.variants).toHaveLength(1)
+    expect(result.variants[0].body).toBe('Success')
   })
 
   it('sets correct provider and modelId from AI response', async () => {
@@ -164,11 +234,17 @@ describe('VariantGenerator.generate()', () => {
     const post = await seedPost(persona.id)
     const ai = mockAIGateway({
       complete: vi.fn().mockResolvedValue({
-        text: 'Generated content', provider: 'anthropic', modelId: 'claude-haiku-4-5',
-        usage: { promptTokens: 50, completionTokens: 30, estimatedCostUsd: 0.001 },
-      }),
+        text: 'Generated content',
+        provider: 'anthropic',
+        modelId: 'claude-haiku-4-5',
+        usage: { promptTokens: 50, completionTokens: 30, estimatedCostUsd: 0.001 }
+      })
     })
-    const gen = new VariantGenerator(ai, new PersonaService(mockAudit()), new PostService(mockAudit()))
+    const gen = new VariantGenerator(
+      ai,
+      new PersonaService(mockAudit()),
+      new PostService(mockAudit())
+    )
 
     const result = await gen.generate(post.id, [Platform.LINKEDIN], 'trace-8')
 

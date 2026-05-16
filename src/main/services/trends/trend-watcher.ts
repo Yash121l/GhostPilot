@@ -16,7 +16,9 @@ async function readConfig(): Promise<TrendConfig> {
     const db = getDb()
     const rows = await db.select().from(settings).where(eq(settings.key, 'trend:config'))
     if (rows[0]) return JSON.parse(rows[0].value) as TrendConfig
-  } catch { /* ignore */ }
+  } catch {
+    /* ignore */
+  }
   return DEFAULT_TREND_CONFIG
 }
 
@@ -36,9 +38,7 @@ function relevanceScore(cluster: RawTrendItem[], config: TrendConfig): number {
   const allWords = cluster.map((i) => i.title.toLowerCase()).join(' ')
 
   if (config.keywords.length > 0) {
-    const matchCount = config.keywords.filter((kw) =>
-      allWords.includes(kw.toLowerCase()),
-    ).length
+    const matchCount = config.keywords.filter((kw) => allWords.includes(kw.toLowerCase())).length
     return Math.min(0.95, 0.3 + (matchCount / config.keywords.length) * 0.65)
   }
 
@@ -70,7 +70,7 @@ export class TrendWatcher {
 
     const settled = await Promise.allSettled(tasks)
     const allItems: RawTrendItem[] = settled.flatMap((r) =>
-      r.status === 'fulfilled' ? r.value : [],
+      r.status === 'fulfilled' ? r.value : []
     )
 
     if (!allItems.length) {
@@ -101,7 +101,7 @@ export class TrendWatcher {
         velocityScore: vel,
         noveltyScore: nov,
         compositeScore: composite,
-        detectedAt: now,
+        detectedAt: now
       })
 
       for (const item of cluster.slice(0, 3)) {
@@ -112,7 +112,7 @@ export class TrendWatcher {
           url: item.url,
           title: item.title,
           score: item.score,
-          fetchedAt: item.fetchedAt,
+          fetchedAt: item.fetchedAt
         })
       }
     }
@@ -152,9 +152,9 @@ export class TrendWatcher {
           url: e.url,
           title: e.title,
           score: e.score,
-          fetchedAt: e.fetchedAt,
+          fetchedAt: e.fetchedAt
         })),
-        detectedAt: c.detectedAt,
+        detectedAt: c.detectedAt
       }))
   }
 
@@ -172,11 +172,21 @@ export class TrendWatcher {
       const cluster = [items[i]]
       used.add(i)
 
-      const wordsI = new Set(items[i].title.toLowerCase().split(/\W+/).filter((w) => w.length > 4))
+      const wordsI = new Set(
+        items[i].title
+          .toLowerCase()
+          .split(/\W+/)
+          .filter((w) => w.length > 4)
+      )
 
       for (let j = i + 1; j < items.length; j++) {
         if (used.has(j)) continue
-        const wordsJ = new Set(items[j].title.toLowerCase().split(/\W+/).filter((w) => w.length > 4))
+        const wordsJ = new Set(
+          items[j].title
+            .toLowerCase()
+            .split(/\W+/)
+            .filter((w) => w.length > 4)
+        )
         const intersection = [...wordsI].filter((w) => wordsJ.has(w))
         if (intersection.length >= 2) {
           cluster.push(items[j])
@@ -188,7 +198,7 @@ export class TrendWatcher {
     }
 
     return clusters.sort(
-      (a, b) => Math.max(...b.map((i) => i.score)) - Math.max(...a.map((i) => i.score)),
+      (a, b) => Math.max(...b.map((i) => i.score)) - Math.max(...a.map((i) => i.score))
     )
   }
 }

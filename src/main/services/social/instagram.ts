@@ -6,7 +6,7 @@ import type {
   PublishResult,
   AnalyticsData,
   RateLimitState,
-  PlatformEvent,
+  PlatformEvent
 } from './interface'
 import { Platform } from '../../../shared/types/platform'
 import { createLogger } from '../../infrastructure/logger/logger'
@@ -28,13 +28,13 @@ export class InstagramConnector implements SocialConnector {
   private _postRate = {
     remaining: POST_LIMIT_24H,
     limit: POST_LIMIT_24H,
-    resetsAt: new Date(Date.now() + 24 * 60 * 60 * 1000),
+    resetsAt: new Date(Date.now() + 24 * 60 * 60 * 1000)
   }
 
   private _dmRate = {
     remaining: DM_LIMIT_1H,
     limit: DM_LIMIT_1H,
-    resetsAt: new Date(Date.now() + 60 * 60 * 1000),
+    resetsAt: new Date(Date.now() + 60 * 60 * 1000)
   }
 
   // Track subscribed webhook intervals for cleanup
@@ -52,27 +52,37 @@ export class InstagramConnector implements SocialConnector {
         'instagram_manage_comments',
         'instagram_manage_messages',
         'pages_show_list',
-        'pages_manage_metadata',
+        'pages_manage_metadata'
       ].join(','),
       response_type: 'code',
-      state,
+      state
     })
     return `https://www.facebook.com/dialog/oauth?${params}`
   }
 
-  async handleCallback(code: string, _codeVerifier: string, redirectUri: string): Promise<ConnectionResult> {
+  async handleCallback(
+    code: string,
+    _codeVerifier: string,
+    redirectUri: string
+  ): Promise<ConnectionResult> {
     const shortRes = await this.gfetch('/oauth/access_token', {
       method: 'POST',
-      body: new URLSearchParams({ client_id: appId(), client_secret: appSecret(), redirect_uri: redirectUri, code }),
+      body: new URLSearchParams({
+        client_id: appId(),
+        client_secret: appSecret(),
+        redirect_uri: redirectUri,
+        code
+      })
     })
     if (!shortRes.ok) throw new Error(`Instagram token exchange failed: ${await shortRes.text()}`)
     const shortData = (await shortRes.json()) as { access_token: string }
 
     // Exchange for long-lived (60-day) token
     const longRes = await this.gfetch(
-      `/oauth/access_token?grant_type=fb_exchange_token&client_id=${appId()}&client_secret=${appSecret()}&fb_exchange_token=${shortData.access_token}`,
+      `/oauth/access_token?grant_type=fb_exchange_token&client_id=${appId()}&client_secret=${appSecret()}&fb_exchange_token=${shortData.access_token}`
     )
-    if (!longRes.ok) throw new Error(`Instagram long-lived token exchange failed: ${await longRes.text()}`)
+    if (!longRes.ok)
+      throw new Error(`Instagram long-lived token exchange failed: ${await longRes.text()}`)
     const longData = (await longRes.json()) as { access_token: string; expires_in?: number }
 
     const profileRes = await this.gfetch(`/me?fields=id,name&access_token=${longData.access_token}`)
@@ -86,22 +96,22 @@ export class InstagramConnector implements SocialConnector {
         expiresAt: longData.expires_in
           ? new Date(Date.now() + longData.expires_in * 1000)
           : new Date(Date.now() + 60 * 24 * 60 * 60 * 1000), // 60 days
-        scopes: ['instagram_basic', 'instagram_content_publish', 'instagram_manage_comments'],
-      },
+        scopes: ['instagram_basic', 'instagram_content_publish', 'instagram_manage_comments']
+      }
     }
   }
 
   async refreshTokens(accessToken: string): Promise<OAuthTokens> {
     // Long-lived tokens are refreshed by calling the refresh endpoint
     const res = await this.gfetch(
-      `/oauth/access_token?grant_type=ig_refresh_token&access_token=${accessToken}`,
+      `/oauth/access_token?grant_type=ig_refresh_token&access_token=${accessToken}`
     )
     if (!res.ok) throw new Error(`Instagram token refresh failed: ${await res.text()}`)
     const data = (await res.json()) as { access_token: string; expires_in: number }
     return {
       accessToken: data.access_token,
       expiresAt: new Date(Date.now() + data.expires_in * 1000),
-      scopes: ['instagram_basic', 'instagram_content_publish'],
+      scopes: ['instagram_basic', 'instagram_content_publish']
     }
   }
 
@@ -115,7 +125,9 @@ export class InstagramConnector implements SocialConnector {
   async publish(post: PreparedPost, tokens: OAuthTokens): Promise<PublishResult> {
     const rl = this.rateLimitState()
     if (rl.exceeded) {
-      throw new Error(`Instagram post rate limit exceeded — resets at ${rl.resetsAt.toLocaleTimeString()}`)
+      throw new Error(
+        `Instagram post rate limit exceeded — resets at ${rl.resetsAt.toLocaleTimeString()}`
+      )
     }
 
     const igId = await this.getIgBusinessId(tokens.accessToken)
@@ -128,7 +140,7 @@ export class InstagramConnector implements SocialConnector {
     // Single image or caption-only
     const containerParams: Record<string, string> = {
       caption: post.body,
-      access_token: tokens.accessToken,
+      access_token: tokens.accessToken
     }
 
     // Instagram requires a public HTTPS URL — use originalUrl from AI-gen or a direct mediaUrl
@@ -142,9 +154,10 @@ export class InstagramConnector implements SocialConnector {
 
     const containerRes = await this.gfetch(`/${igId}/media`, {
       method: 'POST',
-      body: new URLSearchParams(containerParams),
+      body: new URLSearchParams(containerParams)
     })
-    if (!containerRes.ok) throw new Error(`Instagram container creation failed: ${await containerRes.text()}`)
+    if (!containerRes.ok)
+      throw new Error(`Instagram container creation failed: ${await containerRes.text()}`)
     const container = (await containerRes.json()) as { id: string }
 
     // Wait for container to be ready
@@ -152,7 +165,7 @@ export class InstagramConnector implements SocialConnector {
 
     const publishRes = await this.gfetch(`/${igId}/media_publish`, {
       method: 'POST',
-      body: new URLSearchParams({ creation_id: container.id, access_token: tokens.accessToken }),
+      body: new URLSearchParams({ creation_id: container.id, access_token: tokens.accessToken })
     })
     if (!publishRes.ok) throw new Error(`Instagram publish failed: ${await publishRes.text()}`)
     const published = (await publishRes.json()) as { id: string }
@@ -166,7 +179,7 @@ export class InstagramConnector implements SocialConnector {
   private async publishCarousel(
     igId: string,
     post: PreparedPost,
-    tokens: OAuthTokens,
+    tokens: OAuthTokens
   ): Promise<PublishResult> {
     const items = post.carouselItems!.slice(0, 10)
     const childIds: string[] = []
@@ -179,8 +192,8 @@ export class InstagramConnector implements SocialConnector {
           media_type: 'IMAGE',
           is_carousel_item: 'true',
           access_token: tokens.accessToken,
-          ...(item.caption ? { caption: item.caption } : {}),
-        }),
+          ...(item.caption ? { caption: item.caption } : {})
+        })
       })
       if (!childRes.ok) {
         logger.warn({ msg: 'Carousel child creation failed', error: await childRes.text() })
@@ -199,32 +212,34 @@ export class InstagramConnector implements SocialConnector {
         media_type: 'CAROUSEL',
         children: childIds.join(','),
         caption: post.body,
-        access_token: tokens.accessToken,
-      }),
+        access_token: tokens.accessToken
+      })
     })
-    if (!carouselRes.ok) throw new Error(`Instagram carousel container failed: ${await carouselRes.text()}`)
+    if (!carouselRes.ok)
+      throw new Error(`Instagram carousel container failed: ${await carouselRes.text()}`)
     const carousel = (await carouselRes.json()) as { id: string }
 
     await this.pollContainerStatus(carousel.id, tokens.accessToken)
 
     const publishRes = await this.gfetch(`/${igId}/media_publish`, {
       method: 'POST',
-      body: new URLSearchParams({ creation_id: carousel.id, access_token: tokens.accessToken }),
+      body: new URLSearchParams({ creation_id: carousel.id, access_token: tokens.accessToken })
     })
-    if (!publishRes.ok) throw new Error(`Instagram carousel publish failed: ${await publishRes.text()}`)
+    if (!publishRes.ok)
+      throw new Error(`Instagram carousel publish failed: ${await publishRes.text()}`)
     const published = (await publishRes.json()) as { id: string }
 
     this.decrementPostRate()
     return {
       externalId: published.id,
       url: `https://www.instagram.com/p/${published.id}`,
-      extras: { carouselItems: childIds.length },
+      extras: { carouselItems: childIds.length }
     }
   }
 
   async deletePost(externalId: string, tokens: OAuthTokens): Promise<void> {
     const res = await this.gfetch(`/${externalId}?access_token=${tokens.accessToken}`, {
-      method: 'DELETE',
+      method: 'DELETE'
     })
     if (!res.ok && res.status !== 404) {
       throw new Error(`Instagram delete failed (${res.status}): ${await res.text()}`)
@@ -236,7 +251,7 @@ export class InstagramConnector implements SocialConnector {
   async fetchAnalytics(externalId: string, tokens: OAuthTokens): Promise<AnalyticsData> {
     const metrics = 'impressions,reach,likes,comments,shares,saved,profile_visits'
     const res = await this.gfetch(
-      `/${externalId}/insights?metric=${metrics}&period=lifetime&access_token=${tokens.accessToken}`,
+      `/${externalId}/insights?metric=${metrics}&period=lifetime&access_token=${tokens.accessToken}`
     )
 
     if (!res.ok) {
@@ -254,7 +269,7 @@ export class InstagramConnector implements SocialConnector {
       comments: byName['comments'] ?? 0,
       shares: byName['shares'] ?? 0,
       clicks: byName['profile_visits'] ?? 0,
-      fetchedAt: new Date(),
+      fetchedAt: new Date()
     }
   }
 
@@ -262,7 +277,7 @@ export class InstagramConnector implements SocialConnector {
 
   async subscribeEvents(
     tokens: OAuthTokens,
-    onEvent: (event: PlatformEvent) => void,
+    onEvent: (event: PlatformEvent) => void
   ): Promise<() => void> {
     const igId = await this.getIgBusinessId(tokens.accessToken).catch(() => null)
     if (!igId) return () => {}
@@ -273,14 +288,21 @@ export class InstagramConnector implements SocialConnector {
       try {
         const since = Math.floor(lastCommentTs / 1000)
         const res = await this.gfetch(
-          `/${igId}/mentioned_media?fields=id,comments{id,text,from,timestamp},timestamp&since=${since}&access_token=${tokens.accessToken}`,
+          `/${igId}/mentioned_media?fields=id,comments{id,text,from,timestamp},timestamp&since=${since}&access_token=${tokens.accessToken}`
         )
         if (!res.ok) return
 
         const data = (await res.json()) as {
           data: {
             id: string
-            comments?: { data: { id: string; text: string; from?: { id: string; username: string }; timestamp: string }[] }
+            comments?: {
+              data: {
+                id: string
+                text: string
+                from?: { id: string; username: string }
+                timestamp: string
+              }[]
+            }
           }[]
         }
 
@@ -295,7 +317,7 @@ export class InstagramConnector implements SocialConnector {
                 fromDisplayName: comment.from?.username ?? 'Unknown',
                 content: comment.text,
                 parentPostId: media.id,
-                receivedAt: new Date(comment.timestamp),
+                receivedAt: new Date(comment.timestamp)
               })
               lastCommentTs = Math.max(lastCommentTs, ts)
             }
@@ -321,7 +343,7 @@ export class InstagramConnector implements SocialConnector {
       this._postRate = {
         remaining: POST_LIMIT_24H,
         limit: POST_LIMIT_24H,
-        resetsAt: new Date(now + 24 * 60 * 60 * 1000),
+        resetsAt: new Date(now + 24 * 60 * 60 * 1000)
       }
     }
 
@@ -330,7 +352,7 @@ export class InstagramConnector implements SocialConnector {
       remaining: this._postRate.remaining,
       limit: this._postRate.limit,
       resetsAt: this._postRate.resetsAt,
-      exceeded: this._postRate.remaining <= 0,
+      exceeded: this._postRate.remaining <= 0
     }
   }
 
@@ -348,8 +370,8 @@ export class InstagramConnector implements SocialConnector {
       body: JSON.stringify({
         recipient: { id: recipientId },
         message: { text: message },
-        access_token: pageAccessToken,
-      }),
+        access_token: pageAccessToken
+      })
     })
 
     if (!res.ok) throw new Error(`Instagram DM send failed: ${await res.text()}`)
@@ -357,7 +379,11 @@ export class InstagramConnector implements SocialConnector {
     // Update DM rate
     const now = Date.now()
     if (now > this._dmRate.resetsAt.getTime()) {
-      this._dmRate = { remaining: DM_LIMIT_1H, limit: DM_LIMIT_1H, resetsAt: new Date(now + 60 * 60 * 1000) }
+      this._dmRate = {
+        remaining: DM_LIMIT_1H,
+        limit: DM_LIMIT_1H,
+        resetsAt: new Date(now + 60 * 60 * 1000)
+      }
     }
     this._dmRate.remaining = Math.max(0, this._dmRate.remaining - 1)
   }
@@ -372,7 +398,7 @@ export class InstagramConnector implements SocialConnector {
 
     const pageId = pages.data[0].id
     const igRes = await this.gfetch(
-      `/${pageId}?fields=instagram_business_account&access_token=${pages.data[0].access_token}`,
+      `/${pageId}?fields=instagram_business_account&access_token=${pages.data[0].access_token}`
     )
     const igData = (await igRes.json()) as { instagram_business_account?: { id: string } }
     const igId = igData.instagram_business_account?.id
@@ -386,7 +412,7 @@ export class InstagramConnector implements SocialConnector {
     for (let i = 0; i < maxAttempts; i++) {
       await new Promise((r) => setTimeout(r, 2000))
       const res = await this.gfetch(
-        `/${containerId}?fields=status_code,status&access_token=${accessToken}`,
+        `/${containerId}?fields=status_code,status&access_token=${accessToken}`
       )
       if (!res.ok) continue
       const data = (await res.json()) as { status_code?: string; status?: string }
@@ -403,7 +429,15 @@ export class InstagramConnector implements SocialConnector {
   }
 
   private emptyAnalytics(externalId: string): AnalyticsData {
-    return { externalId, impressions: 0, likes: 0, comments: 0, shares: 0, clicks: 0, fetchedAt: new Date() }
+    return {
+      externalId,
+      impressions: 0,
+      likes: 0,
+      comments: 0,
+      shares: 0,
+      clicks: 0,
+      fetchedAt: new Date()
+    }
   }
 
   private gfetch(path: string, init?: RequestInit): Promise<Response> {

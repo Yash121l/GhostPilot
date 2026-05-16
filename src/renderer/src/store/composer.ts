@@ -8,5 +8,5 @@ interface ComposerStore {
 
 export const useComposerStore = create<ComposerStore>((set) => ({
   prefill: null,
-  setPrefill: (text) => set({ prefill: text }),
+  setPrefill: (text) => set({ prefill: text })
 }))

@@ -12,13 +12,13 @@ export enum AITask {
   SCORE_TREND = 'score_trend',
   BUILD_FINGERPRINT = 'build_fingerprint',
   CONTEXT_EMBED = 'context_embed',
-  MODERATION = 'moderation',
+  MODERATION = 'moderation'
 }
 
 export enum ModelHint {
   ECONOMY = 'economy',
   PREMIUM = 'premium',
-  LOCAL = 'local',
+  LOCAL = 'local'
 }
 
 export enum AIProvider {
@@ -26,7 +26,7 @@ export enum AIProvider {
   ANTHROPIC = 'anthropic',
   OLLAMA = 'ollama',
   OPENROUTER = 'openrouter',
-  GROQ = 'groq',
+  GROQ = 'groq'
 }
 
 export interface ProviderKeyConfig {
@@ -59,6 +59,7 @@ export interface LLMUsage {
 export interface AIGatewayRequest {
   task: AITask
   hint: ModelHint
+  preferredProviderId?: string
   prompt: string
   systemMessage?: string
   maxTokens?: number

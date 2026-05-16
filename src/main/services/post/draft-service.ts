@@ -22,7 +22,7 @@ const ALLOWED_TRANSITIONS: Record<PostStatus, PostStatus[]> = {
   [PostStatus.PUBLISHING]: [PostStatus.PUBLISHED, PostStatus.FAILED],
   [PostStatus.PUBLISHED]: [PostStatus.ARCHIVED],
   [PostStatus.FAILED]: [PostStatus.DRAFT, PostStatus.ARCHIVED],
-  [PostStatus.ARCHIVED]: [],
+  [PostStatus.ARCHIVED]: []
 }
 
 export interface GenerationAuditEntry {
@@ -39,7 +39,7 @@ export interface GenerationAuditEntry {
 export class DraftService {
   constructor(
     private readonly audit: AuditService,
-    private readonly postService: PostService,
+    private readonly postService: PostService
   ) {}
 
   // ─── CRUD ────────────────────────────────────────────────────────────────────
@@ -52,12 +52,14 @@ export class DraftService {
     return this.postService.get(id)
   }
 
-  async listDrafts(opts: {
-    personaId?: string
-    statuses?: PostStatus[]
-    limit?: number
-    offset?: number
-  } = {}): Promise<Post[]> {
+  async listDrafts(
+    opts: {
+      personaId?: string
+      statuses?: PostStatus[]
+      limit?: number
+      offset?: number
+    } = {}
+  ): Promise<Post[]> {
     const db = getDb()
     const statuses = opts.statuses ?? [PostStatus.DRAFT, PostStatus.PENDING_APPROVAL]
 
@@ -67,20 +69,23 @@ export class DraftService {
       .where(
         and(
           opts.personaId ? eq(posts.personaId, opts.personaId) : undefined,
-          inArray(posts.status, statuses),
-        ),
+          inArray(posts.status, statuses)
+        )
       )
       .orderBy(desc(posts.updatedAt))
       .limit(opts.limit ?? 50)
       .offset(opts.offset ?? 0)
 
     const allVariants = rows.length
-      ? await db.select().from(draftVariants).where(
-          inArray(
-            draftVariants.postId,
-            rows.map((r) => r.id),
-          ),
-        )
+      ? await db
+          .select()
+          .from(draftVariants)
+          .where(
+            inArray(
+              draftVariants.postId,
+              rows.map((r) => r.id)
+            )
+          )
       : []
 
     const variantsByPost = new Map<string, typeof allVariants>()
@@ -96,13 +101,14 @@ export class DraftService {
   async updateBody(id: string, body: string): Promise<Post> {
     const db = getDb()
     const rows = await db.select().from(posts).where(eq(posts.id, id))
-    if (!rows.length) throw new AppError({ code: ErrorCode.POST_NOT_FOUND, message: `Post ${id} not found` })
+    if (!rows.length)
+      throw new AppError({ code: ErrorCode.POST_NOT_FOUND, message: `Post ${id} not found` })
 
     const allowedStatuses: string[] = [PostStatus.DRAFT, PostStatus.PENDING_APPROVAL]
     if (!allowedStatuses.includes(rows[0].status)) {
       throw new AppError({
         code: ErrorCode.POST_INVALID_TRANSITION,
-        message: `Cannot edit body of post in status ${rows[0].status}`,
+        message: `Cannot edit body of post in status ${rows[0].status}`
       })
     }
 
@@ -114,7 +120,7 @@ export class DraftService {
       entityType: 'posts',
       entityId: id,
       outcome: 'success',
-      details: { action: 'body_updated', chars: body.length },
+      details: { action: 'body_updated', chars: body.length }
     })
 
     logger.info({ msg: 'Draft body updated', id })
@@ -126,11 +132,15 @@ export class DraftService {
     const rows = await db.select().from(posts).where(eq(posts.id, id))
     if (!rows.length) return
 
-    const publishedStatuses: string[] = [PostStatus.PUBLISHED, PostStatus.SCHEDULED, PostStatus.PUBLISHING]
+    const publishedStatuses: string[] = [
+      PostStatus.PUBLISHED,
+      PostStatus.SCHEDULED,
+      PostStatus.PUBLISHING
+    ]
     if (publishedStatuses.includes(rows[0].status)) {
       throw new AppError({
         code: ErrorCode.POST_INVALID_TRANSITION,
-        message: `Cannot delete a post in status ${rows[0].status}`,
+        message: `Cannot delete a post in status ${rows[0].status}`
       })
     }
 
@@ -142,14 +152,15 @@ export class DraftService {
   async transitionStatus(id: string, to: PostStatus): Promise<Post> {
     const db = getDb()
     const rows = await db.select().from(posts).where(eq(posts.id, id))
-    if (!rows.length) throw new AppError({ code: ErrorCode.POST_NOT_FOUND, message: `Post ${id} not found` })
+    if (!rows.length)
+      throw new AppError({ code: ErrorCode.POST_NOT_FOUND, message: `Post ${id} not found` })
 
     const from = rows[0].status as PostStatus
     const allowed = ALLOWED_TRANSITIONS[from] ?? []
     if (!allowed.includes(to)) {
       throw new AppError({
         code: ErrorCode.POST_INVALID_TRANSITION,
-        message: `Cannot transition post from ${from} → ${to}`,
+        message: `Cannot transition post from ${from} → ${to}`
       })
     }
 
@@ -171,7 +182,7 @@ export class DraftService {
       promptTokens: entry.promptTokens,
       completionTokens: entry.completionTokens,
       estimatedCostUsd: entry.estimatedCostUsd,
-      postId: entry.postId,
+      postId: entry.postId
     })
 
     this.audit.write({
@@ -184,8 +195,8 @@ export class DraftService {
         provider: entry.provider,
         model: entry.modelId,
         platform: entry.platform,
-        costUsd: entry.estimatedCostUsd,
-      },
+        costUsd: entry.estimatedCostUsd
+      }
     })
   }
 
@@ -193,7 +204,7 @@ export class DraftService {
 
   private mapPost(
     r: typeof posts.$inferSelect,
-    variants: (typeof draftVariants.$inferSelect)[],
+    variants: (typeof draftVariants.$inferSelect)[]
   ): Post {
     return {
       id: r.id,
@@ -211,15 +222,15 @@ export class DraftService {
           styleDriftScore: v.styleDriftScore,
           createdAt: v.createdAt,
           provider: v.provider,
-          modelId: v.modelId,
-        }),
+          modelId: v.modelId
+        })
       ),
       images: JSON.parse((r as { imagePaths?: string }).imagePaths ?? '[]'),
       scheduledAt: r.scheduledAt ?? undefined,
       publishedAt: r.publishedAt ?? undefined,
       attempts: r.attempts,
       createdAt: r.createdAt,
-      updatedAt: r.updatedAt,
+      updatedAt: r.updatedAt
     }
   }
 }

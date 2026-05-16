@@ -24,7 +24,9 @@ export function setupUpdater(win: BrowserWindow): void {
   // so they know the next update will move them to the native arm64 package.
   const isRosetta = os.arch() === 'arm64' && process.arch === 'x64'
   if (isRosetta) {
-    logger.warn({ msg: 'Running Intel build on Apple Silicon (Rosetta) — next update migrates to arm64' })
+    logger.warn({
+      msg: 'Running Intel build on Apple Silicon (Rosetta) — next update migrates to arm64'
+    })
     autoUpdater.disableDifferentialDownload = true
     win.webContents.once('did-finish-load', () => {
       win.webContents.send(IPC_CHANNELS.UPDATER_ROSETTA_WARNING)

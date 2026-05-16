@@ -5,10 +5,10 @@ on:
   push:
     tags:
       - 'v[0-9]+.[0-9]+.[0-9]+'
-      - 'v[0-9]+.[0-9]+.[0-9]+-*'   # pre-releases: v1.0.0-beta.1
+      - 'v[0-9]+.[0-9]+.[0-9]+-*' # pre-releases: v1.0.0-beta.1
 
 permissions:
-  contents: write   # needed to create GitHub Releases and upload assets
+  contents: write # needed to create GitHub Releases and upload assets
 
 jobs:
   # ── 1. Run tests before releasing ──────────────────────────────────────────
@@ -140,7 +140,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
         with:
-          fetch-depth: 0   # full history for changelog generation
+          fetch-depth: 0 # full history for changelog generation
 
       - name: Extract version from tag
         id: version

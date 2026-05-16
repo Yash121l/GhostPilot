@@ -22,9 +22,9 @@ export function registerSettingsHandlers(auditService: AuditService): void {
   ipcMain.handle(IPC_CHANNELS.SETTINGS_GET, (_event, input: SettingsGetInput) => {
     try {
       const db = getRawDb()
-      const row = db
-        .prepare('SELECT value FROM settings WHERE key = ?')
-        .get(input.key) as { value: string } | undefined
+      const row = db.prepare('SELECT value FROM settings WHERE key = ?').get(input.key) as
+        | { value: string }
+        | undefined
 
       if (!row) return ok(null)
       return ok(JSON.parse(row.value))
@@ -42,14 +42,16 @@ export function registerSettingsHandlers(auditService: AuditService): void {
         entityType: 'settings',
         entityId: input.key,
         outcome: 'success',
-        details: { key: input.key },
+        details: { key: input.key }
       })
 
       const db = getRawDb()
-      db.prepare(`
+      db.prepare(
+        `
         INSERT INTO settings (key, value, updated_at) VALUES (?, ?, ?)
         ON CONFLICT(key) DO UPDATE SET value = excluded.value, updated_at = excluded.updated_at
-      `).run(input.key, JSON.stringify(input.value), Date.now())
+      `
+      ).run(input.key, JSON.stringify(input.value), Date.now())
 
       return ok(undefined)
     } catch (e) {

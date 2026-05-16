@@ -9,22 +9,22 @@ import type { RateLimitInfo } from '@shared/ipc-types'
 const ICONS: Record<Platform, React.ElementType> = {
   [Platform.LINKEDIN]: Briefcase,
   [Platform.TWITTER]: AtSign,
-  [Platform.INSTAGRAM]: Camera,
+  [Platform.INSTAGRAM]: Camera
 }
 const COLORS: Record<Platform, string> = {
   [Platform.LINKEDIN]: 'var(--linkedin)',
   [Platform.TWITTER]: '#111',
-  [Platform.INSTAGRAM]: 'var(--instagram)',
+  [Platform.INSTAGRAM]: 'var(--instagram)'
 }
 const BG: Record<Platform, string> = {
   [Platform.LINKEDIN]: 'var(--linkedin-soft)',
   [Platform.TWITTER]: 'var(--twitter-soft)',
-  [Platform.INSTAGRAM]: 'var(--instagram-soft)',
+  [Platform.INSTAGRAM]: 'var(--instagram-soft)'
 }
 const LABELS: Record<Platform, string> = {
   [Platform.LINKEDIN]: 'LinkedIn',
   [Platform.TWITTER]: 'X',
-  [Platform.INSTAGRAM]: 'Instagram',
+  [Platform.INSTAGRAM]: 'Instagram'
 }
 
 interface DayPost {
@@ -36,15 +36,28 @@ interface DayPost {
   status: string
 }
 
+const CALENDAR_STATUSES = new Set<PostStatus>([
+  PostStatus.SCHEDULED,
+  PostStatus.PUBLISHING,
+  PostStatus.PUBLISHED,
+  PostStatus.FAILED
+])
+
+function calendarDate(post: Post): Date | null {
+  if (!CALENDAR_STATUSES.has(post.status)) return null
+  const date = post.scheduledAt ?? post.publishedAt
+  return date ? new Date(date) : null
+}
+
 function toDayPost(p: Post): DayPost {
-  const dt = new Date(p.scheduledAt ?? p.createdAt)
+  const dt = calendarDate(p) ?? new Date()
   return {
     id: p.id,
     day: dt.getDate(),
     hour: dt.getHours(),
     platform: (p.platforms[0] as Platform) ?? Platform.LINKEDIN,
     title: p.body.slice(0, 80),
-    status: p.status,
+    status: p.status
   }
 }
 
@@ -62,7 +75,7 @@ function PostRow({ post, onDelete }: { post: DayPost; onDelete: () => void }): R
         padding: '10px 12px',
         border: '1px solid var(--border)',
         borderRadius: 10,
-        background: 'var(--bg-card)',
+        background: 'var(--bg-card)'
       }}
     >
       <div className="mono" style={{ width: 50, color: 'var(--text-3)', fontSize: 13 }}>
@@ -77,7 +90,7 @@ function PostRow({ post, onDelete }: { post: DayPost; onDelete: () => void }): R
           color,
           display: 'flex',
           alignItems: 'center',
-          justifyContent: 'center',
+          justifyContent: 'center'
         }}
       >
         <Icon size={15} />
@@ -89,7 +102,7 @@ function PostRow({ post, onDelete }: { post: DayPost; onDelete: () => void }): R
             fontWeight: 500,
             overflow: 'hidden',
             textOverflow: 'ellipsis',
-            whiteSpace: 'nowrap',
+            whiteSpace: 'nowrap'
           }}
         >
           {post.title}
@@ -106,6 +119,7 @@ function PostRow({ post, onDelete }: { post: DayPost; onDelete: () => void }): R
       </div>
       <button
         className="btn ghost icon"
+        aria-label="Delete scheduled post"
         onClick={onDelete}
         style={{ width: 28, height: 28, padding: 0, fontSize: 16, color: 'var(--text-3)' }}
       >
@@ -156,34 +170,32 @@ export default function CalendarPage(): ReactElement {
   const daysInMonth = new Date(year, month + 1, 0).getDate()
   const monthLabel = new Date(year, month, 1).toLocaleString('en-US', {
     month: 'long',
-    year: 'numeric',
+    year: 'numeric'
   })
   const cells: (number | null)[] = [
     ...Array(firstDay).fill(null),
-    ...Array.from({ length: daysInMonth }, (_, i) => i + 1),
+    ...Array.from({ length: daysInMonth }, (_, i) => i + 1)
   ]
 
   const dayPosts: DayPost[] = posts
     .filter((p) => {
-      const dt = new Date(p.scheduledAt ?? p.createdAt)
-      return (
-        dt.getFullYear() === year &&
-        dt.getMonth() === month &&
-        dt.getDate() === selectedDay
-      )
+      const dt = calendarDate(p)
+      if (!dt) return false
+      return dt.getFullYear() === year && dt.getMonth() === month && dt.getDate() === selectedDay
     })
     .map(toDayPost)
     .sort((a, b) => a.hour - b.hour)
 
   const hasPosts = (d: number): boolean =>
     posts.some((p) => {
-      const dt = new Date(p.scheduledAt ?? p.createdAt)
+      const dt = calendarDate(p)
+      if (!dt) return false
       return dt.getFullYear() === year && dt.getMonth() === month && dt.getDate() === d
     })
 
   const scheduledCount = posts.filter((p) => p.status === PostStatus.SCHEDULED).length
   const draftCount = posts.filter(
-    (p) => p.status === PostStatus.DRAFT || p.status === PostStatus.PENDING_APPROVAL,
+    (p) => p.status === PostStatus.DRAFT || p.status === PostStatus.PENDING_APPROVAL
   ).length
   const publishedCount = posts.filter((p) => p.status === PostStatus.PUBLISHED).length
 
@@ -210,19 +222,18 @@ export default function CalendarPage(): ReactElement {
   const RATE_ROWS: { platform: Platform; label: string }[] = [
     { platform: Platform.LINKEDIN, label: 'LinkedIn' },
     { platform: Platform.TWITTER, label: 'X' },
-    { platform: Platform.INSTAGRAM, label: 'Instagram' },
+    { platform: Platform.INSTAGRAM, label: 'Instagram' }
   ]
 
   return (
     <div
-      className="fade-in"
+      className="fade-in calendar-workspace"
       style={{
         display: 'grid',
-        gridTemplateColumns: '1fr 360px',
         gap: 24,
         height: '100%',
         padding: '24px 28px',
-        overflow: 'hidden',
+        overflow: 'hidden'
       }}
     >
       {/* ── DAY DETAIL ── */}
@@ -241,7 +252,7 @@ export default function CalendarPage(): ReactElement {
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',
-                height: '100%',
+                height: '100%'
               }}
             >
               <span
@@ -252,7 +263,7 @@ export default function CalendarPage(): ReactElement {
                   border: '2px solid var(--accent)',
                   borderTopColor: 'transparent',
                   animation: 'spin 900ms linear infinite',
-                  display: 'inline-block',
+                  display: 'inline-block'
                 }}
               />
             </div>
@@ -268,7 +279,7 @@ export default function CalendarPage(): ReactElement {
                   display: 'flex',
                   alignItems: 'center',
                   justifyContent: 'center',
-                  border: '1px solid var(--border)',
+                  border: '1px solid var(--border)'
                 }}
               >
                 <CalendarDays size={20} style={{ color: 'var(--text-3)' }} />
@@ -280,9 +291,7 @@ export default function CalendarPage(): ReactElement {
               <button
                 className="btn primary"
                 style={{ marginTop: 18 }}
-                onClick={() =>
-                  window.dispatchEvent(new CustomEvent('nav', { detail: 'composer' }))
-                }
+                onClick={() => window.dispatchEvent(new CustomEvent('nav', { detail: 'composer' }))}
               >
                 Open Composer
               </button>
@@ -296,6 +305,7 @@ export default function CalendarPage(): ReactElement {
                   onDelete={async () => {
                     await ipc.invoke(IPC_CHANNELS.POST_DELETE, { id: p.id })
                     setPosts((prev) => prev.filter((x) => x.id !== p.id))
+                    window.dispatchEvent(new CustomEvent('posts:changed'))
                   }}
                 />
               ))}
@@ -313,7 +323,7 @@ export default function CalendarPage(): ReactElement {
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'space-between',
-              marginBottom: 12,
+              marginBottom: 12
             }}
           >
             <div
@@ -322,7 +332,7 @@ export default function CalendarPage(): ReactElement {
                 letterSpacing: '0.14em',
                 textTransform: 'uppercase',
                 color: 'var(--text-3)',
-                fontWeight: 600,
+                fontWeight: 600
               }}
             >
               {monthLabel}
@@ -349,7 +359,7 @@ export default function CalendarPage(): ReactElement {
               display: 'grid',
               gridTemplateColumns: 'repeat(7,1fr)',
               gap: 4,
-              marginBottom: 6,
+              marginBottom: 6
             }}
           >
             {['Su', 'Mo', 'Tu', 'We', 'Th', 'Fr', 'Sa'].map((d) => (
@@ -360,7 +370,7 @@ export default function CalendarPage(): ReactElement {
                   color: 'var(--text-3)',
                   textAlign: 'center',
                   fontWeight: 600,
-                  letterSpacing: '0.04em',
+                  letterSpacing: '0.04em'
                 }}
               >
                 {d}
@@ -392,7 +402,7 @@ export default function CalendarPage(): ReactElement {
                     fontWeight: isSel || today_ ? 600 : 500,
                     display: 'flex',
                     alignItems: 'center',
-                    justifyContent: 'center',
+                    justifyContent: 'center'
                   }}
                 >
                   {d}
@@ -404,7 +414,7 @@ export default function CalendarPage(): ReactElement {
                         width: 4,
                         height: 4,
                         borderRadius: '50%',
-                        background: 'var(--accent)',
+                        background: 'var(--accent)'
                       }}
                     />
                   )}
@@ -423,7 +433,7 @@ export default function CalendarPage(): ReactElement {
               textTransform: 'uppercase',
               color: 'var(--text-3)',
               fontWeight: 600,
-              marginBottom: 12,
+              marginBottom: 12
             }}
           >
             Rate limits
@@ -446,7 +456,7 @@ export default function CalendarPage(): ReactElement {
                       display: 'flex',
                       justifyContent: 'space-between',
                       fontSize: 12,
-                      marginBottom: 4,
+                      marginBottom: 4
                     }}
                   >
                     <span
@@ -454,7 +464,7 @@ export default function CalendarPage(): ReactElement {
                         color: 'var(--text-2)',
                         display: 'inline-flex',
                         alignItems: 'center',
-                        gap: 6,
+                        gap: 6
                       }}
                     >
                       <Icon size={12} /> {label}
@@ -468,7 +478,7 @@ export default function CalendarPage(): ReactElement {
                       className="fill"
                       style={{
                         width: pct + '%',
-                        background: rl.exceeded ? 'var(--error)' : color,
+                        background: rl.exceeded ? 'var(--error)' : color
                       }}
                     />
                   </div>
@@ -487,7 +497,7 @@ export default function CalendarPage(): ReactElement {
               textTransform: 'uppercase',
               color: 'var(--text-3)',
               fontWeight: 600,
-              marginBottom: 10,
+              marginBottom: 10
             }}
           >
             This Week

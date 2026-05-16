@@ -20,7 +20,7 @@ export const personas = sqliteTable('personas', {
   pillars: text('pillars').notNull().default('[]'), // JSON array
   styleHints: text('style_hints').notNull().default(''),
   createdAt: integer('created_at', { mode: 'timestamp' }).notNull(),
-  updatedAt: integer('updated_at', { mode: 'timestamp' }).notNull(),
+  updatedAt: integer('updated_at', { mode: 'timestamp' }).notNull()
 })
 
 // ─── Style Fingerprints ───────────────────────────────────────────────────────
@@ -35,7 +35,7 @@ export const styleFingerprints = sqliteTable('style_fingerprints', {
   descriptors: text('descriptors').notNull().default('[]'), // JSON array
   avgSentenceLength: real('avg_sentence_length').notNull().default(0),
   tone: text('tone').notNull().default(''),
-  computedAt: integer('computed_at', { mode: 'timestamp' }).notNull(),
+  computedAt: integer('computed_at', { mode: 'timestamp' }).notNull()
 })
 
 // ─── Posts ────────────────────────────────────────────────────────────────────
@@ -53,7 +53,7 @@ export const posts = sqliteTable('posts', {
   publishedAt: integer('published_at', { mode: 'timestamp' }),
   attempts: integer('attempts').notNull().default(0),
   createdAt: integer('created_at', { mode: 'timestamp' }).notNull(),
-  updatedAt: integer('updated_at', { mode: 'timestamp' }).notNull(),
+  updatedAt: integer('updated_at', { mode: 'timestamp' }).notNull()
 })
 
 // ─── Draft Variants ───────────────────────────────────────────────────────────
@@ -69,7 +69,7 @@ export const draftVariants = sqliteTable('draft_variants', {
   styleDriftScore: real('style_drift_score').notNull().default(0),
   provider: text('provider').notNull(),
   modelId: text('model_id').notNull(),
-  createdAt: integer('created_at', { mode: 'timestamp' }).notNull(),
+  createdAt: integer('created_at', { mode: 'timestamp' }).notNull()
 })
 
 // ─── Jobs ─────────────────────────────────────────────────────────────────────
@@ -88,7 +88,7 @@ export const jobs = sqliteTable('jobs', {
   attempts: integer('attempts').notNull().default(0),
   lastError: text('last_error'),
   createdAt: integer('created_at', { mode: 'timestamp' }).notNull(),
-  updatedAt: integer('updated_at', { mode: 'timestamp' }).notNull(),
+  updatedAt: integer('updated_at', { mode: 'timestamp' }).notNull()
 })
 
 // ─── Social Connections ───────────────────────────────────────────────────────
@@ -104,7 +104,7 @@ export const socialConnections = sqliteTable('social_connections', {
   expiresAt: integer('expires_at', { mode: 'timestamp' }),
   scopes: text('scopes').notNull().default('[]'), // JSON array
   createdAt: integer('created_at', { mode: 'timestamp' }).notNull(),
-  updatedAt: integer('updated_at', { mode: 'timestamp' }).notNull(),
+  updatedAt: integer('updated_at', { mode: 'timestamp' }).notNull()
 })
 
 // ─── LLM Usage ───────────────────────────────────────────────────────────────
@@ -119,7 +119,7 @@ export const llmUsage = sqliteTable('llm_usage', {
   completionTokens: integer('completion_tokens').notNull().default(0),
   estimatedCostUsd: real('estimated_cost_usd').notNull().default(0),
   postId: text('post_id'),
-  personaId: text('persona_id'),
+  personaId: text('persona_id')
 })
 
 // ─── Intent / Goals ───────────────────────────────────────────────────────────
@@ -133,7 +133,7 @@ export const intents = sqliteTable('intents', {
   description: text('description').notNull().default(''),
   horizon: text('horizon').notNull(),
   createdAt: integer('created_at', { mode: 'timestamp' }).notNull(),
-  updatedAt: integer('updated_at', { mode: 'timestamp' }).notNull(),
+  updatedAt: integer('updated_at', { mode: 'timestamp' }).notNull()
 })
 
 export const keyResults = sqliteTable('key_results', {
@@ -145,7 +145,7 @@ export const keyResults = sqliteTable('key_results', {
   target: real('target').notNull().default(0),
   current: real('current').notNull().default(0),
   unit: text('unit').notNull().default(''),
-  weeklyQuota: text('weekly_quota').notNull().default('{}'), // JSON ContentQuota
+  weeklyQuota: text('weekly_quota').notNull().default('{}') // JSON ContentQuota
 })
 
 // ─── Trend Clusters ───────────────────────────────────────────────────────────
@@ -158,7 +158,7 @@ export const trendClusters = sqliteTable('trend_clusters', {
   velocityScore: real('velocity_score').notNull().default(0),
   noveltyScore: real('novelty_score').notNull().default(0),
   compositeScore: real('composite_score').notNull().default(0),
-  detectedAt: integer('detected_at', { mode: 'timestamp' }).notNull(),
+  detectedAt: integer('detected_at', { mode: 'timestamp' }).notNull()
 })
 
 export const trendEvidence = sqliteTable('trend_evidence', {
@@ -170,7 +170,7 @@ export const trendEvidence = sqliteTable('trend_evidence', {
   url: text('url').notNull(),
   title: text('title').notNull(),
   score: real('score').notNull().default(0),
-  fetchedAt: integer('fetched_at', { mode: 'timestamp' }).notNull(),
+  fetchedAt: integer('fetched_at', { mode: 'timestamp' }).notNull()
 })
 
 // ─── Context Chunks (for hybrid BM25+vec retrieval) ──────────────────────────
@@ -185,7 +185,7 @@ export const contextChunks = sqliteTable('context_chunks', {
   content: text('content').notNull(), // for FTS5
   /** Serialized float32 embedding for sqlite-vec. */
   embeddingJson: text('embedding_json').notNull().default('[]'),
-  createdAt: integer('created_at', { mode: 'timestamp' }).notNull(),
+  createdAt: integer('created_at', { mode: 'timestamp' }).notNull()
 })
 
 // ─── AI Provider Keys ─────────────────────────────────────────────────────────
@@ -198,7 +198,7 @@ export const aiProviderKeys = sqliteTable('ai_provider_keys', {
   keychainKey: text('keychain_key').notNull(),
   isDefault: integer('is_default', { mode: 'boolean' }).default(false),
   lastUsedAt: integer('last_used_at', { mode: 'timestamp' }),
-  createdAt: integer('created_at', { mode: 'timestamp' }).notNull(),
+  createdAt: integer('created_at', { mode: 'timestamp' }).notNull()
 })
 
 // ─── Settings ─────────────────────────────────────────────────────────────────
@@ -206,7 +206,56 @@ export const aiProviderKeys = sqliteTable('ai_provider_keys', {
 export const settings = sqliteTable('settings', {
   key: text('key').primaryKey(),
   value: text('value').notNull().default(''), // JSON-encoded
-  updatedAt: integer('updated_at', { mode: 'timestamp' }).notNull(),
+  updatedAt: integer('updated_at', { mode: 'timestamp' }).notNull()
+})
+
+// ─── Platform Analytics Snapshots ────────────────────────────────────────────
+
+export const platformAccountSnapshots = sqliteTable('platform_account_snapshots', {
+  id: text('id').primaryKey(),
+  platform: text('platform').notNull(),
+  accountId: text('account_id').notNull(),
+  displayName: text('display_name').notNull().default(''),
+  followers: integer('followers'),
+  following: integer('following'),
+  posts: integer('posts'),
+  impressions: integer('impressions'),
+  views: integer('views'),
+  likes: integer('likes'),
+  comments: integer('comments'),
+  shares: integer('shares'),
+  clicks: integer('clicks'),
+  fetchedAt: integer('fetched_at', { mode: 'timestamp' }).notNull(),
+  unavailableReason: text('unavailable_reason')
+})
+
+export const platformPostInsights = sqliteTable('platform_post_insights', {
+  id: text('id').primaryKey(),
+  platform: text('platform').notNull(),
+  externalId: text('external_id').notNull(),
+  url: text('url'),
+  bodyPreview: text('body_preview').notNull().default(''),
+  publishedAt: integer('published_at', { mode: 'timestamp' }),
+  impressions: integer('impressions'),
+  views: integer('views'),
+  likes: integer('likes'),
+  comments: integer('comments'),
+  shares: integer('shares'),
+  saves: integer('saves'),
+  clicks: integer('clicks'),
+  engagementRate: real('engagement_rate'),
+  fetchedAt: integer('fetched_at', { mode: 'timestamp' }).notNull()
+})
+
+export const platformHashtagInsights = sqliteTable('platform_hashtag_insights', {
+  id: text('id').primaryKey(),
+  platform: text('platform').notNull(),
+  tag: text('tag').notNull().default(''),
+  postCount: integer('post_count'),
+  topPostsJson: text('top_posts_json').notNull().default('[]'),
+  recentPostsJson: text('recent_posts_json').notNull().default('[]'),
+  fetchedAt: integer('fetched_at', { mode: 'timestamp' }).notNull(),
+  unavailableReason: text('unavailable_reason')
 })
 
 // ─── Audit Log (APPEND-ONLY) ──────────────────────────────────────────────────
@@ -225,7 +274,7 @@ export const auditLog = sqliteTable('audit_log', {
   outcome: text('outcome', { enum: ['success', 'failure', 'blocked'] }).notNull(),
   errorCode: text('error_code'),
   /** Safe metadata JSON — NO tokens, NO key values. */
-  detailsJson: text('details_json'),
+  detailsJson: text('details_json')
 })
 
 // ─── Audit Action Enum ────────────────────────────────────────────────────────
@@ -274,5 +323,5 @@ export enum AuditAction {
   SETTINGS_CHANGED = 'SETTINGS_CHANGED',
   SPEND_CAP_CHANGED = 'SPEND_CAP_CHANGED',
   TELEMETRY_OPT_IN = 'TELEMETRY_OPT_IN',
-  TELEMETRY_OPT_OUT = 'TELEMETRY_OPT_OUT',
+  TELEMETRY_OPT_OUT = 'TELEMETRY_OPT_OUT'
 }

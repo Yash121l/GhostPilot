@@ -10,7 +10,11 @@ describe('LinkedInConnector.getAuthURL()', () => {
   it('returns a valid LinkedIn OAuth URL', () => {
     process.env['LINKEDIN_CLIENT_ID'] = 'test-client-id'
     const connector = new LinkedInConnector()
-    const url = connector.getAuthURL('state-123', 'verifier', 'https://ghostpilot.yashlunawat.com/oauth/callback')
+    const url = connector.getAuthURL(
+      'state-123',
+      'verifier',
+      'https://ghostpilot.yashlunawat.com/oauth/callback'
+    )
 
     expect(url).toContain('https://www.linkedin.com/oauth/v2/authorization')
     expect(url).toContain('client_id=test-client-id')
@@ -72,7 +76,7 @@ describe('LinkedInConnector.rateLimitState()', () => {
     ;(connector as any)._rateLimit = {
       remaining: 0,
       limit: 500,
-      resetsAt: new Date(Date.now() - 1000), // expired
+      resetsAt: new Date(Date.now() - 1000) // expired
     }
 
     const state = connector.rateLimitState()
@@ -85,7 +89,7 @@ describe('LinkedInConnector.rateLimitState()', () => {
     ;(connector as any)._rateLimit = {
       remaining: 0,
       limit: 500,
-      resetsAt: new Date(Date.now() + 86400 * 1000), // not expired
+      resetsAt: new Date(Date.now() + 86400 * 1000) // not expired
     }
 
     const state = connector.rateLimitState()
@@ -115,11 +119,11 @@ describe('LinkedInConnector.publish() — rate limit guard', () => {
     ;(connector as any)._rateLimit = {
       remaining: 0,
       limit: 500,
-      resetsAt: new Date(Date.now() + 86400 * 1000),
+      resetsAt: new Date(Date.now() + 86400 * 1000)
     }
 
-    await expect(
-      connector.publish({ body: 'test' }, mockTokens())
-    ).rejects.toThrow('rate limit exceeded')
+    await expect(connector.publish({ body: 'test' }, mockTokens())).rejects.toThrow(
+      'rate limit exceeded'
+    )
   })
 })

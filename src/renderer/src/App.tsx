@@ -1,29 +1,27 @@
-import { useState, useEffect, type ReactElement } from 'react'
+import { useEffect, useMemo, useState, type ReactElement } from 'react'
 import {
-  PenTool,
+  BarChart3,
   CalendarDays,
-  Link2,
+  Key,
+  Moon,
+  PenTool,
+  RefreshCw,
+  Settings,
+  Sparkles,
   Target,
   TrendingUp,
-  UserCircle2,
-  BarChart3,
-  Settings,
-  DatabaseZap,
-  Bot,
-  Ghost,
-  Briefcase,
-  AtSign,
-  Camera
+  UserCircle2
 } from 'lucide-react'
 import { ipc, IPC_CHANNELS } from './lib/ipc'
 import type { AuthStatusOutput, UpdateState } from '@shared/ipc-types'
-import { Platform } from '@shared/types/platform'
-
-const SIDEBAR_CONNECTORS = [
-  { platform: Platform.LINKEDIN, label: 'LinkedIn', icon: Briefcase, color: '#0a66c2' },
-  { platform: Platform.TWITTER, label: 'X', icon: AtSign, color: '#1d1d1f' },
-  { platform: Platform.INSTAGRAM, label: 'Instagram', icon: Camera, color: '#d6336c' }
-]
+import { PostStatus, type Post } from '@shared/types/post'
+import { useTheme } from './hooks/useTheme'
+import { useCommandPaletteShortcuts } from './hooks/useCommandPalette'
+import { useUIStore } from './store/ui'
+import { AppShell } from './components/shell/AppShell'
+import { UpdateToast } from './components/shell/UpdateToast'
+import { CommandPalette, type CommandAction } from './components/ui/CommandPalette'
+import { ToastProvider } from './components/ui/Toast'
 
 import ComposerPage from './pages/composer'
 import CalendarPage from './pages/calendar'
@@ -31,66 +29,79 @@ import GoalsPage from './pages/goals'
 import TrendsPage from './pages/trends'
 import PersonasPage from './pages/personas'
 import AnalyticsPage from './pages/analytics'
-import ConnectionsPage from './pages/settings/ConnectionsPage'
-import AIProvidersPage from './pages/settings/AIProvidersPage'
+import SettingsPage from './pages/settings/AIProvidersPage'
 
-type Page =
+export type Page =
   | 'composer'
   | 'calendar'
-  | 'inbox'
   | 'goals'
   | 'trends'
   | 'personas'
   | 'analytics'
   | 'settings'
 
-interface NavEntry {
-  id: Page
-  label: string
-  icon: React.ElementType
-}
-
-const NAV: NavEntry[] = [
+const NAV = [
   { id: 'composer', label: 'Composer', icon: PenTool },
   { id: 'calendar', label: 'Calendar', icon: CalendarDays },
-  { id: 'inbox', label: 'Connect', icon: Link2 },
   { id: 'goals', label: 'Goals', icon: Target },
   { id: 'trends', label: 'Trends', icon: TrendingUp },
   { id: 'personas', label: 'Personas', icon: UserCircle2 },
   { id: 'analytics', label: 'Analytics', icon: BarChart3 },
   { id: 'settings', label: 'Settings', icon: Settings }
-]
+] satisfies { id: Page; label: string; icon: React.ElementType }[]
 
 const PAGES: Record<Page, ReactElement> = {
   composer: <ComposerPage />,
   calendar: <CalendarPage />,
-  inbox: <ConnectionsPage />,
   goals: <GoalsPage />,
   trends: <TrendsPage />,
   personas: <PersonasPage />,
   analytics: <AnalyticsPage />,
-  settings: <AIProvidersPage />
+  settings: <SettingsPage />
 }
 
-export default function App(): ReactElement {
+function AppContent(): ReactElement {
   const [page, setPage] = useState<Page>('composer')
   const [connections, setConnections] = useState<AuthStatusOutput[]>([])
+  const [posts, setPosts] = useState<Post[]>([])
   const [aiConfigured, setAiConfigured] = useState(false)
   const [dbOk] = useState(true)
   const [version, setVersion] = useState('...')
   const [updateState, setUpdateState] = useState<UpdateState>({ status: 'idle' })
   const [rosettaWarning, setRosettaWarning] = useState(false)
+  const { mode, setMode } = useTheme()
+  const setCommandPaletteOpen = useUIStore((state) => state.setCommandPaletteOpen)
+
+  useCommandPaletteShortcuts()
+
+  const loadConnections = async (): Promise<void> => {
+    const res = await ipc.invoke(IPC_CHANNELS.AUTH_STATUS, {})
+    if (res.ok) setConnections(res.value)
+  }
+
+  const loadPosts = async (): Promise<void> => {
+    const res = await ipc.invoke(IPC_CHANNELS.POST_LIST, { limit: 500 })
+    if (res.ok) setPosts(res.value)
+  }
+
+  const loadAiStatus = async (): Promise<void> => {
+    const [keysRes, ollamaRes, localAgentsRes] = await Promise.all([
+      ipc.invoke(IPC_CHANNELS.AI_KEYS_LIST, {}),
+      ipc.invoke(IPC_CHANNELS.AI_OLLAMA_STATUS, {}),
+      ipc.invoke(IPC_CHANNELS.LOCAL_AGENT_STATUS, {})
+    ])
+    const hasKeys = keysRes.ok && keysRes.value.length > 0
+    const ollamaAvailable = ollamaRes.ok && ollamaRes.value.available
+    const localAgentAvailable =
+      localAgentsRes.ok &&
+      localAgentsRes.value.some((agent) => agent.installed && agent.authenticated)
+    setAiConfigured(hasKeys || ollamaAvailable || localAgentAvailable)
+  }
 
   useEffect(() => {
-    ipc.invoke(IPC_CHANNELS.AUTH_STATUS, {}).then((res) => {
-      if (res.ok) setConnections(res.value)
-    })
-    ipc.invoke(IPC_CHANNELS.AI_KEYS_LIST, {}).then((res) => {
-      if (res.ok) setAiConfigured(res.value.length > 0)
-    })
-    ipc.invoke(IPC_CHANNELS.AI_OLLAMA_STATUS, {}).then((res) => {
-      if (res.ok && res.value.available) setAiConfigured(true)
-    })
+    void loadConnections()
+    void loadAiStatus()
+    void loadPosts()
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     ;(window as any).api?.getVersion().then((v: string) => setVersion(v))
     ipc.invoke(IPC_CHANNELS.UPDATER_GET_STATE, {}).then((state) => setUpdateState(state))
@@ -98,11 +109,23 @@ export default function App(): ReactElement {
 
   useEffect(() => {
     const unsub = window.api?.on('auth:connected', () => {
-      ipc.invoke(IPC_CHANNELS.AUTH_STATUS, {}).then((res) => {
-        if (res.ok) setConnections(res.value)
-      })
+      void loadConnections()
     })
     return () => unsub?.()
+  }, [])
+
+  useEffect(() => {
+    const refreshPosts = (): void => {
+      void loadPosts()
+    }
+    window.addEventListener('posts:changed', refreshPosts)
+    const unsubPublished = ipc.on('job:published', refreshPosts)
+    const unsubFailed = ipc.on('job:failed', refreshPosts)
+    return () => {
+      window.removeEventListener('posts:changed', refreshPosts)
+      unsubPublished()
+      unsubFailed()
+    }
   }, [])
 
   useEffect(() => {
@@ -139,163 +162,115 @@ export default function App(): ReactElement {
     }
   }, [])
 
-  const connectedCount = connections.filter((c) => c.connected).length
+  useEffect(() => {
+    const onKeyDown = (event: KeyboardEvent): void => {
+      if (!(event.metaKey || event.ctrlKey)) return
+      const index = Number(event.key)
+      if (!Number.isInteger(index) || index < 1 || index > NAV.length) return
+      const target = event.target
+      if (
+        target instanceof HTMLElement &&
+        target.closest('input, textarea, [contenteditable="true"], .ProseMirror')
+      )
+        return
+      event.preventDefault()
+      setPage(NAV[index - 1].id)
+    }
+    window.addEventListener('keydown', onKeyDown)
+    return () => window.removeEventListener('keydown', onKeyDown)
+  }, [])
+
+  const commands = useMemo<CommandAction[]>(
+    () => [
+      ...NAV.map((entry) => ({
+        id: `nav:${entry.id}`,
+        label: `Go to ${entry.label}`,
+        keywords: ['navigate', entry.id],
+        icon: entry.icon,
+        run: () => setPage(entry.id)
+      })),
+      {
+        id: 'draft:new',
+        label: 'New draft',
+        keywords: ['composer', 'clear', 'post'],
+        icon: Sparkles,
+        run: () => {
+          window.dispatchEvent(new CustomEvent('composer:new-draft'))
+          setPage('composer')
+        }
+      },
+      {
+        id: 'connections:refresh',
+        label: 'Open account connections',
+        keywords: ['connect', 'oauth', 'accounts'],
+        icon: RefreshCw,
+        run: () => {
+          setPage('settings')
+          window.setTimeout(() => {
+            window.dispatchEvent(new CustomEvent('settings:section', { detail: 'connections' }))
+          }, 0)
+        }
+      },
+      {
+        id: 'theme:cycle',
+        label: `Toggle theme (${mode})`,
+        keywords: ['dark', 'light', 'system'],
+        icon: Moon,
+        run: () => setMode(mode === 'system' ? 'light' : mode === 'light' ? 'dark' : 'system')
+      },
+      {
+        id: 'settings:keys',
+        label: 'Add API key',
+        keywords: ['provider', 'openai', 'anthropic', 'settings'],
+        icon: Key,
+        run: () => setPage('settings')
+      }
+    ],
+    [mode, setMode]
+  )
+
+  const publishingCounts = useMemo(
+    () => ({
+      drafts: posts.filter((post) => post.status === PostStatus.DRAFT).length,
+      review: posts.filter((post) => post.status === PostStatus.PENDING_APPROVAL).length,
+      scheduled: posts.filter((post) => post.status === PostStatus.SCHEDULED).length,
+      failed: posts.filter((post) => post.status === PostStatus.FAILED).length,
+      published: posts.filter((post) => post.status === PostStatus.PUBLISHED).length
+    }),
+    [posts]
+  )
 
   return (
-    <div className="app-shell">
-      {/* ── Titlebar ── */}
-      <header className="titlebar">
-        <div className="titlebar-title">GhostPilot</div>
-      </header>
+    <>
+      <CommandPalette commands={commands} />
+      <UpdateToast
+        updateState={updateState}
+        rosettaWarning={rosettaWarning}
+        onDismissRosetta={() => setRosettaWarning(false)}
+      />
+      <AppShell
+        nav={NAV}
+        page={page}
+        connections={connections}
+        publishingCounts={publishingCounts}
+        aiConfigured={aiConfigured}
+        dbOk={dbOk}
+        version={version}
+        themeMode={mode}
+        onNavigate={setPage}
+        onThemeChange={setMode}
+        onOpenCommandPalette={() => setCommandPaletteOpen(true)}
+      >
+        {PAGES[page]}
+      </AppShell>
+    </>
+  )
+}
 
-      {/* ── Sidebar ── */}
-      <nav className="sidebar" aria-label="Main navigation">
-        {/* Brand */}
-        <div className="brand">
-          <div className="brand-mark">
-            <Ghost size={20} strokeWidth={1.6} />
-          </div>
-          <div className="brand-name">GHOSTPILOT</div>
-        </div>
-
-        {/* Nav */}
-        <div className="nav-section">Workspace</div>
-        <div className="nav">
-          {NAV.map((item) => {
-            const Icon = item.icon
-            const isActive = page === item.id
-            return (
-              <button
-                key={item.id}
-                className={`nav-item ${isActive ? 'active' : ''}`}
-                onClick={() => setPage(item.id)}
-              >
-                <Icon size={16} strokeWidth={isActive ? 2.2 : 1.8} />
-                <span>{item.label}</span>
-              </button>
-            )
-          })}
-        </div>
-
-        <div className="nav-spacer" />
-
-        {/* Connections */}
-        <div className="connections">
-          <div className="sidebar-header">Connections</div>
-          {SIDEBAR_CONNECTORS.map((p) => {
-            const connected = connections.find((c) => c.platform === p.platform)?.connected
-            const Icon = p.icon
-            return (
-              <div key={p.platform} className="connection-item" onClick={() => setPage('inbox')}>
-                <Icon
-                  size={13}
-                  style={{ color: connected ? p.color : 'var(--text-4)', flexShrink: 0 }}
-                />
-                <span
-                  className="connection-label"
-                  style={{ color: connected ? 'var(--text-2)' : 'var(--text-4)' }}
-                >
-                  {p.label}
-                </span>
-                <div className={`connection-dot ${connected ? 'on' : ''}`} />
-              </div>
-            )
-          })}
-        </div>
-      </nav>
-
-      {/* ── Main content ── */}
-      <main className="main-content" key={page}>
-        <div className="animate-slide-up h-full">{PAGES[page]}</div>
-      </main>
-
-      {/* ── Update notification ── */}
-      {updateState.status === 'available' && (
-        <div style={{
-          position: 'fixed', bottom: 36, right: 16, zIndex: 9999,
-          background: 'var(--bg-card)', border: '1px solid var(--accent)',
-          borderRadius: 10, padding: '10px 14px',
-          display: 'flex', alignItems: 'center', gap: 10,
-          fontSize: 12, boxShadow: '0 4px 20px rgba(0,0,0,0.25)',
-        }}>
-          <span style={{ color: 'var(--text-2)' }}>
-            Update <strong>v{updateState.version}</strong> available
-          </span>
-          <button
-            onClick={() => {
-              // eslint-disable-next-line @typescript-eslint/no-explicit-any
-              ;(window as any).api.invoke('updater:open-releases', {})
-            }}
-            style={{
-              background: 'var(--accent)', color: '#fff', border: 'none',
-              borderRadius: 6, padding: '5px 12px', fontSize: 12,
-              fontWeight: 600, cursor: 'pointer',
-            }}
-          >
-            Download
-          </button>
-          <button
-            onClick={() => setUpdateState({ status: 'idle' })}
-            style={{
-              background: 'none', border: 'none', color: 'var(--text-3)',
-              cursor: 'pointer', fontSize: 14, lineHeight: '1', padding: 0,
-            }}
-          >
-            ✕
-          </button>
-        </div>
-      )}
-
-      {/* ── Rosetta warning ── */}
-      {rosettaWarning && (
-        <div style={{
-          position: 'fixed', bottom: 36, right: 16, zIndex: 9998,
-          background: 'var(--bg-card)', border: '1px solid var(--warning, #f59e0b)',
-          borderRadius: 10, padding: '10px 14px',
-          display: 'flex', alignItems: 'center', gap: 10,
-          fontSize: 12, boxShadow: '0 4px 20px rgba(0,0,0,0.25)',
-        }}>
-          <span style={{ color: 'var(--text-2)' }}>
-            Running Intel build on Apple Silicon — next update will switch to native arm64
-          </span>
-          <button
-            onClick={() => setRosettaWarning(false)}
-            style={{
-              background: 'none', border: 'none', color: 'var(--text-3)',
-              cursor: 'pointer', fontSize: 14, lineHeight: '1', padding: 0,
-            }}
-          >
-            ✕
-          </button>
-        </div>
-      )}
-
-      {/* ── Status bar ── */}
-      <footer className="statusbar select-none">
-        <span className="ok">
-          <DatabaseZap size={11} />
-          DB: {dbOk ? 'Connected' : 'Error'}
-        </span>
-        <span
-          style={{
-            display: 'inline-flex',
-            alignItems: 'center',
-            gap: 4,
-            color: aiConfigured ? 'var(--success)' : 'var(--text-3)'
-          }}
-        >
-          <Bot size={11} />
-          AI: {aiConfigured ? 'Ready' : 'Not configured'}
-        </span>
-        <span style={{ color: 'var(--text-3)' }}>{connectedCount} of 3 accounts connected</span>
-        <span
-          className="right mono"
-          style={{ fontSize: 11, color: 'var(--text-3)', cursor: 'pointer' }}
-          onClick={() => setPage('settings')}
-        >
-          ⌖ v{version}
-        </span>
-      </footer>
-    </div>
+export default function App(): ReactElement {
+  return (
+    <ToastProvider>
+      <AppContent />
+    </ToastProvider>
   )
 }

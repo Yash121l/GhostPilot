@@ -10,7 +10,7 @@ export interface RawTrendItem {
 export async function fetchHackerNews(limit = 30): Promise<RawTrendItem[]> {
   const res = await fetch(
     `https://hn.algolia.com/api/v1/search?tags=front_page&hitsPerPage=${limit}`,
-    { signal: AbortSignal.timeout(10_000) },
+    { signal: AbortSignal.timeout(10_000) }
   )
 
   if (!res.ok) return []
@@ -24,6 +24,6 @@ export async function fetchHackerNews(limit = 30): Promise<RawTrendItem[]> {
     title: h.title,
     url: h.url ?? `https://news.ycombinator.com/item?id=${h.objectID}`,
     score: h.points,
-    fetchedAt: new Date(),
+    fetchedAt: new Date()
   }))
 }

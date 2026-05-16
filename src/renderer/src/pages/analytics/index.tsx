@@ -1,17 +1,21 @@
 import { useState, useEffect, type ReactElement } from 'react'
 import { Briefcase, AtSign, Camera, RefreshCw } from 'lucide-react'
 import { ipc, IPC_CHANNELS } from '../../lib/ipc'
-import type { DailyUsage } from '@shared/ipc-types'
+import type {
+  DailyUsage,
+  HashtagInsight,
+  PlatformAccountSummary,
+  PlatformPostInsight
+} from '@shared/ipc-types'
 import type { Post } from '@shared/types/post'
 import { PostStatus } from '@shared/types/post'
-import { Platform } from '@shared/types/platform'
+import { Platform, PLATFORM_LABELS } from '@shared/types/platform'
 
 const PLATFORM_ICON: Record<string, React.ElementType> = {
   linkedin: Briefcase,
   twitter: AtSign,
   instagram: Camera
 }
-
 
 interface PlatformStat {
   id: string
@@ -21,15 +25,7 @@ interface PlatformStat {
   Icon: React.ElementType
 }
 
-function Kpi({
-  label,
-  value,
-  sub
-}: {
-  label: string
-  value: string
-  sub?: string
-}): ReactElement {
+function Kpi({ label, value, sub }: { label: string; value: string; sub?: string }): ReactElement {
   return (
     <div className="card" style={{ padding: 18 }}>
       <div
@@ -46,9 +42,7 @@ function Kpi({
       <div style={{ fontSize: 26, fontWeight: 700, marginTop: 8, letterSpacing: '-0.02em' }}>
         {value}
       </div>
-      {sub && (
-        <div style={{ fontSize: 12, marginTop: 4, color: 'var(--text-3)' }}>{sub}</div>
-      )}
+      {sub && <div style={{ fontSize: 12, marginTop: 4, color: 'var(--text-3)' }}>{sub}</div>}
     </div>
   )
 }
@@ -82,15 +76,24 @@ export default function AnalyticsPage(): ReactElement {
   const [loading, setLoading] = useState(false)
   const [posts, setPosts] = useState<Post[]>([])
   const [dailyUsage, setDailyUsage] = useState<DailyUsage[]>([])
+  const [accountSummary, setAccountSummary] = useState<PlatformAccountSummary[]>([])
+  const [topInsights, setTopInsights] = useState<PlatformPostInsight[]>([])
+  const [hashtagInsights, setHashtagInsights] = useState<HashtagInsight[]>([])
 
   const refresh = async (): Promise<void> => {
     setLoading(true)
-    const [postsRes, usageRes] = await Promise.all([
+    const [postsRes, usageRes, summaryRes, topRes, hashtagRes] = await Promise.all([
       ipc.invoke(IPC_CHANNELS.POST_LIST, { limit: 200 }),
       ipc.invoke(IPC_CHANNELS.AI_USAGE_DAILY, { days: 30 }),
+      ipc.invoke(IPC_CHANNELS.PLATFORM_ANALYTICS_SUMMARY, {}),
+      ipc.invoke(IPC_CHANNELS.PLATFORM_ANALYTICS_TOP_POSTS, { window: '24h' }),
+      ipc.invoke(IPC_CHANNELS.PLATFORM_ANALYTICS_HASHTAGS, {})
     ])
     if (postsRes.ok) setPosts(postsRes.value)
     if (usageRes.ok) setDailyUsage(usageRes.value)
+    if (summaryRes.ok) setAccountSummary(summaryRes.value)
+    if (topRes.ok) setTopInsights(topRes.value)
+    if (hashtagRes.ok) setHashtagInsights(hashtagRes.value)
     setLoading(false)
   }
 
@@ -103,12 +106,24 @@ export default function AnalyticsPage(): ReactElement {
   const scheduledPosts = posts.filter((p) => p.status === PostStatus.SCHEDULED)
 
   const byPlatform: PlatformStat[] = [
-    { id: Platform.LINKEDIN, label: 'LinkedIn', Icon: Briefcase, color: 'var(--linkedin)', posts: 0 },
+    {
+      id: Platform.LINKEDIN,
+      label: 'LinkedIn',
+      Icon: Briefcase,
+      color: 'var(--linkedin)',
+      posts: 0
+    },
     { id: Platform.TWITTER, label: 'X', Icon: AtSign, color: '#111', posts: 0 },
-    { id: Platform.INSTAGRAM, label: 'Instagram', Icon: Camera, color: 'var(--instagram)', posts: 0 },
+    {
+      id: Platform.INSTAGRAM,
+      label: 'Instagram',
+      Icon: Camera,
+      color: 'var(--instagram)',
+      posts: 0
+    }
   ].map((p) => ({
     ...p,
-    posts: publishedPosts.filter((post) => post.platforms.includes(p.id as Platform)).length,
+    posts: publishedPosts.filter((post) => post.platforms.includes(p.id as Platform)).length
   }))
 
   const totalSpend = dailyUsage.reduce((s, d) => s + d.totalCostUsd, 0)
@@ -154,7 +169,11 @@ export default function AnalyticsPage(): ReactElement {
           {/* KPI row */}
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 12 }}>
             <Kpi label="Total Posts" value={posts.length.toString()} sub="all time" />
-            <Kpi label="Published" value={publishedPosts.length.toString()} sub="successfully sent" />
+            <Kpi
+              label="Published"
+              value={publishedPosts.length.toString()}
+              sub="successfully sent"
+            />
             <Kpi label="Scheduled" value={scheduledPosts.length.toString()} sub="queued" />
             <Kpi label="AI Spend" value={'$' + totalSpend.toFixed(2)} sub="last 30 days" />
           </div>
@@ -206,7 +225,16 @@ export default function AnalyticsPage(): ReactElement {
                   })}
                 </svg>
               ) : (
-                <div style={{ height: 160, display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--text-4)', fontSize: 13 }}>
+                <div
+                  style={{
+                    height: 160,
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    color: 'var(--text-4)',
+                    fontSize: 13
+                  }}
+                >
                   No AI usage yet
                 </div>
               )}
@@ -239,7 +267,14 @@ export default function AnalyticsPage(): ReactElement {
                         marginBottom: 6
                       }}
                     >
-                      <span style={{ display: 'inline-flex', alignItems: 'center', gap: 8, fontSize: 13 }}>
+                      <span
+                        style={{
+                          display: 'inline-flex',
+                          alignItems: 'center',
+                          gap: 8,
+                          fontSize: 13
+                        }}
+                      >
                         <Icon size={14} /> {p.label}
                       </span>
                       <span className="mono" style={{ fontSize: 12, color: 'var(--text-3)' }}>
@@ -258,6 +293,61 @@ export default function AnalyticsPage(): ReactElement {
             </div>
           </div>
 
+          <div className="analytics-grid">
+            <div className="card" style={{ padding: 20 }}>
+              <div className="section-label">Account analysis</div>
+              <div className="settings-list">
+                {accountSummary.map((account) => {
+                  const Icon = PLATFORM_ICON[account.platform] ?? Briefcase
+                  return (
+                    <div key={account.platform} className="settings-key-row">
+                      <div className="settings-icon-cell">
+                        <Icon size={15} />
+                      </div>
+                      <div className="settings-row-main">
+                        <strong>{account.displayName}</strong>
+                        <p>{account.posts ?? 0} published posts tracked locally</p>
+                        {account.unavailableReason ? <p>{account.unavailableReason}</p> : null}
+                      </div>
+                    </div>
+                  )
+                })}
+              </div>
+            </div>
+            <div className="card" style={{ padding: 20 }}>
+              <div className="section-label">Top posts · last 24h</div>
+              {topInsights.length === 0 ? (
+                <div className="settings-muted-card">
+                  No published account posts available for this window.
+                </div>
+              ) : (
+                <div className="settings-list">
+                  {topInsights.slice(0, 5).map((item) => (
+                    <div key={item.externalId} className="settings-key-row">
+                      <div className="settings-row-main">
+                        <strong>{item.bodyPreview}</strong>
+                        <p>{item.publishedAt ?? 'Published time unavailable'}</p>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+            <div className="card" style={{ padding: 20 }}>
+              <div className="section-label">Hashtag readiness</div>
+              <div className="settings-list">
+                {hashtagInsights.map((item) => (
+                  <div key={item.platform} className="settings-key-row">
+                    <div className="settings-row-main">
+                      <strong>{PLATFORM_LABELS[item.platform]}</strong>
+                      <p>{item.unavailableReason ?? `${item.postCount ?? 0} posts`}</p>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+
           {/* Recent posts */}
           <div className="card" style={{ padding: 20 }}>
             <div
@@ -273,7 +363,14 @@ export default function AnalyticsPage(): ReactElement {
               Recent posts
             </div>
             {posts.length === 0 ? (
-              <div style={{ fontSize: 13, color: 'var(--text-4)', fontStyle: 'italic', padding: '12px 0' }}>
+              <div
+                style={{
+                  fontSize: 13,
+                  color: 'var(--text-4)',
+                  fontStyle: 'italic',
+                  padding: '12px 0'
+                }}
+              >
                 No posts yet — create one in the Composer.
               </div>
             ) : (
@@ -292,18 +389,31 @@ export default function AnalyticsPage(): ReactElement {
                         borderTop: i > 0 ? '1px solid var(--border)' : 'none'
                       }}
                     >
-                      <div className="mono" style={{ width: 24, color: 'var(--text-4)', fontSize: 13 }}>
+                      <div
+                        className="mono"
+                        style={{ width: 24, color: 'var(--text-4)', fontSize: 13 }}
+                      >
                         {i + 1}
                       </div>
                       <Icon size={14} />
-                      <div style={{ flex: 1, fontSize: 14, fontWeight: 500, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                      <div
+                        style={{
+                          flex: 1,
+                          fontSize: 14,
+                          fontWeight: 500,
+                          overflow: 'hidden',
+                          textOverflow: 'ellipsis',
+                          whiteSpace: 'nowrap'
+                        }}
+                      >
                         {p.body.slice(0, 80) || '(empty)'}
                       </div>
                       <div
                         className="mono"
                         style={{
                           fontSize: 11,
-                          color: p.status === PostStatus.PUBLISHED ? 'var(--success)' : 'var(--text-3)',
+                          color:
+                            p.status === PostStatus.PUBLISHED ? 'var(--success)' : 'var(--text-3)',
                           width: 80,
                           textAlign: 'right'
                         }}

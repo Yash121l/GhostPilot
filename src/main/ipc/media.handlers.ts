@@ -14,8 +14,11 @@ const ALLOWED_EXTS = new Set(['.jpg', '.jpeg', '.png', '.gif', '.webp'])
 
 function mimeForExt(ext: string): string {
   const map: Record<string, string> = {
-    '.jpg': 'image/jpeg', '.jpeg': 'image/jpeg',
-    '.png': 'image/png', '.gif': 'image/gif', '.webp': 'image/webp',
+    '.jpg': 'image/jpeg',
+    '.jpeg': 'image/jpeg',
+    '.png': 'image/png',
+    '.gif': 'image/gif',
+    '.webp': 'image/webp'
   }
   return map[ext.toLowerCase()] ?? 'image/jpeg'
 }
@@ -33,7 +36,7 @@ export function registerMediaHandlers(): void {
       const result = await dialog.showOpenDialog({
         title: 'Select Images',
         filters: [{ name: 'Images', extensions: ['jpg', 'jpeg', 'png', 'gif', 'webp'] }],
-        properties: ['openFile', 'multiSelections'],
+        properties: ['openFile', 'multiSelections']
       })
 
       if (result.canceled || !result.filePaths.length) {
@@ -64,13 +67,18 @@ export function registerMediaHandlers(): void {
   })
 
   // Update a post's image list
-  ipcMain.handle(IPC_CHANNELS.POST_SET_IMAGES, async (_event, { postId, images }: { postId: string; images: ImageAttachment[] }) => {
-    try {
-      return ok(await getServices().postService.setImages(postId, images))
-    } catch (e) {
-      return err(e instanceof AppError ? e : new AppError({ code: ErrorCode.UNKNOWN, message: String(e) }))
+  ipcMain.handle(
+    IPC_CHANNELS.POST_SET_IMAGES,
+    async (_event, { postId, images }: { postId: string; images: ImageAttachment[] }) => {
+      try {
+        return ok(await getServices().postService.setImages(postId, images))
+      } catch (e) {
+        return err(
+          e instanceof AppError ? e : new AppError({ code: ErrorCode.UNKNOWN, message: String(e) })
+        )
+      }
     }
-  })
+  )
 
   // Generate an image via DALL-E 3 and save to userData/media/
   ipcMain.handle(IPC_CHANNELS.AI_IMAGE_GENERATE, async (_event, { prompt }: { prompt: string }) => {
@@ -78,7 +86,11 @@ export function registerMediaHandlers(): void {
       const attachment = await getServices().aiGateway.generateImage(prompt)
       return ok(attachment)
     } catch (e) {
-      return err(e instanceof AppError ? e : new AppError({ code: ErrorCode.AI_CALL_FAILED, message: String(e) }))
+      return err(
+        e instanceof AppError
+          ? e
+          : new AppError({ code: ErrorCode.AI_CALL_FAILED, message: String(e) })
+      )
     }
   })
 }

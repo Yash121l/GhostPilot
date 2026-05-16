@@ -14,7 +14,7 @@ import type {
   AIGatewayResponse,
   LLMUsage,
   ProviderKeyConfig,
-  OllamaStatus,
+  OllamaStatus
 } from './types/ai'
 
 export const IPC_CHANNELS = {
@@ -47,12 +47,18 @@ export const IPC_CHANNELS = {
   AI_KEYS_SET_DEFAULT: 'ai:keys:set-default',
   AI_KEYS_TEST: 'ai:keys:test',
   AI_OLLAMA_STATUS: 'ai:ollama:status',
+  LOCAL_AGENT_STATUS: 'local-agent:status',
+  LOCAL_AGENT_GENERATE: 'local-agent:generate',
 
   // Connections (extended Phase 1 channels)
   CONNECTIONS_GET_AUTH_URL: 'connections:getAuthURL',
   CONNECTIONS_LIST: 'connections:list',
   CONNECTIONS_REVOKE: 'connections:revoke',
   CONNECTIONS_RATE_LIMIT_STATE: 'connections:rateLimitState',
+  PLATFORM_ANALYTICS_SUMMARY: 'platform-analytics:summary',
+  PLATFORM_ANALYTICS_TOP_POSTS: 'platform-analytics:top-posts',
+  PLATFORM_ANALYTICS_HASHTAGS: 'platform-analytics:hashtags',
+  PLATFORM_ANALYTICS_SYNC: 'platform-analytics:sync',
 
   // Persona
   PERSONA_GET: 'persona:get',
@@ -92,7 +98,7 @@ export const IPC_CHANNELS = {
   // Updater
   UPDATER_GET_STATE: 'updater:get-state',
   UPDATER_STATE_CHANGED: 'updater:state-changed',
-  UPDATER_ROSETTA_WARNING: 'updater:rosetta-warning',
+  UPDATER_ROSETTA_WARNING: 'updater:rosetta-warning'
 } as const
 
 export type IPCChannel = (typeof IPC_CHANNELS)[keyof typeof IPC_CHANNELS]
@@ -110,6 +116,7 @@ export interface GenerateVariantsInput {
   postId: string
   platforms: Platform[]
   traceId: string
+  preferredProviderId?: string
 }
 
 export interface ApprovePostInput {
@@ -178,6 +185,68 @@ export interface DailyUsage {
   byProvider: Record<string, number>
 }
 
+export type LocalAgentProvider = 'codex-cli' | 'claude-code'
+
+export interface LocalAgentStatus {
+  provider: LocalAgentProvider
+  installed: boolean
+  authenticated: boolean
+  version?: string
+  path?: string
+  unavailableReason?: string
+}
+
+export interface LocalAgentGenerateRequest {
+  provider: LocalAgentProvider
+  prompt: string
+  system?: string
+  timeoutMs: number
+}
+
+export interface PlatformAccountSummary {
+  platform: Platform
+  accountId: string
+  displayName: string
+  followers?: number
+  following?: number
+  posts?: number
+  impressions?: number
+  views?: number
+  likes?: number
+  comments?: number
+  shares?: number
+  clicks?: number
+  fetchedAt: string
+  unavailableReason?: string
+}
+
+export interface PlatformPostInsight {
+  platform: Platform
+  externalId: string
+  url?: string
+  bodyPreview: string
+  publishedAt?: string
+  impressions?: number
+  views?: number
+  likes?: number
+  comments?: number
+  shares?: number
+  saves?: number
+  clicks?: number
+  engagementRate?: number
+  fetchedAt: string
+}
+
+export interface HashtagInsight {
+  platform: Platform
+  tag: string
+  postCount?: number
+  topPosts?: PlatformPostInsight[]
+  recentPosts?: PlatformPostInsight[]
+  fetchedAt: string
+  unavailableReason?: string
+}
+
 // ─── Typed IPC Map ────────────────────────────────────────────────────────────
 
 export interface IPCMap {
@@ -230,6 +299,14 @@ export interface IPCMap {
   [IPC_CHANNELS.AI_OLLAMA_STATUS]: {
     req: Record<string, never>
     res: Result<OllamaStatus, AppError>
+  }
+  [IPC_CHANNELS.LOCAL_AGENT_STATUS]: {
+    req: Record<string, never>
+    res: Result<LocalAgentStatus[], AppError>
+  }
+  [IPC_CHANNELS.LOCAL_AGENT_GENERATE]: {
+    req: LocalAgentGenerateRequest
+    res: Result<{ text: string; provider: LocalAgentProvider }, AppError>
   }
 
   [IPC_CHANNELS.PERSONA_GET]: { req: { id: string }; res: Result<Persona, AppError> }
@@ -351,6 +428,22 @@ export interface IPCMap {
   [IPC_CHANNELS.CONNECTIONS_RATE_LIMIT_STATE]: {
     req: { platform: Platform }
     res: Result<RateLimitInfo, AppError>
+  }
+  [IPC_CHANNELS.PLATFORM_ANALYTICS_SUMMARY]: {
+    req: Record<string, never>
+    res: Result<PlatformAccountSummary[], AppError>
+  }
+  [IPC_CHANNELS.PLATFORM_ANALYTICS_TOP_POSTS]: {
+    req: { platform?: Platform; window?: '24h' | '7d' | '30d' }
+    res: Result<PlatformPostInsight[], AppError>
+  }
+  [IPC_CHANNELS.PLATFORM_ANALYTICS_HASHTAGS]: {
+    req: { platform?: Platform; tag?: string }
+    res: Result<HashtagInsight[], AppError>
+  }
+  [IPC_CHANNELS.PLATFORM_ANALYTICS_SYNC]: {
+    req: Record<string, never>
+    res: Result<void, AppError>
   }
 }
 

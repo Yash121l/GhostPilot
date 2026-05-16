@@ -17,7 +17,7 @@ test.describe('Calendar page', () => {
 
   test('shows day-of-week headers', async ({ page }) => {
     for (const day of ['Su', 'Mo', 'Tu', 'We', 'Th', 'Fr', 'Sa']) {
-      await expect(page.locator(`text=${day}`)).toBeVisible()
+      await expect(page.getByText(day, { exact: true })).toBeVisible()
     }
   })
 
@@ -30,7 +30,7 @@ test.describe('Calendar page', () => {
 
   test('shows day detail panel with date', async ({ page }) => {
     // Should show something like "Thu, May 14"
-    await expect(page.locator('[style*="fontSize: 28"]').first()).toBeVisible()
+    await expect(page.getByText(/^[A-Z][a-z]{2}, [A-Z][a-z]+ \d{1,2}$/)).toBeVisible()
   })
 
   test('shows "Nothing scheduled" when no posts', async ({ page }) => {
@@ -61,16 +61,20 @@ test.describe('Calendar page', () => {
 
   test('shows This Week section', async ({ page }) => {
     await expect(page.locator('text=THIS WEEK')).toBeVisible()
-    await expect(page.locator('text=Scheduled')).toBeVisible()
-    await expect(page.locator('text=Drafts')).toBeVisible()
-    await expect(page.locator('text=Published')).toBeVisible()
+    const section = page.locator('.card').filter({ hasText: 'THIS WEEK' })
+    await expect(section.getByText('Scheduled', { exact: true })).toBeVisible()
+    await expect(section.getByText('Drafts', { exact: true })).toBeVisible()
+    await expect(section.getByText('Published', { exact: true })).toBeVisible()
   })
 
   test('can navigate to next month', async ({ page }) => {
     const _initialMonth = await page.locator('text=/\\w+ 20\\d\\d/').first().textContent()
-    await page.click('button:has(svg)').catch(() => {
-      // Try chevron buttons
-    })
+    await page
+      .locator('.card')
+      .filter({ hasText: /\w+ 20\d\d/ })
+      .locator('button')
+      .nth(1)
+      .click()
     // Month label should change or stay same (if navigation failed gracefully)
     await expect(page.locator('text=/\\w+ 20\\d\\d/')).toBeVisible()
   })
@@ -81,7 +85,7 @@ test.describe('Calendar page', () => {
     if (await dayBtn.isVisible()) {
       await dayBtn.click()
       // Day detail header should update
-      await expect(page.locator('[style*="fontSize: 28"]').first()).toBeVisible()
+      await expect(page.getByText(/^[A-Z][a-z]{2}, [A-Z][a-z]+ \d{1,2}$/)).toBeVisible()
     }
   })
 })

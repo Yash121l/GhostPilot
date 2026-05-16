@@ -12,6 +12,8 @@ import { VariantGenerator } from './post/variant-generator'
 import { IntentService } from './intent/intent.service'
 import { TrendWatcher } from './trends/trend-watcher'
 import { SchedulerService } from './scheduler/scheduler.service'
+import { LocalAgentService } from './local-agents/local-agent.service'
+import { PlatformAnalyticsService } from './platform-analytics/platform-analytics.service'
 import { OAuthManager } from './social/oauth-manager'
 import { LinkedInConnector } from './social/linkedin'
 import { XTwitterConnector } from './social/x-twitter'
@@ -30,6 +32,8 @@ export interface Services {
   intentService: IntentService
   trendWatcher: TrendWatcher
   schedulerService: SchedulerService
+  localAgentService: LocalAgentService
+  platformAnalyticsService: PlatformAnalyticsService
   oauthManager: OAuthManager
 }
 
@@ -48,6 +52,7 @@ export async function initServices(): Promise<Services> {
   const trendWatcher = new TrendWatcher()
   const oauthManager = new OAuthManager(audit)
   const schedulerService = new SchedulerService(audit, oauthManager)
+  const localAgentService = new LocalAgentService()
 
   // Register social connectors in both oauth manager and scheduler
   const connectors = [new LinkedInConnector(), new XTwitterConnector(), new InstagramConnector()]
@@ -55,6 +60,7 @@ export async function initServices(): Promise<Services> {
     oauthManager.register(c)
     schedulerService.register(c)
   }
+  const platformAnalyticsService = new PlatformAnalyticsService(oauthManager, postService)
 
   // Load AI provider keys from DB + probe Ollama
   await aiGateway.reload()
@@ -69,7 +75,9 @@ export async function initServices(): Promise<Services> {
     intentService,
     trendWatcher,
     schedulerService,
-    oauthManager,
+    localAgentService,
+    platformAnalyticsService,
+    oauthManager
   }
 
   logger.info({ msg: 'All services initialised' })

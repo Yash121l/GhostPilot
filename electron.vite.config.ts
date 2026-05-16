@@ -16,7 +16,10 @@ function loadDotEnv(): Record<string, string> {
     const eq = trimmed.indexOf('=')
     if (eq === -1) continue
     const key = trimmed.slice(0, eq).trim()
-    const val = trimmed.slice(eq + 1).trim().replace(/^["']|["']$/g, '')
+    const val = trimmed
+      .slice(eq + 1)
+      .trim()
+      .replace(/^["']|["']$/g, '')
     vars[key] = val
   }
   return vars
@@ -26,7 +29,7 @@ const dotEnv = loadDotEnv()
 
 // Build a `define` map so process.env.KEY references in main process are replaced at compile time
 const mainDefine = Object.fromEntries(
-  Object.entries(dotEnv).map(([k, v]) => [`process.env['${k}']`, JSON.stringify(v)]),
+  Object.entries(dotEnv).map(([k, v]) => [`process.env['${k}']`, JSON.stringify(v)])
 )
 
 export default defineConfig({
@@ -35,32 +38,32 @@ export default defineConfig({
     resolve: {
       alias: {
         '@shared': resolve('src/shared'),
-        '@main': resolve('src/main'),
-      },
+        '@main': resolve('src/main')
+      }
     },
     build: {
       rollupOptions: {
         input: {
           index: resolve('src/main/index.ts'),
-          'workers/publisher.worker': resolve('src/main/workers/publisher.worker.ts'),
-        },
-      },
-    },
+          'workers/publisher.worker': resolve('src/main/workers/publisher.worker.ts')
+        }
+      }
+    }
   },
   preload: {
     resolve: {
       alias: {
-        '@shared': resolve('src/shared'),
-      },
-    },
+        '@shared': resolve('src/shared')
+      }
+    }
   },
   renderer: {
     resolve: {
       alias: {
         '@renderer': resolve('src/renderer/src'),
-        '@shared': resolve('src/shared'),
-      },
+        '@shared': resolve('src/shared')
+      }
     },
-    plugins: [react(), tailwindcss()],
-  },
+    plugins: [react(), tailwindcss()]
+  }
 })

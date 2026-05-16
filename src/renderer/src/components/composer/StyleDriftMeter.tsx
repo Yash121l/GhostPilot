@@ -22,7 +22,11 @@ function scoreColor(score: number): string {
   return 'var(--color-error)'
 }
 
-export function StyleDriftMeter({ personaId, text, debounceMs = 800 }: StyleDriftMeterProps): ReactElement {
+export function StyleDriftMeter({
+  personaId,
+  text,
+  debounceMs = 800
+}: StyleDriftMeterProps): ReactElement {
   const [score, setScore] = useState<number | null>(null)
   const [loading, setLoading] = useState(false)
   const timerRef = useRef<NodeJS.Timeout | null>(null)
@@ -68,10 +72,7 @@ export function StyleDriftMeter({ personaId, text, debounceMs = 800 }: StyleDrif
             />
           )}
         </div>
-        <span
-          className="text-[10px] font-mono shrink-0"
-          style={{ color, minWidth: 28 }}
-        >
+        <span className="text-[10px] font-mono shrink-0" style={{ color, minWidth: 28 }}>
           {loading ? '…' : `${pct}%`}
         </span>
       </div>

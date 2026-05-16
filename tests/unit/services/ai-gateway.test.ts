@@ -7,26 +7,35 @@ import { createTestDb, clearTestDb, closeTestDb, getRawTestDb } from '../../help
 vi.mock('electron', () => ({ app: { getPath: () => '/tmp' } }))
 vi.mock('../../../src/main/infrastructure/db/connection', () => ({
   getDb: () => createTestDb(),
-  getRawDb: () => getRawTestDb(),
+  getRawDb: () => getRawTestDb()
 }))
 vi.mock('../../../src/main/infrastructure/keychain/keychain.service', () => ({
   KeychainService: class {
     get = vi.fn().mockResolvedValue(null)
     set = vi.fn().mockResolvedValue(undefined)
     delete = vi.fn().mockResolvedValue(undefined)
-  },
+  }
 }))
 vi.mock('../../../src/main/services/ai-gateway/providers/ollama', () => ({
   OllamaProvider: class {},
-  detectOllama: vi.fn().mockResolvedValue({ available: false, models: [] }),
+  detectOllama: vi.fn().mockResolvedValue({ available: false, models: [] })
+}))
+vi.mock('../../../src/main/services/ai-gateway/providers/local-agent', () => ({
+  detectLocalAgentProviders: vi.fn().mockResolvedValue([])
 }))
 
 const { AIGateway } = await import('../../../src/main/services/ai-gateway/index')
 const { UsageLedger } = await import('../../../src/main/services/ai-gateway/usage-ledger')
 
-beforeAll(() => { createTestDb() })
-beforeEach(() => { clearTestDb() })
-afterAll(() => { closeTestDb() })
+beforeAll(() => {
+  createTestDb()
+})
+beforeEach(() => {
+  clearTestDb()
+})
+afterAll(() => {
+  closeTestDb()
+})
 
 function makeGateway() {
   return new AIGateway(mockAudit())
@@ -44,9 +53,10 @@ function mockProvider(overrides = {}) {
       text: 'Generated text',
       modelId: 'gpt-4o-mini',
       promptTokens: 100,
-      completionTokens: 50,
+      completionTokens: 50
     }),
-    ...overrides,
+    canHandle: vi.fn().mockReturnValue(true),
+    ...overrides
   }
 }
 
@@ -57,12 +67,14 @@ describe('AIGateway.complete() — spend cap', () => {
     const ledger = gw.ledgerInstance
     vi.spyOn(ledger, 'todaySpend').mockReturnValue(10.01) // over $10 cap
 
-    await expect(gw.complete({
-      task: AITask.DRAFT_POST,
-      hint: ModelHint.ECONOMY,
-      prompt: 'test',
-      traceId: 'trace-1',
-    })).rejects.toMatchObject({ code: ErrorCode.SPEND_CAP_EXCEEDED })
+    await expect(
+      gw.complete({
+        task: AITask.DRAFT_POST,
+        hint: ModelHint.ECONOMY,
+        prompt: 'test',
+        traceId: 'trace-1'
+      })
+    ).rejects.toMatchObject({ code: ErrorCode.SPEND_CAP_EXCEEDED })
   })
 })
 
@@ -72,12 +84,14 @@ describe('AIGateway.complete() — no provider', () => {
     // No providers registered, ledger at 0
     vi.spyOn(gw.ledgerInstance, 'todaySpend').mockReturnValue(0)
 
-    await expect(gw.complete({
-      task: AITask.ADAPT_VARIANT,
-      hint: ModelHint.ECONOMY,
-      prompt: 'test',
-      traceId: 'trace-2',
-    })).rejects.toMatchObject({ code: ErrorCode.AI_PROVIDER_NOT_CONFIGURED })
+    await expect(
+      gw.complete({
+        task: AITask.ADAPT_VARIANT,
+        hint: ModelHint.ECONOMY,
+        prompt: 'test',
+        traceId: 'trace-2'
+      })
+    ).rejects.toMatchObject({ code: ErrorCode.AI_PROVIDER_NOT_CONFIGURED })
   })
 })
 
@@ -88,18 +102,46 @@ describe('AIGateway.complete() — provider error', () => {
 
     // Inject a failing provider via routing policy
     const policy = (gw as any).policy
-    vi.spyOn(policy, 'select').mockReturnValue(mockProvider({
-      complete: vi.fn().mockRejectedValue(new Error('Provider timeout')),
-    }))
+    vi.spyOn(policy, 'select').mockReturnValue(
+      mockProvider({
+        complete: vi.fn().mockRejectedValue(new Error('Provider timeout'))
+      })
+    )
 
-    await expect(gw.complete({
-      task: AITask.DRAFT_POST,
-      hint: ModelHint.ECONOMY,
-      prompt: 'test',
-      traceId: 'trace-3',
-    })).rejects.toMatchObject({
+    await expect(
+      gw.complete({
+        task: AITask.DRAFT_POST,
+        hint: ModelHint.ECONOMY,
+        prompt: 'test',
+        traceId: 'trace-3'
+      })
+    ).rejects.toMatchObject({
       code: ErrorCode.AI_CALL_FAILED,
-      retryable: true,
+      retryable: true
+    })
+  })
+
+  it('does not expose the prompt in provider failure messages', async () => {
+    const gw = makeGateway()
+    vi.spyOn(gw.ledgerInstance, 'todaySpend').mockReturnValue(0)
+    const privatePrompt = 'SOURCE DRAFT: private launch plan'
+    vi.spyOn((gw as any).policy, 'select').mockReturnValue(
+      mockProvider({
+        providerId: 'openai',
+        complete: vi.fn().mockRejectedValue(new Error(`Provider rejected ${privatePrompt}`))
+      })
+    )
+
+    await expect(
+      gw.complete({
+        task: AITask.DRAFT_POST,
+        hint: ModelHint.ECONOMY,
+        prompt: privatePrompt,
+        traceId: 'trace-private'
+      })
+    ).rejects.toMatchObject({
+      code: ErrorCode.AI_CALL_FAILED,
+      message: 'OpenAI request failed. Check your API key or try another provider.'
     })
   })
 })
@@ -116,7 +158,7 @@ describe('AIGateway.complete() — success', () => {
       task: AITask.ADAPT_VARIANT,
       hint: ModelHint.ECONOMY,
       prompt: 'Write a LinkedIn post about AI',
-      traceId: 'trace-4',
+      traceId: 'trace-4'
     })
 
     expect(result.text).toBe('Generated text')
@@ -135,15 +177,19 @@ describe('AIGateway.complete() — success', () => {
       promptCostPer1k: 0.001,
       completionCostPer1k: 0.002,
       complete: vi.fn().mockResolvedValue({
-        text: 'ok', modelId: 'gpt-4o-mini',
-        promptTokens: 1000, completionTokens: 500,
-      }),
+        text: 'ok',
+        modelId: 'gpt-4o-mini',
+        promptTokens: 1000,
+        completionTokens: 500
+      })
     })
     vi.spyOn((gw as any).policy, 'select').mockReturnValue(provider)
 
     const result = await gw.complete({
-      task: AITask.DRAFT_POST, hint: ModelHint.ECONOMY,
-      prompt: 'test', traceId: 'trace-5',
+      task: AITask.DRAFT_POST,
+      hint: ModelHint.ECONOMY,
+      prompt: 'test',
+      traceId: 'trace-5'
     })
 
     // cost = (1000/1000)*0.001 + (500/1000)*0.002 = 0.001 + 0.001 = 0.002
@@ -157,8 +203,10 @@ describe('AIGateway.complete() — success', () => {
     vi.spyOn((gw as any).policy, 'select').mockReturnValue(mockProvider())
 
     await gw.complete({
-      task: AITask.DRAFT_POST, hint: ModelHint.ECONOMY,
-      prompt: 'test', traceId: 'trace-6',
+      task: AITask.DRAFT_POST,
+      hint: ModelHint.ECONOMY,
+      prompt: 'test',
+      traceId: 'trace-6'
     })
 
     expect(audit.write).toHaveBeenCalledWith(
@@ -167,6 +215,72 @@ describe('AIGateway.complete() — success', () => {
     expect(audit.write).toHaveBeenCalledWith(
       expect.objectContaining({ action: 'LLM_CALL_COMPLETED' })
     )
+  })
+
+  it('uses a matching keyed preferred provider', async () => {
+    const gw = makeGateway()
+    vi.spyOn(gw.ledgerInstance, 'todaySpend').mockReturnValue(0)
+    const keyedProvider = mockProvider({
+      providerId: 'anthropic',
+      defaultModelId: 'claude-haiku',
+      complete: vi.fn().mockResolvedValue({
+        text: 'keyed provider text',
+        modelId: 'claude-haiku',
+        promptTokens: 20,
+        completionTokens: 10
+      })
+    })
+    ;(gw as any).providers.set('key:test-key', keyedProvider)
+
+    const result = await gw.complete({
+      task: AITask.ADAPT_VARIANT,
+      hint: ModelHint.ECONOMY,
+      preferredProviderId: 'key:test-key',
+      prompt: 'test',
+      traceId: 'trace-key'
+    })
+
+    expect(result.provider).toBe('anthropic')
+    expect(result.text).toBe('keyed provider text')
+    expect(keyedProvider.complete).toHaveBeenCalled()
+  })
+
+  it('falls back to routing when the preferred provider is unavailable', async () => {
+    const gw = makeGateway()
+    vi.spyOn(gw.ledgerInstance, 'todaySpend').mockReturnValue(0)
+    const fallbackProvider = mockProvider()
+    const select = vi.spyOn((gw as any).policy, 'select').mockReturnValue(fallbackProvider)
+
+    const result = await gw.complete({
+      task: AITask.ADAPT_VARIANT,
+      hint: ModelHint.ECONOMY,
+      preferredProviderId: 'missing-provider',
+      prompt: 'test',
+      traceId: 'trace-fallback'
+    })
+
+    expect(select).toHaveBeenCalledWith(AITask.ADAPT_VARIANT, ModelHint.ECONOMY)
+    expect(result.provider).toBe('openai')
+  })
+})
+
+describe('AIGateway provider support', () => {
+  it('builds OpenAI and Anthropic providers', () => {
+    const gw = makeGateway()
+
+    expect((gw as any).buildProvider('openai', 'sk-test')).toBeTruthy()
+    expect((gw as any).buildProvider('anthropic', 'sk-ant-test')).toBeTruthy()
+  })
+
+  it('rejects unsupported cloud API provider keys', async () => {
+    const gw = makeGateway()
+
+    await expect(gw.addKey('google', 'Gemini', 'AIza-test')).rejects.toMatchObject({
+      code: ErrorCode.AI_PROVIDER_NOT_CONFIGURED
+    })
+    await expect(gw.addKey('groq', 'Groq', 'gsk-test')).rejects.toMatchObject({
+      code: ErrorCode.AI_PROVIDER_NOT_CONFIGURED
+    })
   })
 })
 
@@ -179,12 +293,20 @@ describe('UsageLedger', () => {
   it('accumulates spend correctly', () => {
     const ledger = new UsageLedger()
     ledger.record({
-      provider: 'openai', modelId: 'gpt-4o-mini', task: AITask.DRAFT_POST,
-      promptTokens: 100, completionTokens: 50, estimatedCostUsd: 0.005,
+      provider: 'openai',
+      modelId: 'gpt-4o-mini',
+      task: AITask.DRAFT_POST,
+      promptTokens: 100,
+      completionTokens: 50,
+      estimatedCostUsd: 0.005
     })
     ledger.record({
-      provider: 'anthropic', modelId: 'claude-haiku', task: AITask.ADAPT_VARIANT,
-      promptTokens: 200, completionTokens: 100, estimatedCostUsd: 0.003,
+      provider: 'anthropic',
+      modelId: 'claude-haiku',
+      task: AITask.ADAPT_VARIANT,
+      promptTokens: 200,
+      completionTokens: 100,
+      estimatedCostUsd: 0.003
     })
     expect(ledger.todaySpend()).toBeCloseTo(0.008, 5)
   })

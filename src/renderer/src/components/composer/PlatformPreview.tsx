@@ -16,7 +16,15 @@ function charColor(count: number, limit: number): string {
 }
 
 /** LinkedIn card mockup. */
-function LinkedInPreview({ body, displayName, avatarInitial }: { body: string; displayName?: string; avatarInitial?: string }): ReactElement {
+function LinkedInPreview({
+  body,
+  displayName,
+  avatarInitial
+}: {
+  body: string
+  displayName?: string
+  avatarInitial?: string
+}): ReactElement {
   const limit = PLATFORM_CHAR_LIMITS[Platform.LINKEDIN]
   const truncated = body.length > 220
 
@@ -34,8 +42,12 @@ function LinkedInPreview({ body, displayName, avatarInitial }: { body: string; d
           {avatarInitial ?? 'U'}
         </div>
         <div>
-          <p className="text-sm font-semibold" style={{ color: '#000' }}>{displayName ?? 'Your Name'}</p>
-          <p className="text-[11px]" style={{ color: '#666' }}>Just now · 🌐</p>
+          <p className="text-sm font-semibold" style={{ color: '#000' }}>
+            {displayName ?? 'Your Name'}
+          </p>
+          <p className="text-[11px]" style={{ color: '#666' }}>
+            Just now · 🌐
+          </p>
         </div>
       </div>
 
@@ -43,9 +55,7 @@ function LinkedInPreview({ body, displayName, avatarInitial }: { body: string; d
       <div className="px-4 pb-3">
         <p className="text-sm leading-relaxed" style={{ color: '#191919', whiteSpace: 'pre-wrap' }}>
           {truncated ? body.slice(0, 220) : body}
-          {truncated && (
-            <span style={{ color: '#0a66c2', cursor: 'pointer' }}> …see more</span>
-          )}
+          {truncated && <span style={{ color: '#0a66c2', cursor: 'pointer' }}> …see more</span>}
         </p>
       </div>
 
@@ -54,7 +64,9 @@ function LinkedInPreview({ body, displayName, avatarInitial }: { body: string; d
         className="px-4 py-2 flex items-center justify-between"
         style={{ borderTop: '1px solid #e8e8e8' }}
       >
-        <span className="text-[10px]" style={{ color: '#666' }}>👍 Like · 💬 Comment · ↗ Repost</span>
+        <span className="text-[10px]" style={{ color: '#666' }}>
+          👍 Like · 💬 Comment · ↗ Repost
+        </span>
         <span
           className="text-[10px] font-mono font-semibold"
           style={{ color: charColor(body.length, limit) }}
@@ -67,7 +79,15 @@ function LinkedInPreview({ body, displayName, avatarInitial }: { body: string; d
 }
 
 /** X (Twitter) tweet bubble. */
-function XPreview({ body, displayName, avatarInitial }: { body: string; displayName?: string; avatarInitial?: string }): ReactElement {
+function XPreview({
+  body,
+  displayName,
+  avatarInitial
+}: {
+  body: string
+  displayName?: string
+  avatarInitial?: string
+}): ReactElement {
   const limit = PLATFORM_CHAR_LIMITS[Platform.TWITTER]
   const over = body.length > limit
 
@@ -87,23 +107,32 @@ function XPreview({ body, displayName, avatarInitial }: { body: string; displayN
           <div className="flex-1 min-w-0">
             <div className="flex items-center gap-2 mb-1">
               <span className="text-sm font-bold">{displayName ?? 'Your Name'}</span>
-              <span className="text-[11px]" style={{ color: '#71767B' }}>@handle · just now</span>
+              <span className="text-[11px]" style={{ color: '#71767B' }}>
+                @handle · just now
+              </span>
             </div>
             <p className="text-sm leading-relaxed" style={{ whiteSpace: 'pre-wrap' }}>
-              {body.length > limit
-                ? <><span style={{ color: '#E7E9EA' }}>{body.slice(0, limit)}</span><span style={{ color: '#F4212E', background: 'rgba(244,33,46,0.1)' }}>{body.slice(limit)}</span></>
-                : body}
+              {body.length > limit ? (
+                <>
+                  <span style={{ color: '#E7E9EA' }}>{body.slice(0, limit)}</span>
+                  <span style={{ color: '#F4212E', background: 'rgba(244,33,46,0.1)' }}>
+                    {body.slice(limit)}
+                  </span>
+                </>
+              ) : (
+                body
+              )}
             </p>
             {over && (
               <p className="text-[11px] mt-2" style={{ color: '#F4212E' }}>
                 {body.length - limit} characters over limit
               </p>
             )}
-            <div
-              className="flex items-center gap-6 mt-3 text-[12px]"
-              style={{ color: '#71767B' }}
-            >
-              <span>💬 0</span><span>🔁 0</span><span>❤️ 0</span><span>📊 0</span>
+            <div className="flex items-center gap-6 mt-3 text-[12px]" style={{ color: '#71767B' }}>
+              <span>💬 0</span>
+              <span>🔁 0</span>
+              <span>❤️ 0</span>
+              <span>📊 0</span>
             </div>
           </div>
         </div>
@@ -121,7 +150,15 @@ function XPreview({ body, displayName, avatarInitial }: { body: string; displayN
 }
 
 /** Instagram caption frame. */
-function InstagramPreview({ body, displayName, avatarInitial: _avatarInitial }: { body: string; displayName?: string; avatarInitial?: string }): ReactElement {
+function InstagramPreview({
+  body,
+  displayName,
+  avatarInitial: _avatarInitial
+}: {
+  body: string
+  displayName?: string
+  avatarInitial?: string
+}): ReactElement {
   const limit = PLATFORM_CHAR_LIMITS[Platform.INSTAGRAM]
   const truncated = body.length > 125
 
@@ -133,14 +170,20 @@ function InstagramPreview({ body, displayName, avatarInitial: _avatarInitial }: 
       {/* Image placeholder */}
       <div
         className="flex items-center justify-center text-[11px]"
-        style={{ height: 180, background: 'linear-gradient(135deg, #F5F5F7, #E8E8EC)', color: '#9C9C9C' }}
+        style={{
+          height: 180,
+          background: 'linear-gradient(135deg, #F5F5F7, #E8E8EC)',
+          color: '#9C9C9C'
+        }}
       >
         Media placeholder
       </div>
 
       {/* Actions */}
       <div className="px-4 py-2 flex items-center gap-4 text-[18px]">
-        <span>🤍</span><span>💬</span><span>✈️</span>
+        <span>🤍</span>
+        <span>💬</span>
+        <span>✈️</span>
         <span className="ml-auto">🔖</span>
       </div>
 
@@ -153,13 +196,12 @@ function InstagramPreview({ body, displayName, avatarInitial: _avatarInitial }: 
             {truncated && <span style={{ color: '#999', cursor: 'pointer' }}> more</span>}
           </span>
         </p>
-        <p className="text-[11px] mt-1" style={{ color: '#999' }}>Just now</p>
+        <p className="text-[11px] mt-1" style={{ color: '#999' }}>
+          Just now
+        </p>
       </div>
 
-      <div
-        className="px-4 py-2 flex justify-end"
-        style={{ borderTop: '1px solid #DBDBDB' }}
-      >
+      <div className="px-4 py-2 flex justify-end" style={{ borderTop: '1px solid #DBDBDB' }}>
         <span
           className="text-[10px] font-mono font-semibold"
           style={{ color: charColor(body.length, limit) }}
@@ -171,7 +213,12 @@ function InstagramPreview({ body, displayName, avatarInitial: _avatarInitial }: 
   )
 }
 
-export function PlatformPreview({ platform, body, displayName, avatarInitial }: PlatformPreviewProps): ReactElement {
+export function PlatformPreview({
+  platform,
+  body,
+  displayName,
+  avatarInitial
+}: PlatformPreviewProps): ReactElement {
   if (!body) {
     return (
       <div
@@ -189,8 +236,14 @@ export function PlatformPreview({ platform, body, displayName, avatarInitial }: 
     case Platform.TWITTER:
       return <XPreview body={body} displayName={displayName} avatarInitial={avatarInitial} />
     case Platform.INSTAGRAM:
-      return <InstagramPreview body={body} displayName={displayName} avatarInitial={avatarInitial} />
+      return (
+        <InstagramPreview body={body} displayName={displayName} avatarInitial={avatarInitial} />
+      )
     default:
-      return <div className="text-xs text-[var(--color-text-muted)]">Preview unavailable for {platform}</div>
+      return (
+        <div className="text-xs text-[var(--color-text-muted)]">
+          Preview unavailable for {platform}
+        </div>
+      )
   }
 }

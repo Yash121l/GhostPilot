@@ -1,6 +1,13 @@
 import type { RawTrendItem } from './hackernews'
 
-const SUBREDDITS = ['programming', 'MachineLearning', 'artificial', 'startups', 'IndieHackers', 'webdev']
+const SUBREDDITS = [
+  'programming',
+  'MachineLearning',
+  'artificial',
+  'startups',
+  'IndieHackers',
+  'webdev'
+]
 
 /** Fetches top posts from relevant subreddits. */
 export async function fetchReddit(limit = 20): Promise<RawTrendItem[]> {
@@ -12,8 +19,8 @@ export async function fetchReddit(limit = 20): Promise<RawTrendItem[]> {
         `https://www.reddit.com/r/${sub}/hot.json?limit=${Math.ceil(limit / SUBREDDITS.length)}`,
         {
           headers: { 'User-Agent': 'GhostPilot/1.0 (content research tool)' },
-          signal: AbortSignal.timeout(8000),
-        },
+          signal: AbortSignal.timeout(8000)
+        }
       )
 
       if (!res.ok) continue
@@ -34,7 +41,7 @@ export async function fetchReddit(limit = 20): Promise<RawTrendItem[]> {
           title: post.title,
           url: post.is_self ? `https://reddit.com${post.permalink}` : post.url,
           score: post.score,
-          fetchedAt: new Date(),
+          fetchedAt: new Date()
         })
       }
     } catch {

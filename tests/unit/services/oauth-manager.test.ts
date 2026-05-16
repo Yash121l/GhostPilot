@@ -6,14 +6,16 @@ import { ErrorCode } from '../../../src/shared/types/error'
 
 vi.mock('electron', () => ({
   app: { getPath: () => '/tmp' },
-  shell: { openExternal: vi.fn().mockResolvedValue(undefined) },
+  shell: { openExternal: vi.fn().mockResolvedValue(undefined) }
 }))
 
 let db: ReturnType<typeof createTestDb>
 
 vi.mock('../../../src/main/infrastructure/db/connection', () => ({
   getDb: () => db,
-  getRawDb: () => { throw new Error('not available') },
+  getRawDb: () => {
+    throw new Error('not available')
+  }
 }))
 
 // vi.mock is hoisted above module-level declarations, so use vi.hoisted() to
@@ -21,8 +23,14 @@ vi.mock('../../../src/main/infrastructure/db/connection', () => ({
 const keychainStore = vi.hoisted(() => {
   const store = new Map<string, string>()
   const get = vi.fn((key: string) => Promise.resolve(store.get(key) ?? null))
-  const set = vi.fn((key: string, value: string) => { store.set(key, value); return Promise.resolve() })
-  const del = vi.fn((key: string) => { store.delete(key); return Promise.resolve() })
+  const set = vi.fn((key: string, value: string) => {
+    store.set(key, value)
+    return Promise.resolve()
+  })
+  const del = vi.fn((key: string) => {
+    store.delete(key)
+    return Promise.resolve()
+  })
   return { get, set, delete: del, _store: store }
 })
 vi.mock('../../../src/main/infrastructure/keychain/keychain.service', () => ({
@@ -30,12 +38,14 @@ vi.mock('../../../src/main/infrastructure/keychain/keychain.service', () => ({
     get = keychainStore.get
     set = keychainStore.set
     delete = keychainStore.delete
-  },
+  }
 }))
 
 const { OAuthManager } = await import('../../../src/main/services/social/oauth-manager')
 
-beforeAll(() => { db = createTestDb() })
+beforeAll(() => {
+  db = createTestDb()
+})
 beforeEach(() => {
   clearTestDb()
   keychainStore._store.clear()
@@ -72,7 +82,7 @@ describe('OAuthManager.getAuthURL()', () => {
   it('throws OAUTH_FAILED for unregistered platform', async () => {
     const mgr = new OAuthManager(mockAudit())
     await expect(mgr.getAuthURL(Platform.TWITTER)).rejects.toMatchObject({
-      code: ErrorCode.OAUTH_FAILED,
+      code: ErrorCode.OAUTH_FAILED
     })
   })
 
@@ -89,7 +99,9 @@ describe('OAuthManager.handleCallback() — error cases', () => {
   it('throws OAUTH_FAILED when error param present', async () => {
     const mgr = new OAuthManager(mockAudit())
     await expect(
-      mgr.handleCallback('ghostpilot://oauth/callback?error=access_denied&error_description=User+denied')
+      mgr.handleCallback(
+        'ghostpilot://oauth/callback?error=access_denied&error_description=User+denied'
+      )
     ).rejects.toMatchObject({ code: ErrorCode.OAUTH_FAILED })
   })
 
@@ -118,7 +130,7 @@ describe('OAuthManager.handleCallback() — error cases', () => {
       state: expiredState,
       codeVerifier: 'verifier',
       platform: Platform.LINKEDIN,
-      createdAt: Date.now() - 11 * 60 * 1000, // 11 minutes ago (TTL is 10 min)
+      createdAt: Date.now() - 11 * 60 * 1000 // 11 minutes ago (TTL is 10 min)
     })
 
     await expect(
@@ -139,7 +151,7 @@ describe('OAuthManager.handleCallback() — success path', () => {
       state: validState,
       codeVerifier: 'verifier',
       platform: Platform.LINKEDIN,
-      createdAt: Date.now(),
+      createdAt: Date.now()
     })
 
     await mgr.handleCallback(`ghostpilot://oauth/callback?code=auth-code&state=${validState}`)
@@ -167,14 +179,20 @@ describe('OAuthManager.handleCallback() — success path', () => {
     // First connection
     const state1 = 'state-1'
     ;(mgr as any).pendingStates.set(state1, {
-      state: state1, codeVerifier: 'v1', platform: Platform.LINKEDIN, createdAt: Date.now(),
+      state: state1,
+      codeVerifier: 'v1',
+      platform: Platform.LINKEDIN,
+      createdAt: Date.now()
     })
     await mgr.handleCallback(`ghostpilot://oauth/callback?code=code1&state=${state1}`)
 
     // Second connection (re-auth)
     const state2 = 'state-2'
     ;(mgr as any).pendingStates.set(state2, {
-      state: state2, codeVerifier: 'v2', platform: Platform.LINKEDIN, createdAt: Date.now(),
+      state: state2,
+      codeVerifier: 'v2',
+      platform: Platform.LINKEDIN,
+      createdAt: Date.now()
     })
     await mgr.handleCallback(`ghostpilot://oauth/callback?code=code2&state=${state2}`)
 
@@ -206,7 +224,10 @@ describe('OAuthManager.getStatus()', () => {
 
     const state = 'status-test-state'
     ;(mgr as any).pendingStates.set(state, {
-      state, codeVerifier: 'v', platform: Platform.LINKEDIN, createdAt: Date.now(),
+      state,
+      codeVerifier: 'v',
+      platform: Platform.LINKEDIN,
+      createdAt: Date.now()
     })
     await mgr.handleCallback(`ghostpilot://oauth/callback?code=c&state=${state}`)
 
@@ -225,7 +246,10 @@ describe('OAuthManager.disconnect()', () => {
 
     const state = 'disconnect-state'
     ;(mgr as any).pendingStates.set(state, {
-      state, codeVerifier: 'v', platform: Platform.LINKEDIN, createdAt: Date.now(),
+      state,
+      codeVerifier: 'v',
+      platform: Platform.LINKEDIN,
+      createdAt: Date.now()
     })
     await mgr.handleCallback(`ghostpilot://oauth/callback?code=c&state=${state}`)
 
@@ -252,7 +276,10 @@ describe('OAuthManager.getTokens()', () => {
 
     const state = 'tokens-state'
     ;(mgr as any).pendingStates.set(state, {
-      state, codeVerifier: 'v', platform: Platform.LINKEDIN, createdAt: Date.now(),
+      state,
+      codeVerifier: 'v',
+      platform: Platform.LINKEDIN,
+      createdAt: Date.now()
     })
     await mgr.handleCallback(`ghostpilot://oauth/callback?code=c&state=${state}`)
 

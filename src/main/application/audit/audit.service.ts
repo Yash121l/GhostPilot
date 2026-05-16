@@ -67,7 +67,7 @@ export class AuditService {
       ip: 'local',
       outcome: params.outcome,
       errorCode: params.errorCode ?? null,
-      detailsJson: params.details ? JSON.stringify(params.details) : null,
+      detailsJson: params.details ? JSON.stringify(params.details) : null
     })
 
     logger.debug({
@@ -75,7 +75,7 @@ export class AuditService {
       action: params.action,
       entityType: params.entityType,
       entityId: params.entityId,
-      outcome: params.outcome,
+      outcome: params.outcome
     })
   }
 
@@ -116,7 +116,7 @@ export class AuditService {
                 outcome, error_code as errorCode, details_json as detailsJson
          FROM audit_log ${where}
          ORDER BY ts DESC
-         LIMIT @limit OFFSET @offset`,
+         LIMIT @limit OFFSET @offset`
       )
       .all({ ...bindings, limit, offset }) as AuditRow[]
 

@@ -12,32 +12,40 @@ import { PostStatus } from '../../src/shared/types/post'
 
 vi.mock('electron', () => ({
   app: { getPath: () => '/tmp' },
-  shell: { openExternal: vi.fn().mockResolvedValue(undefined) },
+  shell: { openExternal: vi.fn().mockResolvedValue(undefined) }
 }))
 
 let db: ReturnType<typeof createTestDb>
 
 vi.mock('../../src/main/infrastructure/db/connection', () => ({
   getDb: () => db,
-  getRawDb: () => { throw new Error('not available') },
+  getRawDb: () => {
+    throw new Error('not available')
+  }
 }))
 
 const keychainStore = mockKeychain()
 vi.mock('../../src/main/infrastructure/keychain/keychain.service', () => ({
-  KeychainService: vi.fn().mockImplementation(() => keychainStore),
+  KeychainService: vi.fn().mockImplementation(() => keychainStore)
 }))
 
 vi.mock('node-cron', () => ({
   default: { schedule: vi.fn().mockReturnValue({ stop: vi.fn() }) },
-  schedule: vi.fn().mockReturnValue({ stop: vi.fn() }),
+  schedule: vi.fn().mockReturnValue({ stop: vi.fn() })
 }))
 
 const { PersonaService } = await import('../../src/main/services/persona/persona.service')
 const { PostService } = await import('../../src/main/services/post/post.service')
 const { VariantGenerator } = await import('../../src/main/services/post/variant-generator')
 
-beforeAll(() => { db = createTestDb() })
-beforeEach(() => { clearTestDb(); keychainStore._store.clear(); vi.clearAllMocks() })
+beforeAll(() => {
+  db = createTestDb()
+})
+beforeEach(() => {
+  clearTestDb()
+  keychainStore._store.clear()
+  vi.clearAllMocks()
+})
 afterAll(() => closeTestDb())
 
 describe('Full post lifecycle', () => {
@@ -48,7 +56,7 @@ describe('Full post lifecycle', () => {
       name: 'Yash — Indie Founder',
       bio: 'Solo dev shipping AI tools.',
       pillars: ['AI', 'indie hacking'],
-      styleHints: 'Casual, short sentences.',
+      styleHints: 'Casual, short sentences.'
     })
     expect(persona.id).toBeTruthy()
 
@@ -57,27 +65,34 @@ describe('Full post lifecycle', () => {
     const post = await postSvc.create({
       personaId: persona.id,
       body: 'I spent 6 months building the wrong thing. Here is what I learned.',
-      platforms: [Platform.LINKEDIN, Platform.TWITTER],
+      platforms: [Platform.LINKEDIN, Platform.TWITTER]
     })
     expect(post.status).toBe(PostStatus.DRAFT)
     expect(post.variants).toHaveLength(0)
 
     // 3. Generate variants
     const ai = mockAIGateway({
-      complete: vi.fn()
+      complete: vi
+        .fn()
         .mockResolvedValueOnce({
           text: 'LinkedIn: I spent 6 months building the wrong thing.\n\nThree lessons:\n→ Talk to users first\n→ Ship fast\n→ Iterate',
-          provider: 'openai', modelId: 'gpt-4o-mini',
-          usage: { promptTokens: 150, completionTokens: 60, estimatedCostUsd: 0.002 },
+          provider: 'openai',
+          modelId: 'gpt-4o-mini',
+          usage: { promptTokens: 150, completionTokens: 60, estimatedCostUsd: 0.002 }
         })
         .mockResolvedValueOnce({
           text: 'spent 6 months building wrong. here is what i learned 🧵',
-          provider: 'openai', modelId: 'gpt-4o-mini',
-          usage: { promptTokens: 120, completionTokens: 20, estimatedCostUsd: 0.001 },
-        }),
+          provider: 'openai',
+          modelId: 'gpt-4o-mini',
+          usage: { promptTokens: 120, completionTokens: 20, estimatedCostUsd: 0.001 }
+        })
     })
     const gen = new VariantGenerator(ai, personaSvc, postSvc)
-    const withVariants = await gen.generate(post.id, [Platform.LINKEDIN, Platform.TWITTER], 'trace-integration')
+    const withVariants = await gen.generate(
+      post.id,
+      [Platform.LINKEDIN, Platform.TWITTER],
+      'trace-integration'
+    )
 
     expect(withVariants.status).toBe(PostStatus.PENDING_APPROVAL)
     expect(withVariants.variants).toHaveLength(2)
@@ -106,12 +121,18 @@ describe('Full post lifecycle', () => {
     const { eq } = await import('drizzle-orm')
 
     // Publish the variant body via the connector (replicates what the worker does)
-    const [variantRow] = await db.select().from(draftVariants).where(eq(draftVariants.id, liVariant!.id))
+    const [variantRow] = await db
+      .select()
+      .from(draftVariants)
+      .where(eq(draftVariants.id, liVariant!.id))
     const result = await connector.publish({ body: variantRow.body }, tokens)
 
     // Manually update job/post state as the worker would
     await db.update(jobs).set({ status: 'done', updatedAt: new Date() }).where(eq(jobs.id, job.id))
-    await db.update(postsTable).set({ status: 'published', publishedAt: new Date(), updatedAt: new Date() }).where(eq(postsTable.id, post.id))
+    await db
+      .update(postsTable)
+      .set({ status: 'published', publishedAt: new Date(), updatedAt: new Date() })
+      .where(eq(postsTable.id, post.id))
 
     // 6. Verify published
     const publishedPost = await postSvc.get(post.id)
@@ -137,7 +158,7 @@ describe('Full post lifecycle', () => {
     const _post = await postSvc.create({
       personaId: persona.id,
       body: 'Testing without persona context',
-      platforms: [Platform.LINKEDIN],
+      platforms: [Platform.LINKEDIN]
     })
 
     // Delete the persona to simulate missing persona
@@ -152,11 +173,16 @@ describe('Full post lifecycle', () => {
     const _now = new Date()
 
     // Create a persona just for the FK, then create post, then delete persona
-    const tempPersona = await personaSvc.create({ name: 'Temp', bio: '', pillars: [], styleHints: '' })
+    const tempPersona = await personaSvc.create({
+      name: 'Temp',
+      bio: '',
+      pillars: [],
+      styleHints: ''
+    })
     const orphanPost = await postSvc.create({
       personaId: tempPersona.id,
       body: 'Orphan post body',
-      platforms: [Platform.LINKEDIN],
+      platforms: [Platform.LINKEDIN]
     })
 
     // Manually update personaId to non-existent value — disable FK temporarily
@@ -184,7 +210,7 @@ describe('Full post lifecycle', () => {
     const post1 = await postSvc.create({
       personaId: persona.id,
       body: 'First draft',
-      platforms: [Platform.LINKEDIN],
+      platforms: [Platform.LINKEDIN]
     })
 
     // Simulate: user edits draft, clicks Generate again (should update, not create new)
@@ -201,7 +227,9 @@ describe('Post deletion', () => {
     const persona = await personaSvc.create({ name: 'P', bio: '', pillars: [], styleHints: '' })
     const postSvc = new PostService(mockAudit())
     const post = await postSvc.create({
-      personaId: persona.id, body: 'Delete cascade test', platforms: [Platform.LINKEDIN],
+      personaId: persona.id,
+      body: 'Delete cascade test',
+      platforms: [Platform.LINKEDIN]
     })
 
     const { nanoid } = await import('nanoid')
@@ -209,14 +237,26 @@ describe('Post deletion', () => {
     const variantId = nanoid()
     const now = new Date()
     await db.insert(draftVariants).values({
-      id: variantId, postId: post.id, platform: Platform.LINKEDIN,
-      body: 'Variant', charCount: 7, styleDriftScore: 0,
-      provider: 'openai', modelId: 'gpt-4o-mini', createdAt: now,
+      id: variantId,
+      postId: post.id,
+      platform: Platform.LINKEDIN,
+      body: 'Variant',
+      charCount: 7,
+      styleDriftScore: 0,
+      provider: 'openai',
+      modelId: 'gpt-4o-mini',
+      createdAt: now
     })
     await db.insert(jobs).values({
-      id: nanoid(), postId: post.id, variantId, platform: Platform.LINKEDIN,
-      scheduledAt: new Date(), status: 'pending', attempts: 0,
-      createdAt: now, updatedAt: now,
+      id: nanoid(),
+      postId: post.id,
+      variantId,
+      platform: Platform.LINKEDIN,
+      scheduledAt: new Date(),
+      status: 'pending',
+      attempts: 0,
+      createdAt: now,
+      updatedAt: now
     })
 
     await postSvc.delete(post.id)

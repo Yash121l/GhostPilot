@@ -15,7 +15,7 @@ import {
   DEFAULT_SPEND_CAP_USD,
   SCHEMA_VERSION,
   DB_FILE_NAME,
-  CRON_PUBLISH_DISPATCHER,
+  CRON_PUBLISH_DISPATCHER
 } from '../../../src/shared/constants'
 
 describe('App identity', () => {

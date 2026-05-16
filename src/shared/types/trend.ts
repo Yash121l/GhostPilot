@@ -33,7 +33,7 @@ export interface TrendConfig {
 export const DEFAULT_TREND_CONFIG: TrendConfig = {
   keywords: [],
   sources: ['hackernews', 'reddit'],
-  minScore: 0,
+  minScore: 0
 }
 
 /** A single signal backing a trend cluster. */

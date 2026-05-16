@@ -8,7 +8,7 @@ import type {
   AnalyticsData,
   RateLimitState,
   PlatformEvent,
-  MediaBuffer,
+  MediaBuffer
 } from './interface'
 import { Platform } from '../../../shared/types/platform'
 import { createLogger } from '../../infrastructure/logger/logger'
@@ -34,7 +34,7 @@ export class XTwitterConnector implements SocialConnector {
   private _rateLimit = {
     remaining: DAILY_TWEET_LIMIT,
     limit: DAILY_TWEET_LIMIT,
-    resetsAt: new Date(Date.now() + WINDOW_MS),
+    resetsAt: new Date(Date.now() + WINDOW_MS)
   }
 
   // ─── OAuth 2.0 PKCE ─────────────────────────────────────────────────────────
@@ -48,25 +48,29 @@ export class XTwitterConnector implements SocialConnector {
       state,
       code_challenge: codeChallenge,
       code_challenge_method: 'S256',
-      scope: 'tweet.read tweet.write tweet.moderate.write users.read offline.access',
+      scope: 'tweet.read tweet.write tweet.moderate.write users.read offline.access'
     })
     return `https://twitter.com/i/oauth2/authorize?${params}`
   }
 
-  async handleCallback(code: string, codeVerifier: string, redirectUri: string): Promise<ConnectionResult> {
+  async handleCallback(
+    code: string,
+    codeVerifier: string,
+    redirectUri: string
+  ): Promise<ConnectionResult> {
     const credentials = Buffer.from(`${clientId()}:${clientSecret()}`).toString('base64')
     const res = await this.fetch(`${API_V2}/oauth2/token`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/x-www-form-urlencoded',
-        Authorization: `Basic ${credentials}`,
+        Authorization: `Basic ${credentials}`
       },
       body: new URLSearchParams({
         grant_type: 'authorization_code',
         code,
         redirect_uri: redirectUri,
-        code_verifier: codeVerifier,
-      }).toString(),
+        code_verifier: codeVerifier
+      }).toString()
     })
 
     if (!res.ok) throw new Error(`X token exchange failed: ${await res.text()}`)
@@ -82,18 +86,20 @@ export class XTwitterConnector implements SocialConnector {
       accessToken: data.access_token,
       refreshToken: data.refresh_token,
       expiresAt: data.expires_in ? new Date(Date.now() + data.expires_in * 1000) : undefined,
-      scopes: data.scope.split(' '),
+      scopes: data.scope.split(' ')
     }
 
     const profileRes = await this.fetch(`${API_V2}/users/me?user.fields=username,name`, {
-      headers: { Authorization: `Bearer ${data.access_token}` },
+      headers: { Authorization: `Bearer ${data.access_token}` }
     })
-    const profile = (await profileRes.json()) as { data: { id: string; name: string; username: string } }
+    const profile = (await profileRes.json()) as {
+      data: { id: string; name: string; username: string }
+    }
 
     return {
       platformUserId: profile.data.id,
       displayName: `${profile.data.name} (@${profile.data.username})`,
-      tokens,
+      tokens
     }
   }
 
@@ -103,9 +109,12 @@ export class XTwitterConnector implements SocialConnector {
       method: 'POST',
       headers: {
         'Content-Type': 'application/x-www-form-urlencoded',
-        Authorization: `Basic ${credentials}`,
+        Authorization: `Basic ${credentials}`
       },
-      body: new URLSearchParams({ grant_type: 'refresh_token', refresh_token: refreshToken }).toString(),
+      body: new URLSearchParams({
+        grant_type: 'refresh_token',
+        refresh_token: refreshToken
+      }).toString()
     })
 
     if (!res.ok) throw new Error(`X token refresh failed: ${await res.text()}`)
@@ -121,7 +130,7 @@ export class XTwitterConnector implements SocialConnector {
       accessToken: data.access_token,
       refreshToken: data.refresh_token,
       expiresAt: data.expires_in ? new Date(Date.now() + data.expires_in * 1000) : undefined,
-      scopes: data.scope.split(' '),
+      scopes: data.scope.split(' ')
     }
   }
 
@@ -131,9 +140,9 @@ export class XTwitterConnector implements SocialConnector {
       method: 'POST',
       headers: {
         'Content-Type': 'application/x-www-form-urlencoded',
-        Authorization: `Basic ${credentials}`,
+        Authorization: `Basic ${credentials}`
       },
-      body: new URLSearchParams({ token: tokens.accessToken }).toString(),
+      body: new URLSearchParams({ token: tokens.accessToken }).toString()
     })
   }
 
@@ -165,9 +174,9 @@ export class XTwitterConnector implements SocialConnector {
       method: 'POST',
       headers: {
         Authorization: `Bearer ${tokens.accessToken}`,
-        'Content-Type': 'application/json',
+        'Content-Type': 'application/json'
       },
-      body: JSON.stringify(body),
+      body: JSON.stringify(body)
     })
 
     this.parseRateLimitHeaders(res.headers)
@@ -179,7 +188,7 @@ export class XTwitterConnector implements SocialConnector {
     logger.info({ msg: 'Tweet published', id: data.data.id })
     return {
       externalId: data.data.id,
-      url: `https://x.com/i/web/status/${data.data.id}`,
+      url: `https://x.com/i/web/status/${data.data.id}`
     }
   }
 
@@ -187,7 +196,7 @@ export class XTwitterConnector implements SocialConnector {
   private async publishThread(
     parts: string[],
     _mediaUrls: string[],
-    tokens: OAuthTokens,
+    tokens: OAuthTokens
   ): Promise<PublishResult> {
     let replyToId: string | undefined
     let rootResult: PublishResult | undefined
@@ -200,9 +209,9 @@ export class XTwitterConnector implements SocialConnector {
         method: 'POST',
         headers: {
           Authorization: `Bearer ${tokens.accessToken}`,
-          'Content-Type': 'application/json',
+          'Content-Type': 'application/json'
         },
-        body: JSON.stringify(body),
+        body: JSON.stringify(body)
       })
 
       this.parseRateLimitHeaders(res.headers)
@@ -214,7 +223,7 @@ export class XTwitterConnector implements SocialConnector {
       if (!replyToId) {
         rootResult = {
           externalId: data.data.id,
-          url: `https://x.com/i/web/status/${data.data.id}`,
+          url: `https://x.com/i/web/status/${data.data.id}`
         }
       }
       replyToId = data.data.id
@@ -227,7 +236,7 @@ export class XTwitterConnector implements SocialConnector {
   async deletePost(externalId: string, tokens: OAuthTokens): Promise<void> {
     const res = await this.fetch(`${API_V2}/tweets/${externalId}`, {
       method: 'DELETE',
-      headers: { Authorization: `Bearer ${tokens.accessToken}` },
+      headers: { Authorization: `Bearer ${tokens.accessToken}` }
     })
     if (!res.ok && res.status !== 404) {
       throw new Error(`X delete failed (${res.status}): ${await res.text()}`)
@@ -239,7 +248,7 @@ export class XTwitterConnector implements SocialConnector {
   async fetchAnalytics(externalId: string, tokens: OAuthTokens): Promise<AnalyticsData> {
     const fields = 'public_metrics,non_public_metrics,organic_metrics'
     const res = await this.fetch(`${API_V2}/tweets/${externalId}?tweet.fields=${fields}`, {
-      headers: { Authorization: `Bearer ${tokens.accessToken}` },
+      headers: { Authorization: `Bearer ${tokens.accessToken}` }
     })
 
     if (!res.ok) {
@@ -249,7 +258,12 @@ export class XTwitterConnector implements SocialConnector {
 
     const data = (await res.json()) as {
       data: {
-        public_metrics?: { like_count: number; retweet_count: number; reply_count: number; impression_count: number }
+        public_metrics?: {
+          like_count: number
+          retweet_count: number
+          reply_count: number
+          impression_count: number
+        }
         non_public_metrics?: { impression_count: number; url_link_clicks: number }
         organic_metrics?: { impression_count: number }
       }
@@ -265,7 +279,7 @@ export class XTwitterConnector implements SocialConnector {
       comments: pub?.reply_count ?? 0,
       shares: pub?.retweet_count ?? 0,
       clicks: priv?.url_link_clicks ?? 0,
-      fetchedAt: new Date(),
+      fetchedAt: new Date()
     }
   }
 
@@ -273,7 +287,7 @@ export class XTwitterConnector implements SocialConnector {
 
   async subscribeEvents(
     _tokens: OAuthTokens,
-    _onEvent: (event: PlatformEvent) => void,
+    _onEvent: (event: PlatformEvent) => void
   ): Promise<() => void> {
     // X Filtered Stream requires Elevated access — skip for Basic tier
     logger.info({ msg: 'X event subscription skipped — requires Elevated API access' })
@@ -285,7 +299,7 @@ export class XTwitterConnector implements SocialConnector {
       this._rateLimit = {
         remaining: DAILY_TWEET_LIMIT,
         limit: DAILY_TWEET_LIMIT,
-        resetsAt: new Date(Date.now() + WINDOW_MS),
+        resetsAt: new Date(Date.now() + WINDOW_MS)
       }
     }
     return {
@@ -293,7 +307,7 @@ export class XTwitterConnector implements SocialConnector {
       remaining: this._rateLimit.remaining,
       limit: this._rateLimit.limit,
       resetsAt: this._rateLimit.resetsAt,
-      exceeded: this._rateLimit.remaining <= 0,
+      exceeded: this._rateLimit.remaining <= 0
     }
   }
 
@@ -309,10 +323,16 @@ export class XTwitterConnector implements SocialConnector {
           : `Bearer ${tokens.accessToken}`
         const uploadRes = await fetch(`${UPLOAD_API}/media/upload.json`, {
           method: 'POST',
-          headers: { Authorization: authHeader, 'Content-Type': 'application/x-www-form-urlencoded' },
-          body: new URLSearchParams({ media_data: b64 }).toString(),
+          headers: {
+            Authorization: authHeader,
+            'Content-Type': 'application/x-www-form-urlencoded'
+          },
+          body: new URLSearchParams({ media_data: b64 }).toString()
         })
-        if (!uploadRes.ok) { logger.warn({ msg: 'X buffer upload failed', status: uploadRes.status }); continue }
+        if (!uploadRes.ok) {
+          logger.warn({ msg: 'X buffer upload failed', status: uploadRes.status })
+          continue
+        }
         const data = (await uploadRes.json()) as { media_id_string: string }
         mediaIds.push(data.media_id_string)
       } catch (e) {
@@ -341,9 +361,9 @@ export class XTwitterConnector implements SocialConnector {
           method: 'POST',
           headers: {
             Authorization: authHeader,
-            'Content-Type': 'application/x-www-form-urlencoded',
+            'Content-Type': 'application/x-www-form-urlencoded'
           },
-          body: new URLSearchParams({ media_data: b64 }).toString(),
+          body: new URLSearchParams({ media_data: b64 }).toString()
         })
 
         if (!uploadRes.ok) {
@@ -369,7 +389,7 @@ export class XTwitterConnector implements SocialConnector {
       oauth_signature_method: 'HMAC-SHA1',
       oauth_timestamp: Math.floor(Date.now() / 1000).toString(),
       oauth_token: tokens.accessToken,
-      oauth_version: '1.0',
+      oauth_version: '1.0'
     }
 
     const paramStr = Object.entries(oauthParams)
@@ -377,7 +397,11 @@ export class XTwitterConnector implements SocialConnector {
       .map(([k, v]) => `${encodeURIComponent(k)}=${encodeURIComponent(v)}`)
       .join('&')
 
-    const sigBase = [method.toUpperCase(), encodeURIComponent(url), encodeURIComponent(paramStr)].join('&')
+    const sigBase = [
+      method.toUpperCase(),
+      encodeURIComponent(url),
+      encodeURIComponent(paramStr)
+    ].join('&')
     const sigKey = `${encodeURIComponent(consumerSecret())}&${encodeURIComponent(tokens.refreshToken ?? '')}`
     const signature = createHmac('sha1', sigKey).update(sigBase).digest('base64')
 
@@ -407,7 +431,15 @@ export class XTwitterConnector implements SocialConnector {
   }
 
   private emptyAnalytics(externalId: string): AnalyticsData {
-    return { externalId, impressions: 0, likes: 0, comments: 0, shares: 0, clicks: 0, fetchedAt: new Date() }
+    return {
+      externalId,
+      impressions: 0,
+      likes: 0,
+      comments: 0,
+      shares: 0,
+      clicks: 0,
+      fetchedAt: new Date()
+    }
   }
 
   private fetch(url: string, init?: RequestInit): Promise<Response> {

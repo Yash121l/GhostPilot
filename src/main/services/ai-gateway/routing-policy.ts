@@ -5,13 +5,13 @@ import { AITask, ModelHint } from '../../../shared/types/ai'
  * Selects the best available provider for a given task and hint.
  * Priority order:
  *   LOCAL → Ollama (if available)
- *   ECONOMY → cheapest cloud provider, or Ollama fallback
+ *   ECONOMY → local/free provider first, then cloud
  *   PREMIUM → best quality cloud provider
  */
 export class RoutingPolicy {
   constructor(
     private readonly providers: Map<string, LLMProvider>,
-    private readonly ollamaAvailable: () => boolean,
+    private readonly ollamaAvailable: () => boolean
   ) {}
 
   select(task: AITask, hint: ModelHint): LLMProvider {
@@ -22,15 +22,15 @@ export class RoutingPolicy {
     }
 
     if (hint === ModelHint.PREMIUM) {
-      // Prefer Anthropic Sonnet → OpenAI GPT-4o → Anthropic Haiku → OpenAI mini → Ollama
-      for (const id of ['anthropic', 'openai', 'ollama']) {
+      // Prefer cloud premium first, then local agents.
+      for (const id of ['anthropic', 'openai', 'codex-cli', 'claude-code', 'ollama']) {
         const p = this.providers.get(id)
         if (p && p.canHandle(task)) return p
       }
     }
 
     // ECONOMY or fallback: prefer cheapest available
-    const order = ['ollama', 'openai', 'anthropic']
+    const order = ['ollama', 'codex-cli', 'claude-code', 'openai', 'anthropic']
     for (const id of order) {
       const p = this.providers.get(id)
       if (!p) continue

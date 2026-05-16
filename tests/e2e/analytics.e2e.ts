@@ -20,10 +20,11 @@ test.describe('Analytics page', () => {
   })
 
   test('shows 4 KPI cards', async ({ page }) => {
-    await expect(page.locator('text=Total Posts')).toBeVisible()
-    await expect(page.locator('text=Published')).toBeVisible()
-    await expect(page.locator('text=Scheduled')).toBeVisible()
-    await expect(page.locator('text=AI Spend')).toBeVisible()
+    const main = page.locator('main')
+    await expect(main.getByText('Total Posts', { exact: true })).toBeVisible()
+    await expect(main.getByText('Published', { exact: true })).toBeVisible()
+    await expect(main.getByText('Scheduled', { exact: true })).toBeVisible()
+    await expect(main.getByText('AI Spend', { exact: true })).toBeVisible()
   })
 
   test('shows AI token usage chart section', async ({ page }) => {
@@ -31,10 +32,11 @@ test.describe('Analytics page', () => {
   })
 
   test('shows By platform section', async ({ page }) => {
-    await expect(page.locator('text=By platform')).toBeVisible()
-    await expect(page.locator('text=LinkedIn')).toBeVisible()
-    await expect(page.locator('text=X')).toBeVisible()
-    await expect(page.locator('text=Instagram')).toBeVisible()
+    const byPlatform = page.locator('main .card').filter({ hasText: 'By platform' })
+    await expect(byPlatform).toBeVisible()
+    await expect(byPlatform.getByText('LinkedIn', { exact: true })).toBeVisible()
+    await expect(byPlatform.getByText('X', { exact: true })).toBeVisible()
+    await expect(byPlatform.getByText('Instagram', { exact: true })).toBeVisible()
   })
 
   test('shows Recent posts section', async ({ page }) => {
@@ -46,10 +48,13 @@ test.describe('Analytics page', () => {
   })
 
   test('KPI cards show numeric values', async ({ page }) => {
-    // Each KPI card should show a number
-    const kpiValues = page.locator('[style*="fontSize: 26"]')
-    const count = await kpiValues.count()
-    expect(count).toBeGreaterThanOrEqual(4)
+    const main = page.locator('main')
+    await expect(main.getByText('Total Posts', { exact: true }).locator('..')).toContainText(/\d+/)
+    await expect(main.getByText('Published', { exact: true }).locator('..')).toContainText(/\d+/)
+    await expect(main.getByText('Scheduled', { exact: true }).locator('..')).toContainText(/\d+/)
+    await expect(main.getByText('AI Spend', { exact: true }).locator('..')).toContainText(
+      /\$\d+\.\d{2}/
+    )
   })
 
   test('refresh button reloads data without error', async ({ page }) => {
@@ -61,14 +66,19 @@ test.describe('Analytics page', () => {
 
   test('shows "No posts yet" when no posts exist', async ({ page }) => {
     // On fresh install
-    const hasNoPosts = await page.locator('text=No posts yet').isVisible()
-    const hasPosts = await page.locator('[style*="fontWeight: 500"]').count()
+    const main = page.locator('main')
+    const hasNoPosts = await main.getByText('No posts yet').isVisible()
+    const hasPosts = await main.locator('.analytics-list-row').count()
     expect(hasNoPosts || hasPosts > 0).toBe(true)
   })
 
   test('shows "No AI usage" when no keys configured', async ({ page }) => {
-    const hasNoUsage = await page.locator('text=No AI usage').isVisible()
-    const hasUsage = await page.locator('text=/\\$\\d+\\.\\d+/').isVisible()
+    const main = page.locator('main')
+    const hasNoUsage = await main
+      .getByText(/No AI usage/)
+      .first()
+      .isVisible()
+    const hasUsage = await main.getByText(/\$\d+\.\d+/).isVisible()
     expect(hasNoUsage || hasUsage).toBe(true)
   })
 })

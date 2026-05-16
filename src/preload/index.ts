@@ -17,7 +17,7 @@ import type { IPCMap } from '../shared/ipc-types'
  */
 function invoke<K extends keyof IPCMap>(
   channel: K,
-  payload: IPCMap[K]['req'],
+  payload: IPCMap[K]['req']
 ): Promise<IPCMap[K]['res']> {
   return ipcRenderer.invoke(channel as string, payload)
 }
@@ -36,7 +36,7 @@ const api = {
   invoke,
   on,
   /** Electron app version — safe to expose. */
-  getVersion: (): Promise<string> => ipcRenderer.invoke('app:version'),
+  getVersion: (): Promise<string> => ipcRenderer.invoke('app:version')
 }
 
 contextBridge.exposeInMainWorld('api', api)

@@ -32,7 +32,11 @@ const db = new Database(dbPath, { timeout: 5000 })
 db.pragma('journal_mode = WAL')
 db.pragma('foreign_keys = ON')
 
-function log(level: 'debug' | 'info' | 'warn' | 'error', msg: string, fields: Record<string, unknown> = {}): void {
+function log(
+  level: 'debug' | 'info' | 'warn' | 'error',
+  msg: string,
+  fields: Record<string, unknown> = {}
+): void {
   parentPort?.postMessage({ kind: 'log', level, context: 'PublisherWorker', msg, fields })
 }
 
@@ -53,31 +57,34 @@ interface PendingPublish {
 const pending = new Map<string, PendingPublish>()
 
 // Listen for responses from main thread
-parentPort?.on('message', (msg: { kind: string; jobId?: string; url?: string; externalId?: string; error?: string }) => {
-  if (msg.kind === 'publish_result' && msg.jobId) {
-    const p = pending.get(msg.jobId)
-    if (p) {
-      clearTimeout(p.timeout)
-      pending.delete(msg.jobId)
-      p.resolve({ url: msg.url ?? '', externalId: msg.externalId ?? '' })
+parentPort?.on(
+  'message',
+  (msg: { kind: string; jobId?: string; url?: string; externalId?: string; error?: string }) => {
+    if (msg.kind === 'publish_result' && msg.jobId) {
+      const p = pending.get(msg.jobId)
+      if (p) {
+        clearTimeout(p.timeout)
+        pending.delete(msg.jobId)
+        p.resolve({ url: msg.url ?? '', externalId: msg.externalId ?? '' })
+      }
+    }
+
+    if (msg.kind === 'publish_error' && msg.jobId) {
+      const p = pending.get(msg.jobId)
+      if (p) {
+        clearTimeout(p.timeout)
+        pending.delete(msg.jobId)
+        p.reject(new Error(msg.error ?? 'Unknown publish error'))
+      }
+    }
+
+    if (msg.kind === 'shutdown') {
+      log('info', 'Worker shutting down')
+      db.close()
+      process.exit(0)
     }
   }
-
-  if (msg.kind === 'publish_error' && msg.jobId) {
-    const p = pending.get(msg.jobId)
-    if (p) {
-      clearTimeout(p.timeout)
-      pending.delete(msg.jobId)
-      p.reject(new Error(msg.error ?? 'Unknown publish error'))
-    }
-  }
-
-  if (msg.kind === 'shutdown') {
-    log('info', 'Worker shutting down')
-    db.close()
-    process.exit(0)
-  }
-})
+)
 
 // ─── DB helpers (sync — better-sqlite3 is synchronous) ───────────────────────
 
@@ -108,50 +115,73 @@ interface PostRow {
 
 function getDueJobs(): JobRow[] {
   return db
-    .prepare(`SELECT * FROM jobs WHERE status = 'pending' AND scheduled_at <= ? ORDER BY scheduled_at ASC LIMIT 20`)
+    .prepare(
+      `SELECT * FROM jobs WHERE status = 'pending' AND scheduled_at <= ? ORDER BY scheduled_at ASC LIMIT 20`
+    )
     .all(Date.now()) as JobRow[]
 }
 
 function getVariant(variantId: string): VariantRow | undefined {
-  return db.prepare('SELECT * FROM draft_variants WHERE id = ?').get(variantId) as VariantRow | undefined
+  return db.prepare('SELECT * FROM draft_variants WHERE id = ?').get(variantId) as
+    | VariantRow
+    | undefined
 }
 
 function getPostImagePaths(postId: string): string {
-  const row = db.prepare('SELECT image_paths FROM posts WHERE id = ?').get(postId) as PostRow | undefined
+  const row = db.prepare('SELECT image_paths FROM posts WHERE id = ?').get(postId) as
+    | PostRow
+    | undefined
   return row?.image_paths ?? '[]'
 }
 
 function markRunning(jobId: string): void {
-  db.prepare(`UPDATE jobs SET status = 'running', updated_at = ? WHERE id = ?`).run(Date.now(), jobId)
+  db.prepare(`UPDATE jobs SET status = 'running', updated_at = ? WHERE id = ?`).run(
+    Date.now(),
+    jobId
+  )
 }
 
 function markDone(jobId: string): void {
   db.prepare(`UPDATE jobs SET status = 'done', updated_at = ? WHERE id = ?`).run(Date.now(), jobId)
   // Update parent post to 'published'
-  const job = db.prepare('SELECT post_id FROM jobs WHERE id = ?').get(jobId) as { post_id: string } | undefined
+  const job = db.prepare('SELECT post_id FROM jobs WHERE id = ?').get(jobId) as
+    | { post_id: string }
+    | undefined
   if (job) {
-    db.prepare(`UPDATE posts SET status = 'published', published_at = ?, updated_at = ? WHERE id = ?`)
-      .run(Date.now(), Date.now(), job.post_id)
+    db.prepare(
+      `UPDATE posts SET status = 'published', published_at = ?, updated_at = ? WHERE id = ?`
+    ).run(Date.now(), Date.now(), job.post_id)
   }
 }
 
 function markFailed(jobId: string, attempts: number, error: string, permanent: boolean): void {
   const now = Date.now()
   if (permanent || attempts >= MAX_ATTEMPTS) {
-    db.prepare(`UPDATE jobs SET status = 'failed', attempts = ?, last_error = ?, updated_at = ? WHERE id = ?`)
-      .run(attempts, error, now, jobId)
-    const job = db.prepare('SELECT post_id FROM jobs WHERE id = ?').get(jobId) as { post_id: string } | undefined
+    db.prepare(
+      `UPDATE jobs SET status = 'failed', attempts = ?, last_error = ?, updated_at = ? WHERE id = ?`
+    ).run(attempts, error, now, jobId)
+    const job = db.prepare('SELECT post_id FROM jobs WHERE id = ?').get(jobId) as
+      | { post_id: string }
+      | undefined
     if (job) {
-      db.prepare(`UPDATE posts SET status = 'failed', updated_at = ? WHERE id = ?`).run(now, job.post_id)
+      db.prepare(`UPDATE posts SET status = 'failed', updated_at = ? WHERE id = ?`).run(
+        now,
+        job.post_id
+      )
     }
   } else {
     // Reschedule with backoff
     const backoff = BACKOFF_MS[Math.min(attempts, BACKOFF_MS.length - 1)]
     const nextAt = now + backoff
     db.prepare(
-      `UPDATE jobs SET status = 'pending', attempts = ?, last_error = ?, scheduled_at = ?, updated_at = ? WHERE id = ?`,
+      `UPDATE jobs SET status = 'pending', attempts = ?, last_error = ?, scheduled_at = ?, updated_at = ? WHERE id = ?`
     ).run(attempts, error, nextAt, now, jobId)
-    log('info', 'Job rescheduled with backoff', { jobId, attempts, backoffMs: backoff, nextAt: new Date(nextAt).toISOString() })
+    log('info', 'Job rescheduled with backoff', {
+      jobId,
+      attempts,
+      backoffMs: backoff,
+      nextAt: new Date(nextAt).toISOString()
+    })
   }
 }
 
@@ -174,7 +204,7 @@ function requestPublish(job: JobRow, body: string): Promise<{ url: string; exter
       variantId: job.variant_id,
       platform: job.platform,
       body,
-      imagePaths: getPostImagePaths(job.post_id),
+      imagePaths: getPostImagePaths(job.post_id)
     })
   })
 }
@@ -199,7 +229,7 @@ async function processJob(job: JobRow): Promise<void> {
       postId: job.post_id,
       platform: job.platform,
       url: result.url,
-      externalId: result.externalId,
+      externalId: result.externalId
     })
 
     log('info', 'Job published', { jobId: job.id, platform: job.platform, url: result.url })
@@ -207,7 +237,14 @@ async function processJob(job: JobRow): Promise<void> {
     const error = String(e)
     const attempts = job.attempts + 1
     // These API errors will never resolve on retry — mark permanent immediately
-    const permanentPatterns = ['CreditsDepleted', 'Forbidden', '401', '403', 'invalid_token', 'token_expired']
+    const permanentPatterns = [
+      'CreditsDepleted',
+      'Forbidden',
+      '401',
+      '403',
+      'invalid_token',
+      'token_expired'
+    ]
     const isPermanentError = permanentPatterns.some((p) => error.includes(p))
     const permanent = attempts >= MAX_ATTEMPTS || isPermanentError
 
@@ -219,7 +256,7 @@ async function processJob(job: JobRow): Promise<void> {
       postId: job.post_id,
       platform: job.platform,
       error,
-      permanent,
+      permanent
     })
 
     log('warn', 'Job failed', { jobId: job.id, platform: job.platform, attempts, error, permanent })

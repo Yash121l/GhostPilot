@@ -30,7 +30,7 @@ export class AnthropicProvider implements LLMProvider {
       max_tokens: opts.maxTokens ?? 2048,
       system: opts.systemMessage,
       messages: [{ role: 'user', content: prompt }],
-      temperature: opts.temperature ?? 0.7,
+      temperature: opts.temperature ?? 0.7
     })
 
     const text = res.content
@@ -42,7 +42,7 @@ export class AnthropicProvider implements LLMProvider {
       text,
       modelId: this.defaultModelId,
       promptTokens: res.usage.input_tokens,
-      completionTokens: res.usage.output_tokens,
+      completionTokens: res.usage.output_tokens
     }
   }
 }

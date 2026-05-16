@@ -44,14 +44,14 @@ export default defineConfig(
       '**/*.e2e.{ts,tsx}',
       'playwright.config.ts',
       'electron.vite.config.ts',
-      'vitest.config.ts',
+      'vitest.config.ts'
     ],
     rules: {
       '@typescript-eslint/explicit-function-return-type': 'off',
       '@typescript-eslint/no-explicit-any': 'off',
       // Playwright uses use() as a fixture API, not React's use hook
       'react-hooks/rules-of-hooks': 'off',
-      'no-empty-pattern': 'off',
+      'no-empty-pattern': 'off'
     }
   },
   eslintConfigPrettier

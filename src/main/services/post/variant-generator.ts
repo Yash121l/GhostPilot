@@ -7,6 +7,7 @@ import type { Platform } from '../../../shared/types/platform'
 import { PLATFORM_CHAR_LIMITS } from '../../../shared/types/platform'
 import type { Post, DraftVariant } from '../../../shared/types/post'
 import { createLogger } from '../../infrastructure/logger/logger'
+import { AppError, ErrorCode } from '../../../shared/types/error'
 
 const logger = createLogger('VariantGenerator')
 
@@ -16,17 +17,45 @@ const PLATFORM_INSTRUCTIONS: Record<string, string> = {
   twitter:
     'Write a single tweet. Direct and punchy. Max 280 chars. No hashtag spam — at most 2. No emojis unless they add meaning.',
   instagram:
-    'Write an Instagram caption. Lead with a strong first line (visible before "more"). Include relevant hashtags at the end (10–15). Conversational tone. Max 2200 chars.',
+    'Write an Instagram caption. Lead with a strong first line (visible before "more"). Include relevant hashtags at the end (10–15). Conversational tone. Max 2200 chars.'
+}
+
+function sanitizeGenerationError(error: unknown): string {
+  const message = error instanceof Error ? error.message : String(error)
+  if (/codex cli|codex exec|\/codex/i.test(message)) {
+    return 'Codex CLI failed. Check sign-in or choose an API provider in Settings.'
+  }
+  if (/claude code/i.test(message)) {
+    return 'Claude Code failed. Check sign-in or choose an API provider in Settings.'
+  }
+  if (/openai/i.test(message)) {
+    return 'OpenAI request failed. Check your API key or try another provider.'
+  }
+  if (/anthropic/i.test(message)) {
+    return 'Anthropic request failed. Check your API key or try another provider.'
+  }
+  if (/no ai provider|provider not configured/i.test(message)) {
+    return 'No AI provider available. Add an API key or sign in to a local agent.'
+  }
+  if (/ai call failed|provider|timeout|timed out/i.test(message)) {
+    return 'AI provider request failed. Try another provider in Settings.'
+  }
+  return message.length > 180 ? `${message.slice(0, 177)}...` : message
 }
 
 export class VariantGenerator {
   constructor(
     private readonly ai: AIGateway,
     private readonly personaService: PersonaService,
-    private readonly postService: PostService,
+    private readonly postService: PostService
   ) {}
 
-  async generate(postId: string, platforms: Platform[], traceId: string): Promise<Post> {
+  async generate(
+    postId: string,
+    platforms: Platform[],
+    traceId: string,
+    preferredProviderId?: string
+  ): Promise<Post> {
     const post = await this.postService.get(postId)
 
     // Resolve persona — fall back gracefully if not found or personaId is 'default'
@@ -43,18 +72,22 @@ export class VariantGenerator {
         persona.styleHints ? `Style hints: ${persona.styleHints}` : '',
         persona.latestFingerprint
           ? `Voice: ${persona.latestFingerprint.tone}; avg sentence length: ${persona.latestFingerprint.avgSentenceLength} words`
-          : '',
+          : ''
       ]
         .filter(Boolean)
         .join('\n')
     } catch {
       // No persona found (e.g. personaId = 'default') — generate without persona context
-      logger.warn({ msg: 'Persona not found, generating without context', personaId: post.personaId })
+      logger.warn({
+        msg: 'Persona not found, generating without context',
+        personaId: post.personaId
+      })
       personaContext = 'Write in a clear, engaging, professional tone.'
     }
 
     const variants: DraftVariant[] = []
     const now = new Date()
+    const errors: string[] = []
 
     for (const platform of platforms) {
       const instructions = PLATFORM_INSTRUCTIONS[platform] ?? `Write a post for ${platform}.`
@@ -69,7 +102,7 @@ export class VariantGenerator {
         '',
         `SOURCE DRAFT:\n${post.body}`,
         '',
-        'OUTPUT: Return ONLY the finished post text. No explanation. No meta-commentary.',
+        'OUTPUT: Return ONLY the finished post text. No explanation. No meta-commentary.'
       ]
         .filter((l) => l !== undefined)
         .join('\n')
@@ -82,12 +115,13 @@ export class VariantGenerator {
         const res = await this.ai.complete({
           task: AITask.ADAPT_VARIANT,
           hint: ModelHint.ECONOMY,
+          preferredProviderId,
           prompt,
           systemMessage,
           maxTokens: Math.ceil(charLimit * 1.2),
           traceId,
           postId,
-          personaId: resolvedPersonaId,
+          personaId: resolvedPersonaId
         })
 
         const body = res.text.trim().slice(0, charLimit)
@@ -101,24 +135,22 @@ export class VariantGenerator {
           styleDriftScore: 0,
           createdAt: now,
           provider: res.provider,
-          modelId: res.modelId,
+          modelId: res.modelId
         })
 
         logger.info({ msg: 'Variant generated', platform, postId, chars: body.length })
       } catch (e) {
         logger.error({ msg: 'Variant generation failed', platform, postId, error: String(e) })
-        variants.push({
-          id: nanoid(),
-          postId,
-          platform,
-          body: `[Generation failed: ${String(e)}]`,
-          charCount: 0,
-          styleDriftScore: 0,
-          createdAt: now,
-          provider: 'error',
-          modelId: 'error',
-        })
+        errors.push(sanitizeGenerationError(e))
       }
+    }
+
+    if (variants.length === 0) {
+      throw new AppError({
+        code: ErrorCode.AI_CALL_FAILED,
+        message: errors[0] ?? 'No variants could be generated.',
+        retryable: true
+      })
     }
 
     return this.postService.setVariants(postId, variants)

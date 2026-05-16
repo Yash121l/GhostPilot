@@ -4,7 +4,12 @@
 import { vi } from 'vitest'
 import type { AuditService } from '../../src/main/application/audit/audit.service'
 import type { AIGateway } from '../../src/main/services/ai-gateway/index'
-import type { SocialConnector, OAuthTokens, ConnectionResult, PublishResult } from '../../src/main/services/social/interface'
+import type {
+  SocialConnector,
+  OAuthTokens,
+  ConnectionResult,
+  PublishResult
+} from '../../src/main/services/social/interface'
 import { Platform } from '../../src/shared/types/platform'
 
 // ─── Audit mock ───────────────────────────────────────────────────────────────
@@ -12,7 +17,7 @@ import { Platform } from '../../src/shared/types/platform'
 export function mockAudit(): AuditService {
   return {
     write: vi.fn(),
-    query: vi.fn().mockResolvedValue([]),
+    query: vi.fn().mockResolvedValue([])
   } as unknown as AuditService
 }
 
@@ -24,7 +29,7 @@ export function mockAIGateway(overrides: Partial<AIGateway> = {}): AIGateway {
       text: 'Generated post content for testing purposes.',
       provider: 'openai',
       modelId: 'gpt-4o-mini',
-      usage: { promptTokens: 100, completionTokens: 50, estimatedCostUsd: 0.001 },
+      usage: { promptTokens: 100, completionTokens: 50, estimatedCostUsd: 0.001 }
     }),
     reload: vi.fn().mockResolvedValue(undefined),
     listKeys: vi.fn().mockResolvedValue([]),
@@ -33,7 +38,7 @@ export function mockAIGateway(overrides: Partial<AIGateway> = {}): AIGateway {
     setDefault: vi.fn(),
     testKey: vi.fn().mockResolvedValue({ latencyMs: 120, model: 'gpt-4o-mini' }),
     ollamaStatus: vi.fn().mockResolvedValue({ available: false, models: [] }),
-    ...overrides,
+    ...overrides
   } as unknown as AIGateway
 }
 
@@ -45,7 +50,7 @@ export function mockTokens(overrides: Partial<OAuthTokens> = {}): OAuthTokens {
     refreshToken: 'test-refresh-token',
     expiresAt: new Date(Date.now() + 3600 * 1000),
     scopes: ['openid', 'profile', 'w_member_social'],
-    ...overrides,
+    ...overrides
   }
 }
 
@@ -58,13 +63,13 @@ export function mockConnector(platform: Platform = Platform.LINKEDIN): SocialCon
     handleCallback: vi.fn().mockResolvedValue({
       platformUserId: 'user-123',
       displayName: 'Test User',
-      tokens: mockTokens(),
+      tokens: mockTokens()
     } as ConnectionResult),
     refreshTokens: vi.fn().mockResolvedValue(mockTokens()),
     revokeConnection: vi.fn().mockResolvedValue(undefined),
     publish: vi.fn().mockResolvedValue({
       externalId: 'urn:li:share:123456',
-      url: 'https://www.linkedin.com/feed/update/urn:li:share:123456',
+      url: 'https://www.linkedin.com/feed/update/urn:li:share:123456'
     } as PublishResult),
     deletePost: vi.fn().mockResolvedValue(undefined),
     fetchAnalytics: vi.fn().mockResolvedValue({
@@ -74,7 +79,7 @@ export function mockConnector(platform: Platform = Platform.LINKEDIN): SocialCon
       comments: 2,
       shares: 1,
       clicks: 0,
-      fetchedAt: new Date(),
+      fetchedAt: new Date()
     }),
     subscribeEvents: vi.fn().mockResolvedValue(() => {}),
     rateLimitState: vi.fn().mockReturnValue({
@@ -82,8 +87,8 @@ export function mockConnector(platform: Platform = Platform.LINKEDIN): SocialCon
       remaining: 499,
       limit: 500,
       resetsAt: new Date(Date.now() + 86400 * 1000),
-      exceeded: false,
-    }),
+      exceeded: false
+    })
   }
 }
 
@@ -93,8 +98,14 @@ export function mockKeychain() {
   const store = new Map<string, string>()
   return {
     get: vi.fn((key: string) => Promise.resolve(store.get(key) ?? null)),
-    set: vi.fn((key: string, value: string) => { store.set(key, value); return Promise.resolve() }),
-    delete: vi.fn((key: string) => { store.delete(key); return Promise.resolve() }),
-    _store: store,
+    set: vi.fn((key: string, value: string) => {
+      store.set(key, value)
+      return Promise.resolve()
+    }),
+    delete: vi.fn((key: string) => {
+      store.delete(key)
+      return Promise.resolve()
+    }),
+    _store: store
   }
 }

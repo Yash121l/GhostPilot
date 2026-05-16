@@ -1,38 +1,45 @@
 /**
- * E2E: Connect page — platform connection UI
+ * E2E: Settings Connections — platform connection UI
  * Note: actual OAuth flows open a browser and cannot be fully automated.
  * These tests cover the UI state and the disconnect flow.
  */
 import { test, expect } from './fixtures/electron'
 import { AppShell } from './fixtures/pages'
 
-test.describe('Connect page', () => {
+test.describe('Settings Connections', () => {
   test.beforeEach(async ({ page }) => {
     const shell = new AppShell(page)
-    await shell.goTo('Connect')
+    await shell.goTo('Settings')
+    await page.click('.settings-tabs button:has-text("Connections")')
   })
 
-  test('shows Connect heading and subtitle', async ({ page }) => {
-    await expect(page.locator('h1:has-text("Connect")')).toBeVisible()
-    await expect(page.locator('text=Link your social accounts')).toBeVisible()
+  test('shows connected accounts heading', async ({ page }) => {
+    await expect(page.locator('h1:has-text("Settings")')).toBeVisible()
+    await expect(page.locator('text=Connected accounts')).toBeVisible()
   })
 
   test('shows all three platform cards', async ({ page }) => {
-    await expect(page.locator('.card:has-text("LinkedIn")')).toBeVisible()
-    await expect(page.locator('.card:has-text("X (Twitter)")')).toBeVisible()
-    await expect(page.locator('.card:has-text("Instagram")')).toBeVisible()
+    await expect(page.locator('.settings-card:has-text("LinkedIn")')).toBeVisible()
+    await expect(page.locator('.settings-card:has-text("X (Twitter)")')).toBeVisible()
+    await expect(page.locator('.settings-card:has-text("Instagram")')).toBeVisible()
   })
 
-  test('LinkedIn card shows description', async ({ page }) => {
-    await expect(page.locator('.card:has-text("LinkedIn")')).toContainText('Professional posts')
+  test('LinkedIn card shows status', async ({ page }) => {
+    await expect(page.locator('.settings-card:has-text("LinkedIn")')).toContainText(
+      /Offline|Connected/
+    )
   })
 
-  test('X card shows description', async ({ page }) => {
-    await expect(page.locator('.card:has-text("X (Twitter)")')).toContainText('Tweets')
+  test('X card shows status', async ({ page }) => {
+    await expect(page.locator('.settings-card:has-text("X (Twitter)")')).toContainText(
+      /Offline|Connected/
+    )
   })
 
-  test('Instagram card shows description', async ({ page }) => {
-    await expect(page.locator('.card:has-text("Instagram")')).toContainText('Visual content')
+  test('Instagram card shows status', async ({ page }) => {
+    await expect(page.locator('.settings-card:has-text("Instagram")')).toContainText(
+      /Offline|Connected/
+    )
   })
 
   test('shows Connect button for disconnected platforms', async ({ page }) => {
@@ -43,26 +50,31 @@ test.describe('Connect page', () => {
   })
 
   test('shows Privacy & Security section', async ({ page }) => {
-    await expect(page.locator('text=Privacy')).toBeVisible()
+    await expect(page.locator('text=OAuth tokens')).toBeVisible()
     await expect(page.locator('text=keychain')).toBeVisible()
   })
 
   test('shows refresh button', async ({ page }) => {
-    await expect(page.locator('button.btn.ghost.icon')).toBeVisible()
+    await expect(page.locator('button:has-text("Refresh")')).toBeVisible()
   })
 
   test('refresh button reloads connection status', async ({ page }) => {
-    const refreshBtn = page.locator('button.btn.ghost.icon')
+    const refreshBtn = page.locator('button:has-text("Refresh")')
     await refreshBtn.click()
     // Should not throw — just reloads
     await page.waitForTimeout(500)
-    await expect(page.locator('h1:has-text("Connect")')).toBeVisible()
+    await expect(page.locator('h1:has-text("Settings")')).toBeVisible()
   })
 
-  test('Connect button triggers OAuth (opens browser)', async ({ page, electronApp: _electronApp }) => {
+  test('Connect button triggers OAuth (opens browser)', async ({
+    page,
+    electronApp: _electronApp
+  }) => {
     // We can't complete the OAuth flow in e2e, but we can verify the button
     // triggers the initiateConnect IPC call without crashing the app
-    const connectBtn = page.locator('.card:has-text("LinkedIn") button:has-text("Connect")')
+    const connectBtn = page.locator(
+      '.settings-card:has-text("LinkedIn") button:has-text("Connect")'
+    )
     if (await connectBtn.isVisible()) {
       // Click and immediately check the app doesn't crash
       await connectBtn.click()
@@ -73,7 +85,7 @@ test.describe('Connect page', () => {
   })
 })
 
-test.describe('Connect page — already connected', () => {
+test.describe('Settings connections — already connected', () => {
   test.skip(
     !process.env['GHOSTPILOT_LINKEDIN_CONNECTED'],
     'Skipped: set GHOSTPILOT_LINKEDIN_CONNECTED=1 to run connected tests'
@@ -81,14 +93,18 @@ test.describe('Connect page — already connected', () => {
 
   test('LinkedIn shows Connected status', async ({ page }) => {
     const shell = new AppShell(page)
-    await shell.goTo('Connect')
-    await expect(page.locator('.card:has-text("LinkedIn")')).toContainText('Connected')
+    await shell.goTo('Settings')
+    await page.click('.settings-tabs button:has-text("Connections")')
+    await expect(page.locator('.settings-card:has-text("LinkedIn")')).toContainText('Connected')
   })
 
   test('LinkedIn shows Disconnect button when connected', async ({ page }) => {
     const shell = new AppShell(page)
-    await shell.goTo('Connect')
-    await expect(page.locator('.card:has-text("LinkedIn") button:has-text("Disconnect")')).toBeVisible()
+    await shell.goTo('Settings')
+    await page.click('.settings-tabs button:has-text("Connections")')
+    await expect(
+      page.locator('.settings-card:has-text("LinkedIn") button:has-text("Disconnect")')
+    ).toBeVisible()
   })
 
   test('sidebar shows LinkedIn with green dot', async ({ page }) => {

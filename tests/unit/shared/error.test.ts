@@ -19,7 +19,7 @@ describe('AppError', () => {
       message: 'ai failed',
       retryable: true,
       context: ctx,
-      cause,
+      cause
     })
     expect(e.retryable).toBe(true)
     expect(e.context).toEqual(ctx)

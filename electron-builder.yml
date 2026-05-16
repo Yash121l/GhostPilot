@@ -33,8 +33,8 @@ mac:
   target:
     - target: dmg
       arch:
-        - arm64    # Apple Silicon (M1/M2/M3/M4)
-        - x64      # Intel
+        - arm64 # Apple Silicon (M1/M2/M3/M4)
+        - x64 # Intel
   category: public.app-category.productivity
   icon: build/icon.icns
   # Entitlements for macOS sandbox / hardened runtime
@@ -118,7 +118,7 @@ deb:
     - libdrm2
     - libgbm1
     - libxcb-dri3-0
-    - libsecret-1-0   # for keytar
+    - libsecret-1-0 # for keytar
 
 # ── Auto-updater ──────────────────────────────────────────────────────────────
 publish:

@@ -34,7 +34,7 @@ export class OpenAIProvider implements LLMProvider {
       model: this.defaultModelId,
       messages,
       max_tokens: opts.maxTokens ?? 2048,
-      temperature: opts.temperature ?? 0.7,
+      temperature: opts.temperature ?? 0.7
     })
 
     const choice = res.choices[0]
@@ -45,7 +45,7 @@ export class OpenAIProvider implements LLMProvider {
       text,
       modelId: this.defaultModelId,
       promptTokens: usage.prompt_tokens,
-      completionTokens: usage.completion_tokens,
+      completionTokens: usage.completion_tokens
     }
   }
 }

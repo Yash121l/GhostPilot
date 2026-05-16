@@ -10,6 +10,8 @@ import { registerTrendHandlers } from './trend.handlers'
 import { registerAuthHandlers } from './auth.handlers'
 import { registerConnectionHandlers } from './connections.ipc'
 import { registerMediaHandlers } from './media.handlers'
+import { registerLocalAgentHandlers } from './local-agent.handlers'
+import { registerPlatformAnalyticsHandlers } from './platform-analytics.handlers'
 import { createLogger } from '../infrastructure/logger/logger'
 
 const logger = createLogger('IPC')
@@ -34,6 +36,8 @@ export function registerAllHandlers(): void {
   registerAuthHandlers()
   registerConnectionHandlers()
   registerMediaHandlers()
+  registerLocalAgentHandlers()
+  registerPlatformAnalyticsHandlers()
 
   ipcMain.handle('app:version', () => process.env['npm_package_version'] ?? '0.0.0')
 

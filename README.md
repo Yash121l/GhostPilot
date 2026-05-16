@@ -23,15 +23,15 @@ Write once. GhostPilot adapts your draft for LinkedIn, X (Twitter), and Instagra
 
 ## Tech stack
 
-| Layer | Tech |
-|---|---|
-| Desktop shell | Electron 39 |
-| Frontend | React 19, TypeScript, Tailwind CSS v4 |
-| Build | electron-vite, electron-builder |
-| Database | SQLite via better-sqlite3 + Drizzle ORM |
-| AI | OpenAI, Anthropic, Groq, OpenRouter, Ollama (BYOK) |
-| Secrets | macOS Keychain via keytar |
-| Tests | Vitest (unit/integration), Playwright (e2e) |
+| Layer         | Tech                                               |
+| ------------- | -------------------------------------------------- |
+| Desktop shell | Electron 39                                        |
+| Frontend      | React 19, TypeScript, Tailwind CSS v4              |
+| Build         | electron-vite, electron-builder                    |
+| Database      | SQLite via better-sqlite3 + Drizzle ORM            |
+| AI            | OpenAI, Anthropic, Groq, OpenRouter, Ollama (BYOK) |
+| Secrets       | macOS Keychain via keytar                          |
+| Tests         | Vitest (unit/integration), Playwright (e2e)        |
 
 ---
 
@@ -75,6 +75,7 @@ npm run db:migrate    # apply migrations
 ```
 
 Reset the local database:
+
 ```bash
 rm ~/Library/Application\ Support/ghostpilot/ghostpilot.db
 ```
@@ -113,6 +114,7 @@ build/                       Electron builder resources (icons, entitlements)
 See [SETUP.md](./SETUP.md) for step-by-step instructions for LinkedIn, X, and Instagram.
 
 **Redirect URI to register in all platform OAuth apps:**
+
 ```
 https://ghostpilot.yashlunawat.com/oauth/callback
 ```

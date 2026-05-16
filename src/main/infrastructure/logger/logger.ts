@@ -41,7 +41,7 @@ function configureLog(): void {
   const userDataPath = app.getPath('userData')
   log.transports.file.resolvePathFn = (variables) => {
     const vars = variables as { processType?: string }
-    const name = vars.processType === 'main' ? 'main' : (vars.processType || 'unknown')
+    const name = vars.processType === 'main' ? 'main' : vars.processType || 'unknown'
     return join(userDataPath, 'logs', `${name}.log`)
   }
   log.transports.file.format = '[{y}-{m}-{d} {h}:{i}:{s}.{ms}] {text}'
@@ -51,7 +51,7 @@ function configureLog(): void {
     (msg) => {
       const [level, ...rest] = msg.data
       return [JSON.stringify({ ...rest[0], level, ts: new Date().toISOString() })]
-    },
+    }
   ]
 }
 
@@ -86,7 +86,6 @@ export function createLogger(context: string, process: LogProcess = 'main'): Log
     },
     error(fields: LogFields): void {
       log.error(sanitizeForLog({ ...base, ...fields }))
-    },
+    }
   }
 }
-

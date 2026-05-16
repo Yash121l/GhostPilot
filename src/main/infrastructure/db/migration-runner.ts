@@ -164,7 +164,7 @@ CREATE TABLE IF NOT EXISTS \`settings\` (
   \`value\` text NOT NULL DEFAULT '',
   \`updated_at\` integer NOT NULL
 );
-    `.trim(),
+    `.trim()
   },
 
   {
@@ -200,7 +200,7 @@ END;
 CREATE INDEX IF NOT EXISTS idx_audit_log_ts ON audit_log(ts DESC);
 CREATE INDEX IF NOT EXISTS idx_audit_log_entity ON audit_log(entity_type, entity_id);
 CREATE INDEX IF NOT EXISTS idx_audit_log_action ON audit_log(action);
-    `.trim(),
+    `.trim()
   },
 
   {
@@ -225,13 +225,72 @@ CREATE INDEX IF NOT EXISTS idx_jobs_status_sched     ON jobs(status, scheduled_a
 CREATE INDEX IF NOT EXISTS idx_llm_usage_ts          ON llm_usage(ts DESC);
 CREATE INDEX IF NOT EXISTS idx_trend_clusters_score  ON trend_clusters(composite_score DESC);
 CREATE INDEX IF NOT EXISTS idx_social_platform       ON social_connections(platform);
-    `.trim(),
+    `.trim()
   },
 
   {
     filename: '0004_post_images.sql',
-    sql: `ALTER TABLE \`posts\` ADD COLUMN \`image_paths\` text NOT NULL DEFAULT '[]';`.trim(),
+    sql: `ALTER TABLE \`posts\` ADD COLUMN \`image_paths\` text NOT NULL DEFAULT '[]';`.trim()
   },
+
+  {
+    filename: '0005_platform_analytics.sql',
+    sql: `
+CREATE TABLE IF NOT EXISTS \`platform_account_snapshots\` (
+  \`id\` text PRIMARY KEY NOT NULL,
+  \`platform\` text NOT NULL,
+  \`account_id\` text NOT NULL,
+  \`display_name\` text NOT NULL DEFAULT '',
+  \`followers\` integer,
+  \`following\` integer,
+  \`posts\` integer,
+  \`impressions\` integer,
+  \`views\` integer,
+  \`likes\` integer,
+  \`comments\` integer,
+  \`shares\` integer,
+  \`clicks\` integer,
+  \`fetched_at\` integer NOT NULL,
+  \`unavailable_reason\` text
+);
+
+CREATE TABLE IF NOT EXISTS \`platform_post_insights\` (
+  \`id\` text PRIMARY KEY NOT NULL,
+  \`platform\` text NOT NULL,
+  \`external_id\` text NOT NULL,
+  \`url\` text,
+  \`body_preview\` text NOT NULL DEFAULT '',
+  \`published_at\` integer,
+  \`impressions\` integer,
+  \`views\` integer,
+  \`likes\` integer,
+  \`comments\` integer,
+  \`shares\` integer,
+  \`saves\` integer,
+  \`clicks\` integer,
+  \`engagement_rate\` real,
+  \`fetched_at\` integer NOT NULL
+);
+
+CREATE TABLE IF NOT EXISTS \`platform_hashtag_insights\` (
+  \`id\` text PRIMARY KEY NOT NULL,
+  \`platform\` text NOT NULL,
+  \`tag\` text NOT NULL DEFAULT '',
+  \`post_count\` integer,
+  \`top_posts_json\` text NOT NULL DEFAULT '[]',
+  \`recent_posts_json\` text NOT NULL DEFAULT '[]',
+  \`fetched_at\` integer NOT NULL,
+  \`unavailable_reason\` text
+);
+
+CREATE INDEX IF NOT EXISTS idx_platform_account_snapshots_platform
+  ON platform_account_snapshots(platform, fetched_at DESC);
+CREATE INDEX IF NOT EXISTS idx_platform_post_insights_platform
+  ON platform_post_insights(platform, published_at DESC);
+CREATE INDEX IF NOT EXISTS idx_platform_hashtag_insights_platform
+  ON platform_hashtag_insights(platform, tag, fetched_at DESC);
+    `.trim()
+  }
 ]
 
 // ── Runner ─────────────────────────────────────────────────────────────────────
@@ -271,7 +330,7 @@ export function runMigrations(): void {
       db.exec(sql)
       db.prepare('INSERT INTO _migrations (filename, applied_at) VALUES (?, ?)').run(
         filename,
-        Date.now(),
+        Date.now()
       )
     })()
 
