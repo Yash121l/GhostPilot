@@ -88,6 +88,11 @@ export const IPC_CHANNELS = {
   MEDIA_OPEN_DIALOG: 'media:openDialog',
   POST_SET_IMAGES: 'post:setImages',
   AI_IMAGE_GENERATE: 'ai:image:generate',
+
+  // Updater
+  UPDATER_GET_STATE: 'updater:get-state',
+  UPDATER_STATE_CHANGED: 'updater:state-changed',
+  UPDATER_ROSETTA_WARNING: 'updater:rosetta-warning',
 } as const
 
 export type IPCChannel = (typeof IPC_CHANNELS)[keyof typeof IPC_CHANNELS]
@@ -324,6 +329,12 @@ export interface IPCMap {
     res: Result<{ score: number }, AppError>
   }
 
+  // Updater
+  [IPC_CHANNELS.UPDATER_GET_STATE]: {
+    req: Record<string, never>
+    res: UpdateState
+  }
+
   // Phase 1 — Connections
   [IPC_CHANNELS.CONNECTIONS_GET_AUTH_URL]: {
     req: { platform: Platform }
@@ -359,3 +370,10 @@ export interface RateLimitInfo {
   resetsAt: number
   exceeded: boolean
 }
+
+export type UpdateState =
+  | { status: 'idle' }
+  | { status: 'checking' }
+  | { status: 'up-to-date' }
+  | { status: 'available'; version: string }
+  | { status: 'error'; message: string }

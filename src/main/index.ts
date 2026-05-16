@@ -1,4 +1,13 @@
-import { app, BrowserWindow, Tray, nativeImage, dialog, shell, protocol, Notification } from 'electron'
+import {
+  app,
+  BrowserWindow,
+  Tray,
+  nativeImage,
+  dialog,
+  shell,
+  protocol,
+  Notification
+} from 'electron'
 import { join } from 'path'
 import { readFileSync, existsSync } from 'fs'
 import type { ImageAttachment } from '../shared/types/post'
@@ -23,8 +32,8 @@ import { AuditAction } from './infrastructure/db/schema'
   // project root, but __dirname points to out/main/ in the built app.
   const candidates = [
     resolve(process.cwd(), '.env'),
-    resolve(__dirname, '../../.env'),   // built: out/main/ → project root
-    resolve(__dirname, '../../../.env'), // extra fallback
+    resolve(__dirname, '../../.env'), // built: out/main/ → project root
+    resolve(__dirname, '../../../.env') // extra fallback
   ]
   for (const envPath of candidates) {
     if (!existsSync(envPath)) continue
@@ -35,13 +44,16 @@ import { AuditAction } from './infrastructure/db/schema'
       const eq = trimmed.indexOf('=')
       if (eq === -1) continue
       const key = trimmed.slice(0, eq).trim()
-      const val = trimmed.slice(eq + 1).trim().replace(/^["']|["']$/g, '')
+      const val = trimmed
+        .slice(eq + 1)
+        .trim()
+        .replace(/^["']|["']$/g, '')
       if (key && !(key in process.env)) process.env[key] = val
     }
     break // stop after first found
   }
   // Log which path was used (visible in dev console)
-  const found = candidates.find(p => existsSync(p))
+  const found = candidates.find((p) => existsSync(p))
   if (found) console.log('[env] loaded from', found)
   else console.warn('[env] .env file not found — OAuth credentials may be missing')
 })()
@@ -51,6 +63,174 @@ const logger = createLogger('Main')
 let mainWindow: BrowserWindow | null = null
 let tray: Tray | null = null
 let publisherWorker: Worker | null = null
+let isQuitting = false
+let workerRestartAttempts = 0
+const WORKER_RESTART_DELAYS = [500, 1000, 2000, 5000, 10000]
+
+function spawnPublisherWorker(): void {
+  try {
+    const workerPath = join(__dirname, 'workers/publisher.worker.js')
+    publisherWorker = new Worker(workerPath, { workerData: { dbPath: getDbPath() } })
+
+    publisherWorker.on('online', () => {
+      workerRestartAttempts = 0
+      logger.info({ msg: 'Publisher worker online' })
+    })
+
+    publisherWorker.on(
+      'message',
+      (msg: {
+        kind: string
+        jobId?: string
+        postId?: string
+        platform?: string
+        url?: string
+        error?: string
+        permanent?: boolean
+        level?: string
+        context?: string
+        msg?: string
+        fields?: Record<string, unknown>
+      }) => {
+        if (msg.kind === 'log') {
+          const wLogger = createLogger(msg.context ?? 'Worker', 'worker:publisher')
+          const level = (msg.level ?? 'info') as 'debug' | 'info' | 'warn' | 'error'
+          wLogger[level]({ msg: msg.msg ?? '', ...msg.fields })
+          return
+        }
+
+        // Relay publish_request to actual connector
+        if (msg.kind === 'publish_request' && msg.jobId) {
+          const jobId = msg.jobId
+          const platform = msg.platform as Platform
+          const body = (msg as unknown as Record<string, string>)['body'] ?? ''
+          const imagePathsJson = (msg as unknown as Record<string, string>)['imagePaths'] ?? '[]'
+
+          let images: ImageAttachment[] = []
+          try {
+            images = JSON.parse(imagePathsJson) as ImageAttachment[]
+          } catch {
+            /* ignore */
+          }
+          const mediaBuffers = images
+            .filter((img) => {
+              try {
+                readFileSync(img.localPath)
+                return true
+              } catch {
+                return false
+              }
+            })
+            .map((img) => ({
+              data: readFileSync(img.localPath),
+              mimeType: img.mimeType,
+              originalUrl: undefined
+            }))
+
+          getServices()
+            .oauthManager.getTokens(platform)
+            .then(async (tokens) => {
+              if (!tokens) {
+                publisherWorker?.postMessage({
+                  kind: 'publish_error',
+                  jobId,
+                  error: `No tokens for ${platform}`
+                })
+                return
+              }
+              const connector = getServices().oauthManager.getConnector(platform)
+              if (!connector) {
+                publisherWorker?.postMessage({
+                  kind: 'publish_error',
+                  jobId,
+                  error: `No connector for ${platform}`
+                })
+                return
+              }
+              try {
+                const result = await connector.publish(
+                  { body, mediaBuffers: mediaBuffers.length ? mediaBuffers : undefined },
+                  tokens
+                )
+                publisherWorker?.postMessage({
+                  kind: 'publish_result',
+                  jobId,
+                  url: result.url,
+                  externalId: result.externalId
+                })
+              } catch (e) {
+                publisherWorker?.postMessage({ kind: 'publish_error', jobId, error: String(e) })
+              }
+            })
+            .catch((e) => {
+              publisherWorker?.postMessage({ kind: 'publish_error', jobId, error: String(e) })
+            })
+          return
+        }
+
+        // Audit + notify on job outcomes
+        if (msg.kind === 'job:published' && msg.postId && msg.platform) {
+          getServices().audit.write({
+            actor: 'system',
+            action: AuditAction.POST_PUBLISHED,
+            entityType: 'posts',
+            entityId: msg.postId,
+            outcome: 'success',
+            details: { platform: msg.platform, url: msg.url ?? '' }
+          })
+          logger.info({
+            msg: 'Post published',
+            postId: msg.postId,
+            platform: msg.platform,
+            url: msg.url ?? ''
+          })
+          new Notification({ title: APP_NAME, body: `Post published on ${msg.platform}` }).show()
+          mainWindow?.webContents.send(msg.kind, msg)
+        }
+
+        if (msg.kind === 'job:failed' && msg.postId && msg.platform) {
+          getServices().audit.write({
+            actor: 'system',
+            action: AuditAction.POST_PUBLISH_FAILED,
+            entityType: 'posts',
+            entityId: msg.postId,
+            outcome: 'failure',
+            errorCode: 'PUBLISH_ERROR',
+            details: { platform: msg.platform, error: msg.error ?? '', permanent: msg.permanent }
+          })
+          if (msg.permanent) {
+            new Notification({
+              title: APP_NAME,
+              body: `Post failed permanently on ${msg.platform}`
+            }).show()
+          }
+          mainWindow?.webContents.send(msg.kind, msg)
+        }
+      }
+    )
+
+    publisherWorker.on('error', (e) =>
+      logger.error({ msg: 'Publisher worker error', error: e.message })
+    )
+
+    publisherWorker.on('exit', (code) => {
+      publisherWorker = null
+      if (isQuitting) return
+      if (code !== 0) logger.warn({ msg: 'Publisher worker exited unexpectedly', code })
+      const delay =
+        WORKER_RESTART_DELAYS[Math.min(workerRestartAttempts, WORKER_RESTART_DELAYS.length - 1)]
+      workerRestartAttempts++
+      logger.warn({
+        msg: 'Publisher worker restarting',
+        attempt: workerRestartAttempts,
+        delayMs: delay
+      })
+      setTimeout(spawnPublisherWorker, delay)
+    })
+  } catch (e) {
+    logger.warn({ msg: 'Publisher worker failed to start', error: String(e) })
+  }
+}
 
 async function bootstrap(): Promise<void> {
   logger.info({ msg: 'App starting', version: app.getVersion() })
@@ -63,7 +243,7 @@ async function bootstrap(): Promise<void> {
     logger.error({ msg: 'DB initialisation failed', error: String(e) })
     await dialog.showErrorBox(
       'Database Error',
-      `${APP_NAME} could not initialise its database.\n\n${String(e)}\n\nThe app will now quit.`,
+      `${APP_NAME} could not initialise its database.\n\n${String(e)}\n\nThe app will now quit.`
     )
     app.quit()
     return
@@ -88,100 +268,9 @@ async function bootstrap(): Promise<void> {
   }
 
   // 5. Spawn publisher worker thread (handles actual publish dispatch)
-  try {
-    const workerPath = join(__dirname, 'workers/publisher.worker.js')
-    publisherWorker = new Worker(workerPath, { workerData: { dbPath: getDbPath() } })
+  spawnPublisherWorker()
 
-    publisherWorker.on('message', (msg: { kind: string; jobId?: string; postId?: string; platform?: string; url?: string; error?: string; permanent?: boolean; level?: string; context?: string; msg?: string; fields?: Record<string, unknown> }) => {
-      if (msg.kind === 'log') {
-        const wLogger = createLogger(msg.context ?? 'Worker', 'worker:publisher')
-        const level = (msg.level ?? 'info') as 'debug' | 'info' | 'warn' | 'error'
-        wLogger[level]({ msg: msg.msg ?? '', ...msg.fields })
-        return
-      }
-
-      // Relay publish_request to actual connector
-      if (msg.kind === 'publish_request' && msg.jobId) {
-        const jobId = msg.jobId
-        const platform = msg.platform as Platform
-        const body = (msg as unknown as Record<string, string>)['body'] ?? ''
-        const imagePathsJson = (msg as unknown as Record<string, string>)['imagePaths'] ?? '[]'
-
-        // Build mediaBuffers from local image files
-        let images: ImageAttachment[] = []
-        try { images = JSON.parse(imagePathsJson) as ImageAttachment[] } catch { /* ignore */ }
-        const mediaBuffers = images
-          .filter((img) => { try { readFileSync(img.localPath); return true } catch { return false } })
-          .map((img) => ({
-            data: readFileSync(img.localPath),
-            mimeType: img.mimeType,
-            originalUrl: undefined,
-          }))
-
-        getServices().oauthManager.getTokens(platform).then(async (tokens) => {
-          if (!tokens) {
-            publisherWorker?.postMessage({ kind: 'publish_error', jobId, error: `No tokens for ${platform}` })
-            return
-          }
-          const connector = getServices().oauthManager.getConnector(platform)
-          if (!connector) {
-            publisherWorker?.postMessage({ kind: 'publish_error', jobId, error: `No connector for ${platform}` })
-            return
-          }
-          try {
-            const result = await connector.publish({ body, mediaBuffers: mediaBuffers.length ? mediaBuffers : undefined }, tokens)
-            publisherWorker?.postMessage({ kind: 'publish_result', jobId, url: result.url, externalId: result.externalId })
-          } catch (e) {
-            publisherWorker?.postMessage({ kind: 'publish_error', jobId, error: String(e) })
-          }
-        }).catch((e) => {
-          publisherWorker?.postMessage({ kind: 'publish_error', jobId, error: String(e) })
-        })
-        return
-      }
-
-      // Audit + notify on job outcomes
-      if (msg.kind === 'job:published' && msg.postId && msg.platform) {
-        getServices().audit.write({
-          actor: 'system',
-          action: AuditAction.POST_PUBLISHED,
-          entityType: 'posts',
-          entityId: msg.postId,
-          outcome: 'success',
-          details: { platform: msg.platform, url: msg.url ?? '' },
-        })
-        logger.info({ msg: 'Post published', postId: msg.postId, platform: msg.platform, url: msg.url ?? '' })
-        new Notification({ title: APP_NAME, body: `Post published on ${msg.platform}` }).show()
-        mainWindow?.webContents.send(msg.kind, msg)
-      }
-
-      if (msg.kind === 'job:failed' && msg.postId && msg.platform) {
-        getServices().audit.write({
-          actor: 'system',
-          action: AuditAction.POST_PUBLISH_FAILED,
-          entityType: 'posts',
-          entityId: msg.postId,
-          outcome: 'failure',
-          errorCode: 'PUBLISH_ERROR',
-          details: { platform: msg.platform, error: msg.error ?? '', permanent: msg.permanent },
-        })
-        if (msg.permanent) {
-          new Notification({ title: APP_NAME, body: `Post failed permanently on ${msg.platform}` }).show()
-        }
-        mainWindow?.webContents.send(msg.kind, msg)
-      }
-    })
-
-    publisherWorker.on('error', (e) => logger.error({ msg: 'Publisher worker error', error: e.message }))
-    publisherWorker.on('exit', (code) => {
-      if (code !== 0) logger.warn({ msg: 'Publisher worker exited', code })
-      publisherWorker = null
-    })
-  } catch (e) {
-    logger.warn({ msg: 'Publisher worker failed to start', error: String(e) })
-  }
-
-  // 5. Main window
+  // 6. Main window
   mainWindow = createMainWindow()
   setupUpdater(mainWindow)
 }
@@ -199,8 +288,8 @@ function createMainWindow(): BrowserWindow {
       preload: join(__dirname, '../preload/index.js'),
       contextIsolation: true,
       nodeIntegration: false,
-      sandbox: false,
-    },
+      sandbox: true
+    }
   })
 
   win.webContents.setWindowOpenHandler(({ url }) => {
@@ -215,9 +304,9 @@ function createMainWindow(): BrowserWindow {
         'Content-Security-Policy': [
           app.isPackaged
             ? "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data: https:; connect-src 'self' https:"
-            : "default-src 'self' 'unsafe-inline' 'unsafe-eval' data:; connect-src 'self' ws: http: https:; script-src 'self' 'unsafe-eval' 'unsafe-inline' http:;",
-        ],
-      },
+            : "default-src 'self' 'unsafe-inline' 'unsafe-eval' data:; connect-src 'self' ws: http: https:; script-src 'self' 'unsafe-eval' 'unsafe-inline' http:;"
+        ]
+      }
     })
   })
 
@@ -246,7 +335,7 @@ function createMainWindow(): BrowserWindow {
 
 function registerOAuthScheme(): void {
   protocol.registerSchemesAsPrivileged([
-    { scheme: APP_URL_SCHEME, privileges: { secure: true, standard: true } },
+    { scheme: APP_URL_SCHEME, privileges: { secure: true, standard: true } }
   ])
 }
 
@@ -293,6 +382,7 @@ app.on('window-all-closed', () => {
 })
 
 app.on('before-quit', () => {
+  isQuitting = true
   logger.info({ msg: 'App quitting — stopping scheduler & closing DB' })
   try {
     getServices().schedulerService.stop()
@@ -313,7 +403,7 @@ app.on('open-url', async (_event, url) => {
     mainWindow?.webContents.send('auth:connected')
     new Notification({
       title: 'GhostPilot',
-      body: 'Platform connected successfully',
+      body: 'Platform connected successfully'
     }).show()
   } catch (e) {
     logger.error({ msg: 'OAuth callback failed', error: String(e) })

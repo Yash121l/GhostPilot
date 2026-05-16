@@ -16,7 +16,7 @@ import {
   Camera
 } from 'lucide-react'
 import { ipc, IPC_CHANNELS } from './lib/ipc'
-import type { AuthStatusOutput } from '@shared/ipc-types'
+import type { AuthStatusOutput, UpdateState } from '@shared/ipc-types'
 import { Platform } from '@shared/types/platform'
 
 const SIDEBAR_CONNECTORS = [
@@ -78,7 +78,8 @@ export default function App(): ReactElement {
   const [aiConfigured, setAiConfigured] = useState(false)
   const [dbOk] = useState(true)
   const [version, setVersion] = useState('...')
-  const [updateVersion, setUpdateVersion] = useState<string | null>(null)
+  const [updateState, setUpdateState] = useState<UpdateState>({ status: 'idle' })
+  const [rosettaWarning, setRosettaWarning] = useState(false)
 
   useEffect(() => {
     ipc.invoke(IPC_CHANNELS.AUTH_STATUS, {}).then((res) => {
@@ -92,6 +93,7 @@ export default function App(): ReactElement {
     })
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     ;(window as any).api?.getVersion().then((v: string) => setVersion(v))
+    ipc.invoke(IPC_CHANNELS.UPDATER_GET_STATE, {}).then((state) => setUpdateState(state))
   }, [])
 
   useEffect(() => {
@@ -125,11 +127,16 @@ export default function App(): ReactElement {
   }, [])
 
   useEffect(() => {
-    const unsub = window.api?.on('updater:update-available', (info: unknown) => {
-      const { version: v } = info as { version: string }
-      setUpdateVersion(v)
+    const unsubState = window.api?.on(IPC_CHANNELS.UPDATER_STATE_CHANGED, (state: unknown) => {
+      setUpdateState(state as UpdateState)
     })
-    return () => unsub?.()
+    const unsubRosetta = window.api?.on(IPC_CHANNELS.UPDATER_ROSETTA_WARNING, () => {
+      setRosettaWarning(true)
+    })
+    return () => {
+      unsubState?.()
+      unsubRosetta?.()
+    }
   }, [])
 
   const connectedCount = connections.filter((c) => c.connected).length
@@ -203,7 +210,7 @@ export default function App(): ReactElement {
       </main>
 
       {/* ── Update notification ── */}
-      {updateVersion && (
+      {updateState.status === 'available' && (
         <div style={{
           position: 'fixed', bottom: 36, right: 16, zIndex: 9999,
           background: 'var(--bg-card)', border: '1px solid var(--accent)',
@@ -212,7 +219,7 @@ export default function App(): ReactElement {
           fontSize: 12, boxShadow: '0 4px 20px rgba(0,0,0,0.25)',
         }}>
           <span style={{ color: 'var(--text-2)' }}>
-            Update <strong>v{updateVersion}</strong> available
+            Update <strong>v{updateState.version}</strong> available
           </span>
           <button
             onClick={() => {
@@ -228,7 +235,31 @@ export default function App(): ReactElement {
             Download
           </button>
           <button
-            onClick={() => setUpdateVersion(null)}
+            onClick={() => setUpdateState({ status: 'idle' })}
+            style={{
+              background: 'none', border: 'none', color: 'var(--text-3)',
+              cursor: 'pointer', fontSize: 14, lineHeight: '1', padding: 0,
+            }}
+          >
+            ✕
+          </button>
+        </div>
+      )}
+
+      {/* ── Rosetta warning ── */}
+      {rosettaWarning && (
+        <div style={{
+          position: 'fixed', bottom: 36, right: 16, zIndex: 9998,
+          background: 'var(--bg-card)', border: '1px solid var(--warning, #f59e0b)',
+          borderRadius: 10, padding: '10px 14px',
+          display: 'flex', alignItems: 'center', gap: 10,
+          fontSize: 12, boxShadow: '0 4px 20px rgba(0,0,0,0.25)',
+        }}>
+          <span style={{ color: 'var(--text-2)' }}>
+            Running Intel build on Apple Silicon — next update will switch to native arm64
+          </span>
+          <button
+            onClick={() => setRosettaWarning(false)}
             style={{
               background: 'none', border: 'none', color: 'var(--text-3)',
               cursor: 'pointer', fontSize: 14, lineHeight: '1', padding: 0,
