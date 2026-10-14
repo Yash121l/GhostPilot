@@ -54,5 +54,16 @@ export default defineConfig(
       'no-empty-pattern': 'off'
     }
   },
+  // Website analytics: plain browser script that embeds PostHog's minified loader snippet.
+  {
+    files: ['website/**/*.js'],
+    languageOptions: {
+      globals: { posthog: 'readonly' }
+    },
+    rules: {
+      '@typescript-eslint/explicit-function-return-type': 'off',
+      '@typescript-eslint/no-unused-expressions': 'off'
+    }
+  },
   eslintConfigPrettier
 )
